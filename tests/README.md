@@ -79,13 +79,19 @@ Global mocks available: `global.display`, `global.get_pointer()`, `global.stage`
 
 When tests need missing functionality, add it to the appropriate mock file. Keep mocks minimal - only implement what tests actually use.
 
-## What's Not Worth Testing
+## What's Excluded From Coverage
 
-Some files have low or zero coverage intentionally:
+These are excluded in `vitest.config.js` because they are UI-only — they would need a
+full St/Clutter or GTK4 stack mocked for little benefit:
 
-- **`keybindings.js`** - Glue code mapping keys to `windowManager.command()`. No logic to test.
-- **`indicator.js`** - GNOME Shell UI integration. Would require full Shell mocking for minimal benefit.
-- **`extension-theme-manager.js`** - UI-specific theme handling.
+- **`lib/prefs/**`** - Preferences UI, not testable without GTK4.
+- **`cheatsheet.js`** - St/Clutter overlay widgets.
+- **`indicator.js`** - Quick Settings panel integration.
+- **`extension-theme-manager.js`** - stylesheet management.
+
+Everything else is expected to be covered. `keybindings.js` in particular IS tested
+(`tests/unit/keybindings/`, 52 tests) — its drag-modifier and dispatch logic is real
+logic; only the `Main.wm` registration glue is inherently untestable.
 
 ## Troubleshooting
 
