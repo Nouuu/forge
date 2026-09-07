@@ -48,7 +48,7 @@ journalctl -e -u gnome-shell        # jump to the end (Wayland)
 
 Include your GNOME version (`gnome-shell --version`), session type (X11/Wayland),
 the steps to reproduce, and any relevant `journalctl` output. File issues against
-the fork: <https://github.com/jcrussell/forge/issues>.
+the fork: <https://github.com/Nouuu/forge/issues>.
 
 ## Known limitations
 

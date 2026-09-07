@@ -36,7 +36,7 @@ since the previous `v*` tag are bucketed by conventional-commit type into
 Features / Bug Fixes / Documentation & Translations / Maintenance, with anything
 that doesn't parse listed under Other so nothing is silently dropped. GitHub's
 built-in `generate_release_notes` is PR-derived and this repo commits straight to
-`dev`, so it produced empty bodies (`v49-90-beta.1` and `beta.2` shipped with just
+`main`, so it produced empty bodies (`v49-90-beta.1` and `beta.2` shipped with just
 a compare link).
 
 Nothing needs maintaining per release. When a release *does* need a human note —
@@ -90,5 +90,5 @@ distribution trust comes from its review.
 
 ```bash
 sha256sum -c SHA256SUMS
-gh attestation verify forge@jmmaranan.com.zip --repo jcrussell/forge
+gh attestation verify forge@jmmaranan.com.zip --repo Nouuu/forge
 ```

@@ -1,7 +1,7 @@
 # Forge (maintained by Claude)
 
-[![CI](https://github.com/jcrussell/forge/actions/workflows/testing.yml/badge.svg)](https://github.com/jcrussell/forge/actions/workflows/testing.yml)
-[![codecov](https://codecov.io/github/jcrussell/forge/graph/badge.svg?token=MFNOBH5D4L)](https://codecov.io/github/jcrussell/forge)
+[![CI](https://github.com/Nouuu/forge/actions/workflows/testing.yml/badge.svg)](https://github.com/Nouuu/forge/actions/workflows/testing.yml)
+[![codecov](https://codecov.io/github/Nouuu/forge/graph/badge.svg)](https://codecov.io/github/Nouuu/forge)
 
 An AI-maintained fork of [Forge](https://github.com/forge-ext/forge), the GNOME
 Shell extension that provides i3/sway-style tiling window management.
@@ -54,7 +54,7 @@ This fork includes significant improvements over the upstream version:
 
 ### Code Quality
 
-- Comprehensive unit test suite (1,400+ tests, ~88% line coverage) plus a Dockerized E2E suite
+- Comprehensive unit test suite (1,700+ tests, ~92% line coverage) plus a Dockerized E2E suite
 - Refactored architecture with focused, extracted managers (see [architecture docs](docs/dev/architecture.md))
 - Riskier options stay behind clearly-marked experimental toggles
 
@@ -75,12 +75,12 @@ app by searching for "Forge".
 ### From a pre-built release
 
 Download `forge@jmmaranan.com.zip` from the
-[latest release](https://github.com/jcrussell/forge/releases/latest), then:
+[latest release](https://github.com/Nouuu/forge/releases/latest), then:
 
 ```bash
 # (optional) verify the checksum and build provenance
 sha256sum -c SHA256SUMS
-gh attestation verify forge@jmmaranan.com.zip --repo jcrussell/forge
+gh attestation verify forge@jmmaranan.com.zip --repo Nouuu/forge
 
 # install
 gnome-extensions install --force forge@jmmaranan.com.zip
