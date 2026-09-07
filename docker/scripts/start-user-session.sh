@@ -46,7 +46,7 @@ echo "$SESSION_TYPE" > /tmp/forge-session-type
 chmod 644 /tmp/forge-session-type
 
 # Force software GL (llvmpipe) for every session process (forge-4wl). On
-# F44/GNOME50 rawhide, gnome-text-editor attempts a ZINK/Vulkan GL path that has
+# F44/GNOME50, gnome-text-editor attempts a ZINK/Vulkan GL path that has
 # no device in the headless container; the failing vkCreateInstance probe slows
 # the first cold --new-window enough to blow the launch timeout (transient
 # first-test ERROR). These vars must be passed via systemd-run --setenv — the

@@ -1,5 +1,5 @@
 # Docker Compose for Forge E2E Testing
-# Uses Fedora version (maps to GNOME: F39=G45, F40=G46, F41=G47, F42=G48, F43=G49)
+# Uses Fedora version (maps to GNOME: F39=G45, F40=G46, F41=G47, F42=G48, F43=G49, F44=G50)
 #
 # NOTE: This container requires systemd as PID 1.
 # For interactive use, prefer: make e2e-debug
@@ -21,8 +21,8 @@ services:
       context: ..
       dockerfile: docker/Dockerfile.e2e
       args:
-        FEDORA_VERSION: ${FEDORA_VERSION:-43}
-    image: forge-e2e-fedora${FEDORA_VERSION:-43}
+        FEDORA_VERSION: ${FEDORA_VERSION:-42}
+    image: forge-e2e-fedora${FEDORA_VERSION:-42}
     container_name: forge-e2e
     volumes:
       - ../tests/e2e:/app/tests/e2e:ro
@@ -31,7 +31,7 @@ services:
     environment:
       - DISPLAY=:99
       - container=docker
-      - FEDORA_VERSION=${FEDORA_VERSION:-43}
+      - FEDORA_VERSION=${FEDORA_VERSION:-42}
     # Systemd requires privileged mode and proper cgroup namespace
     privileged: true
     cap_add:
