@@ -28,3 +28,7 @@ coverage/
 
 # Python virtualenv (local tooling, not part of the extension)
 .venv/
+
+# Editor / toolchain local state
+.idea/
+mise.toml

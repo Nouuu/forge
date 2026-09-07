@@ -7,7 +7,7 @@ Env knobs (all optional):
     FORGE_FUZZ_SESSIONS   number of seeded sessions               (default 1)
     FORGE_FUZZ_STEPS      steps per session                       (default 30)
     FORGE_FUZZ_SEED       base seed; session i uses base+i        (default 1)
-    FORGE_FUZZ_WINDOWS    initial windows per session             (default 2)
+    FORGE_FUZZ_WINDOWS    initial windows per session             (default 4)
     FORGE_FUZZ_SHRINK     1 to ddmin a failure, 0 to skip         (default 1)
     FORGE_FUZZ_SHRINK_K   K-times replay per shrink candidate     (default 3)
     FORGE_FUZZ_CONTINUE   1 to run all sessions + summarize, 0 to abort on first (default 0)

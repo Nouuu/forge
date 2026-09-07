@@ -4,7 +4,7 @@ End-to-end tests for Forge run against real GNOME Shell inside Docker containers
 
 ## Architecture
 
-Each E2E container is a self-contained Fedora image with GNOME Shell and all test dependencies. The container runs systemd as PID 1 (required for `systemd-logind` and `org.freedesktop.locale1`), then `start-user-session.sh` launches Xvfb, a D-Bus session daemon, and GNOME Shell directly — without relying on systemd user services.
+Each E2E container is a self-contained Fedora image with GNOME Shell and all test dependencies. The container runs systemd as PID 1 (required for `systemd-logind` and `org.freedesktop.locale1`), then `start-user-session.sh` launches a D-Bus session daemon and GNOME Shell directly — without relying on systemd user services. It auto-detects the session type: X11 on Xvfb for Fedora 39-42, headless Wayland for Fedora 43+ (whose gnome-shell is compiled without X11).
 
 ```
 Host                          Container (systemd PID 1)
@@ -12,9 +12,9 @@ Host                          Container (systemd PID 1)
 make e2e-test
   └─ docker run -td ───────►  /usr/sbin/init
   └─ docker exec ──────────►  start-user-session.sh
-                                 ├─ Xvfb :99
+                                 ├─ Xvfb :99            (F39-42 only)
                                  ├─ dbus-daemon --session
-                                 └─ gnome-shell --x11
+                                 └─ gnome-shell --x11   (F43+: --headless --wayland)
   └─ docker exec ──────────►  set-env.sh run-tests.sh
                                  └─ pytest tests/
 ```
@@ -26,16 +26,17 @@ make e2e-test
 | 39 | 45 | Supported |
 | 40 | 46 | Supported |
 | 41 | 47 | Supported |
-| 42 | 48 | Supported |
-| 43 | 49 | Supported (default) |
-| rawhide | 50 | Manual only (`make e2e-test GNOME_VERSION=50`) |
+| 42 | 48 | Supported (default) |
+| 43 | 49 | Supported |
+| 44 | 50 | Supported |
+| rawhide | next devel cycle | Manual only (`make e2e-test FEDORA_VERSION=rawhide`) |
 
-Rawhide is excluded from CI (`supported_fedora` in `gnome-versions.json`) to avoid breakage from upstream instability, but can be tested manually.
+Fedora 39-44 all run in CI (`supported_fedora` in `gnome-versions.json`). Rawhide is excluded to avoid breakage from upstream instability, but can be tested manually with `FEDORA_VERSION=rawhide`.
 
 ## Running Tests
 
 ```bash
-# Run with default GNOME version (49)
+# Run with the default lane (GNOME 48 / Fedora 42 - see FEDORA_VERSION in the Makefile)
 make e2e-test
 
 # Run with a specific GNOME version
@@ -200,10 +201,23 @@ make e2e-fuzz FORGE_FUZZ_REPLAY=/app/e2e-results/fuzz/repro-5.min.json
 
 ## Adding a New GNOME Version
 
+Every one of these must move together — the sites below drifted apart historically
+because this list used to stop at step 4.
+
 1. Add the Fedora-to-GNOME mapping in `gnome-versions.json` (`fedora_to_gnome`)
 2. Add the Fedora version to `supported_fedora` if it should run in CI
 3. Add the GNOME-to-Fedora mapping in the Makefile's `ifdef GNOME_VERSION` block
 4. Update `SUPPORTED_FEDORA_VERSIONS` in the Makefile if added to CI
+5. Add the new shell major to `metadata.json`'s `shell-version` array — without it the
+   extension refuses to load on that shell
+6. Update the Fedora-to-GNOME comment blocks, which are duplicated in four files:
+   `Makefile`, `docker/Dockerfile.e2e`, `docker/docker-compose.e2e.yml` and
+   `.github/workflows/e2e-testing.yml`
+7. Update the `e2e-versions` help text in the Makefile, and the table at the top of
+   this file
+8. If the *default* lane moves, change it in all three places at once: `FEDORA_VERSION`
+   in the Makefile, `ARG FEDORA_VERSION` in `docker/Dockerfile.e2e`, and the
+   `${FEDORA_VERSION:-NN}` defaults in `docker/docker-compose.e2e.yml`
 
 ## Container Structure
 
@@ -218,7 +232,7 @@ make e2e-fuzz FORGE_FUZZ_REPLAY=/app/e2e-results/fuzz/repro-5.min.json
 
 ### Key Scripts
 
-- **`start-user-session.sh`** — Root script that creates the XDG runtime directory, starts Xvfb, launches a D-Bus session daemon, pre-enables Forge via gsettings, and starts GNOME Shell in X11 mode. Waits for Shell.Eval to confirm readiness.
+- **`start-user-session.sh`** — Root script that creates the XDG runtime directory, starts Xvfb, launches a D-Bus session daemon, pre-enables Forge via gsettings, and starts GNOME Shell — X11 on F39-42, headless Wayland on F43+ (detected via `gnome-shell --help | grep -- --x11`). Waits for Shell.Eval to confirm readiness.
 - **`set-env.sh`** — Lightweight wrapper that exports `DBUS_SESSION_BUS_ADDRESS` and `DISPLAY`, then `eval`s its arguments. Used to run commands in the gnomeshell user's D-Bus session.
 - **`run-tests.sh`** — Waits for GNOME Shell and Forge to be ready, then runs pytest.
 - **`lib.sh`** — Shared functions: `wait_for_shell`, `wait_for_forge_extension`, `check_forge_extension`, `print_system_info`.

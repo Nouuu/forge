@@ -299,7 +299,8 @@ ifdef GNOME_VERSION
 endif
 
 # Default Fedora version for E2E tests (Fedora 42 = GNOME 48)
-# Fedora 43 (GNOME 49) removed X11 support; headless Wayland mode is unstable.
+# Fedora 43+ compiles gnome-shell without X11 support, so those lanes run headless
+# Wayland; 42 keeps the default lane on X11. F43/F44 are still full CI lanes.
 FEDORA_VERSION ?= 42
 E2E_IMAGE = forge-e2e-fedora$(FEDORA_VERSION)
 E2E_RESULTS_DIR = e2e-results
@@ -448,19 +449,19 @@ e2e-versions:
 	@echo "  GNOME 47 (Fedora 41)"
 	@echo "  GNOME 48 (Fedora 42) - default"
 	@echo "  GNOME 49 (Fedora 43)"
-	@echo "  GNOME 50 (Fedora rawhide) - alpha"
+	@echo "  GNOME 50 (Fedora 44)"
 	@echo ""
 	@echo "Usage:"
 	@echo "  make e2e-test                    # Run with default (GNOME 48)"
 	@echo "  make e2e-test GNOME_VERSION=48   # Run with GNOME 48"
-	@echo "  make e2e-test GNOME_VERSION=50   # Run with GNOME 50 (rawhide)"
+	@echo "  make e2e-test GNOME_VERSION=50   # Run with GNOME 50 (Fedora 44)"
 	@echo "  make e2e-test FEDORA_VERSION=42  # Run with Fedora 42 (GNOME 48)"
 	@echo "  make e2e-test-all                # Run for all versions"
 	@echo "  make e2e-fuzz                    # Run the live fuzzer lane (forge-cnrc)"
 	@echo "  make e2e-debug                   # Interactive debugging"
 	@echo ""
 	@echo "Images are self-contained, built from Fedora base images."
-	@echo "To test rawhide manually: make e2e-test GNOME_VERSION=50"
+	@echo "To test rawhide manually: make e2e-test FEDORA_VERSION=rawhide"
 
 help:
 	@echo "Forge GNOME Shell Extension - Build Targets"

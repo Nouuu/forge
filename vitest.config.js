@@ -20,7 +20,7 @@ export default defineConfig({
       ],
       all: true,
       // Regression ratchet (forge-fhen.8): set a few points below the measured
-      // baseline (stmts/lines 91.98%, branches 86.62%, funcs 91.79%) so a drop in
+      // baseline (stmts/lines 92.41%, branches 86.69%, funcs 92.15%) so a drop in
       // coverage fails CI without an immediately-red build. Raise these as coverage
       // improves; do NOT lower them to make a red build pass.
       thresholds: {

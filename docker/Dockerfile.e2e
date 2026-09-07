@@ -15,7 +15,7 @@
 #   - Use docker exec to run tests: docker exec $POD set-env.sh /app/scripts/run-tests.sh
 #   - The Makefile handles this automatically with: make e2e-test
 
-ARG FEDORA_VERSION=43
+ARG FEDORA_VERSION=42
 FROM registry.fedoraproject.org/fedora:${FEDORA_VERSION}
 
 LABEL maintainer="Forge <forge@jmmaranan.com>"

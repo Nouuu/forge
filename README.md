@@ -54,7 +54,7 @@ This fork includes significant improvements over the upstream version:
 
 ### Code Quality
 
-- Comprehensive unit test suite (1,400+ tests, ~88% line coverage) plus a Dockerized E2E suite
+- Comprehensive unit test suite (1,750+ tests, ~92% line coverage, 90% enforced in CI) plus a Dockerized E2E suite
 - Refactored architecture with focused, extracted managers (see [architecture docs](docs/dev/architecture.md))
 - Riskier options stay behind clearly-marked experimental toggles
 
