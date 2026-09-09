@@ -78,18 +78,27 @@ maximize itself) — prove them with unit tests at the `move()`/`apply()` level.
 
 ## Tree reload vs. render
 
-`tree.reload()` (`tree.js`) is the **only full tree wipe**: it clears children,
-recreates `WORKSPACE`/`MONITOR` nodes, then re-tracks windows **flat** (default
-`HSPLIT`/`VSPLIT`) — so **`STACKED`/`TABBED` layouts and nesting are lost across a
-reload**. It is invoked only from `enable()` and the no-`mo{m}ws{n}`-node fallback
-inside `trackWindow` (`reloadTree`, `window.js`).
+`tree.reload()` (`tree.js`) is the **only full tree wipe**: it clears children and
+recreates the `WORKSPACE`/`MONITOR` scaffold at the live workspace and monitor
+counts, after which `reloadTree` re-tracks windows **flat**. `STACKED`/`TABBED`
+groupings survive it — `reloadTree` brackets the wipe with
+`snapshotLayoutGroups()` / `restoreLayoutGroups()` (forge-bqa, nested sub-splits
+included via forge-4y80). Four callers reach it (`reloadTree`, `window.js`):
+`enable()`, `workspaces-reordered`, `monitors-changed`, and the
+no-`mo{m}ws{n}`-node fallback inside `trackWindow`.
 
 Everything else **preserves** the tree by routing to `renderTree` (which never
-clears containers): workareas-changed, workspace add/remove, active-workspace, and
-monitors-changed all re-track or re-render without wiping. So a plain resume or
-monitor change does **not** lose layout — only a window-created event that can't
-find its monitor/workspace node does. Confirm the trigger from logs before
-"fixing" lost-layout reports.
+clears containers): workareas-changed, workspace add/remove and active-workspace
+all re-track or re-render without wiping.
+
+**Monitor hot-plug is the one case that must wipe.** The `mo{m}ws{n}` scaffold is
+only ever built by `addWorkspace` -> `tree.addMonitor`, and `addWorkspace` returns
+early once the `ws{n}` node exists — so nothing rebuilds it in place, and there is
+no `removeMonitor`. `_onMonitorsChanged` therefore reloads, which recreates the
+nodes at the new count and tears down the stale `St.Bin`s in one step. The signal
+is `Main.layoutManager::monitors-changed` — **MetaDisplay does not emit it**
+(forge-0rb6) — and the handler ignores a zero-monitor report so a KVM switch or
+lock does not wipe the tree.
 
 ## Floating subsystem
 

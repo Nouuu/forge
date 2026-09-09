@@ -1,9 +1,10 @@
 """
 Workspace monocle toggle tests for Forge (forge-a34.7).
 
-WorkspaceMonocleToggle moves every tiled window on the active workspace's first
+WorkspaceMonocleToggle moves every tiled window on the active workspace's CURRENT
 monitor into ONE tabbed container, so the focused window fills the work area and
-the others stack behind it (same rect). Toggling again restores a split layout
+the others stack behind it (same rect). The scope is one output, as in i3/sway;
+the container here is single-monitor, so current and first are the same node. Toggling again restores a split layout
 (determineSplitLayout returns HSPLIT/VSPLIT only).
 
 We assert via window rects rather than get_container_layout (which is

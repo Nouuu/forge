@@ -99,4 +99,73 @@ describe("forge-wf49: workspace monocle heuristic", () => {
     expect(consAfterExit.length).toBe(1);
     expect([LAYOUT_TYPES.HSPLIT, LAYOUT_TYPES.VSPLIT]).toContain(consAfterExit[0].layout);
   });
+
+  // G5: the monocle operated on monitorNodes[0], so on a multi-monitor workspace it
+  // silently acted on the FIRST monitor whatever the user was looking at — invoking
+  // it from the second screen appeared to do nothing while quietly re-tabbing the
+  // first. i3/sway scope fullscreen per output; this now follows the CURRENT monitor.
+  describe("multi-monitor scope", () => {
+    let multi;
+
+    beforeEach(() => {
+      ctx.cleanup();
+      multi = createWindowManagerFixture({
+        settings: { "tiling-mode-enabled": true },
+        globals: { display: { monitorCount: 2 } },
+      });
+      ctx = multi;
+    });
+
+    const tileOn = (monitorNode, id) => {
+      const meta = createMockWindow({ id, workspace: multi.workspaces[0] });
+      const node = new Node(NODE_TYPES.WINDOW, meta);
+      node.settings = multi.tree.settings;
+      node.mode = WINDOW_MODES.TILE;
+      node.rect = { x: 0, y: 0, width: 400, height: 600 };
+      monitorNode.appendChild(node);
+      return node;
+    };
+
+    it("monocles the monitor the user is on, not monitor 0", () => {
+      const mon0 = multi.tree.findNode("mo0ws0");
+      const mon1 = multi.tree.findNode("mo1ws0");
+      expect(mon1).not.toBeNull();
+      mon0.layout = LAYOUT_TYPES.HSPLIT;
+      mon1.layout = LAYOUT_TYPES.HSPLIT;
+      mon0.rect = { x: 0, y: 0, width: 1200, height: 800 };
+      mon1.rect = { x: 1200, y: 0, width: 1200, height: 800 };
+
+      tileOn(mon0, 1);
+      tileOn(mon0, 2);
+      tileOn(mon1, 3);
+      tileOn(mon1, 4);
+
+      global.display.get_current_monitor.mockReturnValue(1);
+      multi.windowManager.toggleWorkspaceMonocle();
+
+      // Monitor 1 collapsed into one tabbed container...
+      const cons1 = mon1.getNodeByType(NODE_TYPES.CON);
+      expect(cons1.length).toBe(1);
+      expect(cons1[0].layout).toBe(LAYOUT_TYPES.TABBED);
+      expect(cons1[0].childNodes.length).toBe(2);
+
+      // ...and monitor 0 was left completely alone.
+      expect(mon0.getNodeByType(NODE_TYPES.CON).length).toBe(0);
+      expect(mon0.childNodes.length).toBe(2);
+    });
+
+    it("falls back to the first monitor node when the current one has none", () => {
+      const mon0 = multi.tree.findNode("mo0ws0");
+      mon0.layout = LAYOUT_TYPES.HSPLIT;
+      mon0.rect = { x: 0, y: 0, width: 1200, height: 800 };
+      tileOn(mon0, 1);
+      tileOn(mon0, 2);
+
+      // A monitor index with no node for this workspace (stale scaffold).
+      global.display.get_current_monitor.mockReturnValue(7);
+
+      expect(() => multi.windowManager.toggleWorkspaceMonocle()).not.toThrow();
+      expect(mon0.getNodeByType(NODE_TYPES.CON).length).toBe(1);
+    });
+  });
 });

@@ -14,7 +14,7 @@ import { WindowType } from "../../mocks/gnome/Meta.js";
  * Tests for workspace-related operations including:
  * - getWindowsOnWorkspace(): Get windows on a specific workspace
  * - isActiveWindowWorkspaceTiled(): Check if window's workspace allows tiling
- * - isCurrentWorkspaceTiled(): Check if current workspace allows tiling
+ * - _isWorkspaceSkipped(): Whether a workspace index is excluded from tiling
  * - trackCurrentMonWs(): Track current monitor/workspace
  * - trackCurrentWindows(): Sync tree with current windows
  */
@@ -224,71 +224,46 @@ describe("WindowManager - Workspace Management", () => {
     });
   });
 
-  describe("isCurrentWorkspaceTiled", () => {
-    it("should return true when current workspace is not skipped", () => {
-      ctx.settings.get_string.mockImplementation((key) => {
-        if (key === "workspace-skip-tile") return "1,2";
-        return "";
-      });
-      global.workspace_manager.get_active_workspace_index.mockReturnValue(0);
+  // isCurrentWorkspaceTiled() was deleted as dead API (no production caller). The
+  // behaviour these cases actually exercised is the skip-list parsing in
+  // _isWorkspaceSkipped, which IS live — isActiveWindowWorkspaceTiled and the render
+  // path both route through it — so they now drive that directly.
+  describe("_isWorkspaceSkipped", () => {
+    const skipList = (value) =>
+      ctx.settings.get_string.mockImplementation((key) =>
+        key === "workspace-skip-tile" ? value : ""
+      );
 
-      const result = wm().isCurrentWorkspaceTiled();
+    it("should return false when the workspace is not in the list", () => {
+      skipList("1,2");
 
-      expect(result).toBe(true);
+      expect(wm()._isWorkspaceSkipped(0)).toBe(false);
     });
 
-    it("should return false when current workspace is skipped", () => {
-      ctx.settings.get_string.mockImplementation((key) => {
-        if (key === "workspace-skip-tile") return "0,2";
-        return "";
-      });
-      global.workspace_manager.get_active_workspace_index.mockReturnValue(0);
+    it("should return true when the workspace is in the list", () => {
+      skipList("0,2");
 
-      const result = wm().isCurrentWorkspaceTiled();
-
-      expect(result).toBe(false);
+      expect(wm()._isWorkspaceSkipped(0)).toBe(true);
     });
 
     it("should handle empty skip list", () => {
-      ctx.settings.get_string.mockImplementation((key) => {
-        if (key === "workspace-skip-tile") return "";
-        return "";
-      });
+      skipList("");
 
-      const result = wm().isCurrentWorkspaceTiled();
-
-      expect(result).toBe(true);
+      expect(wm()._isWorkspaceSkipped(0)).toBe(false);
     });
 
     it("should check different workspaces correctly", () => {
-      ctx.settings.get_string.mockImplementation((key) => {
-        if (key === "workspace-skip-tile") return "1";
-        return "";
-      });
+      skipList("1");
 
-      // Workspace 0
-      global.workspace_manager.get_active_workspace_index.mockReturnValue(0);
-      expect(wm().isCurrentWorkspaceTiled()).toBe(true);
-
-      // Workspace 1 (skipped)
-      global.workspace_manager.get_active_workspace_index.mockReturnValue(1);
-      expect(wm().isCurrentWorkspaceTiled()).toBe(false);
-
-      // Workspace 2
-      global.workspace_manager.get_active_workspace_index.mockReturnValue(2);
-      expect(wm().isCurrentWorkspaceTiled()).toBe(true);
+      expect(wm()._isWorkspaceSkipped(0)).toBe(false);
+      expect(wm()._isWorkspaceSkipped(1)).toBe(true);
+      expect(wm()._isWorkspaceSkipped(2)).toBe(false);
     });
 
     it("should handle whitespace in skip list", () => {
-      ctx.settings.get_string.mockImplementation((key) => {
-        if (key === "workspace-skip-tile") return " 0 , 2 ";
-        return "";
-      });
-      global.workspace_manager.get_active_workspace_index.mockReturnValue(0);
+      skipList(" 0 , 2 ");
 
-      const result = wm().isCurrentWorkspaceTiled();
-
-      expect(result).toBe(false);
+      expect(wm()._isWorkspaceSkipped(0)).toBe(true);
     });
   });
 
@@ -407,12 +382,10 @@ describe("WindowManager - Workspace Management", () => {
       });
 
       // Workspace 0 should be tiled
-      global.workspace_manager.get_active_workspace_index.mockReturnValue(0);
-      expect(wm().isCurrentWorkspaceTiled()).toBe(true);
+      expect(wm()._isWorkspaceSkipped(0)).toBe(false);
 
       // Workspace 1 should be skipped (floating)
-      global.workspace_manager.get_active_workspace_index.mockReturnValue(1);
-      expect(wm().isCurrentWorkspaceTiled()).toBe(false);
+      expect(wm()._isWorkspaceSkipped(1)).toBe(true);
     });
 
     it("should handle workspace with mixed window modes", () => {

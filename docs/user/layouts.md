@@ -59,9 +59,10 @@ It's off by default because it overrides a split direction you set by hand with
 
 ## Monocle
 
-Monocle gathers **all** of the workspace's tiled windows into a single **tabbed**
-container — you see one window at a time and switch with the tab strip, a focus mode
-for a busy workspace. Toggle again to return to your previous split layout. Bind it
+Monocle gathers the tiled windows of the **monitor you are on** into a single
+**tabbed** container — you see one window at a time and switch with the tab strip, a
+focus mode for a busy screen. Like i3/sway, the scope is one output: on a
+multi-monitor workspace your other screens keep their layout. Toggle again to return to your previous split layout. Bind it
 yourself: **`workspace-monocle-toggle` has no default chord** (set one in
 Preferences → Keyboard).
 

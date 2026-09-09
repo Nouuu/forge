@@ -74,6 +74,17 @@ describe("FeatureIndicator", () => {
     ).not.toThrow();
   });
 
+  // destroy() runs from disable(), and disable() nulls ext.settings on its way out —
+  // GNOME also destroys Quick Settings items on session-mode changes. A bare
+  // this.extension.settings.disconnect() then throws out of the shell's teardown.
+  it("survives destroy() when the extension settings are already gone", () => {
+    const indicator = new FeatureIndicator(extension);
+    extension.settings = null;
+
+    expect(() => indicator.destroy()).not.toThrow();
+    expect(indicator._settingsChangedId).toBeNull();
+  });
+
   // forge-5r0j: `_destroyed` is a flag Forge never assigns, so guarding on it is
   // vacuous — a finalized St actor reports itself by throwing on the first property
   // access, not by setting a flag. The handler runs on a GSettings signal, so an

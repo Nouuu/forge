@@ -19,17 +19,19 @@ describe("WorkspaceManager", () => {
   let mockExtWm;
   let workspace0;
   let workspace1;
+  let workspace2;
   let ctx;
 
   beforeEach(() => {
     // Install GNOME globals with 2 workspaces
     ctx = installGnomeGlobals({
-      workspaceManager: { workspaceCount: 2 },
+      workspaceManager: { workspaceCount: 3 },
     });
 
     // Access workspaces from ctx
     workspace0 = ctx.workspaces[0];
     workspace1 = ctx.workspaces[1];
+    workspace2 = ctx.workspaces[2];
 
     // Create a mock tree with minimal implementation
     mockTree = {
@@ -129,6 +131,53 @@ describe("WorkspaceManager", () => {
       expect(mockTree._nodes.has("ws1")).toBe(true);
       expect(workspaceManager._workspaceSignals.size).toBe(2);
     });
+
+    // G8: the node, its layout and its bin were all built (and the bin parented into
+    // window_group) BEFORE get_workspace_by_index was checked. The `if (!workspace)`
+    // exit then reported failure while leaving a monitor-less, signal-less workspace
+    // node and a live St.Bin behind — the forge-98sa leak shape, on the add side.
+    describe("when the Meta.Workspace does not exist", () => {
+      const MISSING = 5;
+
+      beforeEach(() => {
+        // Mutter returns null for an index whose workspace is gone — a workspace
+        // removed between the signal and the handler, or a stale index during a
+        // dynamic-workspace teardown. The fixture fabricates one for any index, so
+        // the real return has to be forced here.
+        global.display
+          .get_workspace_manager()
+          .get_workspace_by_index.mockImplementation((i) =>
+            i === MISSING ? null : ctx.workspaces[i]
+          );
+      });
+
+      it("returns false", () => {
+        expect(workspaceManager.addWorkspace(MISSING)).toBe(false);
+      });
+
+      it("leaves no half-built workspace node in the tree", () => {
+        workspaceManager.addWorkspace(MISSING);
+
+        expect(mockTree._nodes.has(`ws${MISSING}`)).toBe(false);
+      });
+
+      it("leaves no orphaned bin parented in window_group", () => {
+        global.window_group.add_child.mockClear();
+
+        workspaceManager.addWorkspace(MISSING);
+
+        const added = global.window_group.add_child.mock.calls.length;
+        const removed = global.window_group.remove_child.mock.calls.length;
+        expect(removed).toBe(added);
+      });
+
+      it("binds no signals and adds no monitors", () => {
+        workspaceManager.addWorkspace(MISSING);
+
+        expect(workspaceManager._workspaceSignals.has(MISSING)).toBe(false);
+        expect(mockTree.addMonitor).not.toHaveBeenCalled();
+      });
+    });
   });
 
   describe("removeWorkspace()", () => {
@@ -165,6 +214,78 @@ describe("WorkspaceManager", () => {
       const result = workspaceManager.removeWorkspace(99);
 
       expect(result).toBe(false);
+    });
+  });
+
+  // G6: the tree renumbers its ws{n}/mo{m}ws{n} nodes and its signal map when a
+  // workspace is inserted or removed, so it follows the same Meta.Workspace as it
+  // shifts. workspace-skip-tile stored raw indices and was left alone, so the
+  // exclusion silently re-pointed at a DIFFERENT workspace — and with GNOME's
+  // dynamic workspaces that happens routinely.
+  describe("workspace-skip-tile follows the renumbering", () => {
+    const skipList = () => mockExtWm.ext.settings.get_string("workspace-skip-tile");
+
+    beforeEach(() => {
+      // _renumberWorkspaces walks the tree first; the base mock has no getNodeByType.
+      // An empty node list is enough — this block is about the settings side.
+      mockTree.getNodeByType = vi.fn(() => []);
+      const values = { "workspace-skip-tile": "" };
+      mockExtWm.ext = {
+        settings: {
+          get_string: vi.fn((key) => values[key] ?? ""),
+          set_string: vi.fn((key, value) => {
+            values[key] = value;
+          }),
+        },
+      };
+    });
+
+    it("shifts entries above a removed workspace down", () => {
+      mockExtWm.ext.settings.set_string("workspace-skip-tile", "0,2,3");
+
+      workspaceManager.renumberWorkspacesAfterRemoval(1);
+
+      expect(skipList()).toBe("0,1,2");
+    });
+
+    it("drops the entry for the workspace that was removed", () => {
+      mockExtWm.ext.settings.set_string("workspace-skip-tile", "1,2");
+
+      workspaceManager.renumberWorkspacesAfterRemoval(1);
+
+      // 1 is gone with its workspace; 2 becomes 1.
+      expect(skipList()).toBe("1");
+    });
+
+    it("shifts entries at or above an inserted workspace up", () => {
+      mockExtWm.ext.settings.set_string("workspace-skip-tile", "0,1");
+
+      workspaceManager.renumberWorkspacesAfterAddition(1);
+
+      expect(skipList()).toBe("0,2");
+    });
+
+    it("leaves an empty list alone and writes nothing", () => {
+      workspaceManager.renumberWorkspacesAfterRemoval(1);
+
+      expect(mockExtWm.ext.settings.set_string).not.toHaveBeenCalled();
+    });
+
+    it("writes nothing when no entry moves", () => {
+      mockExtWm.ext.settings.set_string("workspace-skip-tile", "0");
+      mockExtWm.ext.settings.set_string.mockClear();
+
+      workspaceManager.renumberWorkspacesAfterRemoval(3);
+
+      expect(mockExtWm.ext.settings.set_string).not.toHaveBeenCalled();
+    });
+
+    it("ignores a non-numeric entry instead of dropping it", () => {
+      mockExtWm.ext.settings.set_string("workspace-skip-tile", "junk,2");
+
+      workspaceManager.renumberWorkspacesAfterRemoval(1);
+
+      expect(skipList()).toBe("junk,1");
     });
   });
 
@@ -342,9 +463,9 @@ describe("WorkspaceManager", () => {
       ws2.childNodes.push(mo0ws2);
 
       // Set up workspace signals
-      workspaceManager._workspaceSignals.set(0, [100]);
-      workspaceManager._workspaceSignals.set(1, [101]);
-      workspaceManager._workspaceSignals.set(2, [102]);
+      workspaceManager._workspaceSignals.set(0, { workspace: workspace0, signals: [100] });
+      workspaceManager._workspaceSignals.set(1, { workspace: workspace1, signals: [101] });
+      workspaceManager._workspaceSignals.set(2, { workspace: workspace2, signals: [102] });
 
       // Use our enhanced mock tree
       workspaceManager._tree = rt;
@@ -410,8 +531,8 @@ describe("WorkspaceManager", () => {
       ws1.childNodes = [];
       ws2.childNodes = [];
 
-      workspaceManager._workspaceSignals.set(0, [100]);
-      workspaceManager._workspaceSignals.set(2, [102]);
+      workspaceManager._workspaceSignals.set(0, { workspace: workspace0, signals: [100] });
+      workspaceManager._workspaceSignals.set(2, { workspace: workspace2, signals: [102] });
       // ws1 already removed from signals map (by removeWorkspace)
 
       workspaceManager._tree = rt;
@@ -420,9 +541,18 @@ describe("WorkspaceManager", () => {
 
       // Key 0 should remain, key 2 should become key 1
       expect(workspaceManager._workspaceSignals.has(0)).toBe(true);
-      expect(workspaceManager._workspaceSignals.get(0)).toEqual([100]);
+      expect(workspaceManager._workspaceSignals.get(0)).toEqual({
+        workspace: workspace0,
+        signals: [100],
+      });
       expect(workspaceManager._workspaceSignals.has(1)).toBe(true);
-      expect(workspaceManager._workspaceSignals.get(1)).toEqual([102]);
+      // The rekeyed entry must carry its ORIGINAL workspace object, not just the ids:
+      // a rekey that rebuilt the entry from the new index would silently bind teardown
+      // to the wrong Meta.Workspace (forge-gw2c).
+      expect(workspaceManager._workspaceSignals.get(1)).toEqual({
+        workspace: workspace2,
+        signals: [102],
+      });
       expect(workspaceManager._workspaceSignals.has(2)).toBe(false);
     });
 
@@ -492,8 +622,8 @@ describe("WorkspaceManager", () => {
       ws0.childNodes.push(mo0ws0);
       ws1.childNodes.push(mo0ws1);
 
-      workspaceManager._workspaceSignals.set(0, [100]);
-      workspaceManager._workspaceSignals.set(1, [101]);
+      workspaceManager._workspaceSignals.set(0, { workspace: workspace0, signals: [100] });
+      workspaceManager._workspaceSignals.set(1, { workspace: workspace1, signals: [101] });
 
       workspaceManager._tree = rt;
 
@@ -532,8 +662,8 @@ describe("WorkspaceManager", () => {
       ws0.childNodes = [];
       ws1.childNodes = [];
 
-      workspaceManager._workspaceSignals.set(0, [100]);
-      workspaceManager._workspaceSignals.set(1, [101]);
+      workspaceManager._workspaceSignals.set(0, { workspace: workspace0, signals: [100] });
+      workspaceManager._workspaceSignals.set(1, { workspace: workspace1, signals: [101] });
 
       workspaceManager._tree = rt;
 
@@ -541,9 +671,15 @@ describe("WorkspaceManager", () => {
       workspaceManager.renumberWorkspacesAfterAddition(1);
 
       expect(workspaceManager._workspaceSignals.has(0)).toBe(true);
-      expect(workspaceManager._workspaceSignals.get(0)).toEqual([100]);
+      expect(workspaceManager._workspaceSignals.get(0)).toEqual({
+        workspace: workspace0,
+        signals: [100],
+      });
       expect(workspaceManager._workspaceSignals.has(2)).toBe(true);
-      expect(workspaceManager._workspaceSignals.get(2)).toEqual([101]);
+      expect(workspaceManager._workspaceSignals.get(2)).toEqual({
+        workspace: workspace1,
+        signals: [101],
+      });
       expect(workspaceManager._workspaceSignals.has(1)).toBe(false);
     });
   });

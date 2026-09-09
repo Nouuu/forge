@@ -14,13 +14,37 @@ vi.mock("gi://GObject", () => GnomeMocks.GObject);
 
 // Create shared mock objects that tests can modify
 // Using vi.hoisted() ensures these are created before mocks and are mutable
-const { mockOverview, mockWm, mockPanel, mockSessionMode } = vi.hoisted(() => {
+const { mockOverview, mockWm, mockPanel, mockSessionMode, mockLayoutManager } = vi.hoisted(() => {
   return {
     mockOverview: {
       visible: false,
       connect: (signal, callback) => Math.random(),
       disconnect: (id) => {},
       _signals: {},
+    },
+    // Main.layoutManager is the emitter of "monitors-changed" — MetaDisplay does
+    // NOT emit it (forge-0rb6). Unlike mockOverview this one keeps the handlers so
+    // a test can fire the signal and assert the disconnect actually happened.
+    mockLayoutManager: {
+      _handlers: new Map(),
+      _nextId: 1,
+      connect(signal, callback) {
+        const id = this._nextId++;
+        this._handlers.set(id, { signal, callback });
+        return id;
+      },
+      disconnect(id) {
+        this._handlers.delete(id);
+      },
+      emit(signal, ...args) {
+        for (const { signal: s, callback } of [...this._handlers.values()]) {
+          if (s === signal) callback(this, ...args);
+        }
+      },
+      _reset() {
+        this._handlers.clear();
+        this._nextId = 1;
+      },
     },
     mockWm: {
       addKeybinding: () => {},
@@ -66,6 +90,7 @@ vi.mock("resource:///org/gnome/shell/ui/main.js", () => ({
   wm: mockWm,
   panel: mockPanel,
   sessionMode: mockSessionMode,
+  layoutManager: mockLayoutManager,
   notify: () => {},
 }));
 

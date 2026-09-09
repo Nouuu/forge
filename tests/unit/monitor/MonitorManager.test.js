@@ -56,25 +56,6 @@ describe("MonitorManager", () => {
     ctx.cleanup();
   });
 
-  describe("getMonitorCount()", () => {
-    it("should return the number of monitors from display", () => {
-      expect(monitorManager.getMonitorCount()).toBe(2);
-      expect(global.display.get_n_monitors).toHaveBeenCalled();
-    });
-
-    it("should return updated count when monitors change", () => {
-      global.display.get_n_monitors.mockReturnValue(3);
-
-      expect(monitorManager.getMonitorCount()).toBe(3);
-    });
-
-    it("should return 1 for single monitor setup", () => {
-      global.display.get_n_monitors.mockReturnValue(1);
-
-      expect(monitorManager.getMonitorCount()).toBe(1);
-    });
-  });
-
   describe("addMonitor()", () => {
     it("should create monitor node for single monitor", () => {
       global.display.get_n_monitors.mockReturnValue(1);
@@ -155,51 +136,6 @@ describe("MonitorManager", () => {
       expect(mockExtWm.determineSplitLayoutForRect).toHaveBeenCalledTimes(2);
       expect(global.display.get_monitor_geometry).toHaveBeenCalledWith(0);
       expect(global.display.get_monitor_geometry).toHaveBeenCalledWith(1);
-    });
-  });
-
-  describe("getMonitorNode()", () => {
-    beforeEach(() => {
-      // Set up some monitor nodes
-      global.display.get_n_monitors.mockReturnValue(2);
-      monitorManager.addMonitor(0);
-      monitorManager.addMonitor(1);
-    });
-
-    it("should find monitor node by workspace and monitor index", () => {
-      const node = monitorManager.getMonitorNode(0, 0);
-
-      expect(mockTree.findNode).toHaveBeenCalledWith("mo0ws0");
-      expect(node).toBeDefined();
-      expect(node.nodeValue).toBe("mo0ws0");
-    });
-
-    it("should find monitor node on different workspace", () => {
-      const node = monitorManager.getMonitorNode(1, 0);
-
-      expect(mockTree.findNode).toHaveBeenCalledWith("mo0ws1");
-      expect(node.nodeValue).toBe("mo0ws1");
-    });
-
-    it("should find second monitor on workspace", () => {
-      const node = monitorManager.getMonitorNode(0, 1);
-
-      expect(mockTree.findNode).toHaveBeenCalledWith("mo1ws0");
-      expect(node.nodeValue).toBe("mo1ws0");
-    });
-
-    it("should return null for non-existent monitor node", () => {
-      const node = monitorManager.getMonitorNode(99, 0);
-
-      expect(mockTree.findNode).toHaveBeenCalledWith("mo0ws99");
-      expect(node).toBeNull();
-    });
-
-    it("should return null for non-existent monitor index", () => {
-      const node = monitorManager.getMonitorNode(0, 99);
-
-      expect(mockTree.findNode).toHaveBeenCalledWith("mo99ws0");
-      expect(node).toBeNull();
     });
   });
 
