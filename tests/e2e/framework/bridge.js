@@ -581,7 +581,7 @@
         // the bare strings below — see NODE_TYPES/LAYOUT_TYPES (tree.js:37,45) and WINDOW_MODES
         // (window.js:60).
         const NODE_TYPES_OK = { ROOT: 1, MONITOR: 1, CON: 1, WINDOW: 1, WORKSPACE: 1 };
-        const LAYOUTS_OK = { STACKED: 1, TABBED: 1, ROOT: 1, HSPLIT: 1, VSPLIT: 1, PRESET: 1 };
+        const LAYOUTS_OK = { STACKED: 1, TABBED: 1, ROOT: 1, HSPLIT: 1, VSPLIT: 1 };
         const SPLITS = { HSPLIT: 1, VSPLIT: 1 };
 
         // m4: a real cycle check (visited-identity Set) replaces the old depth>20 heuristic —
