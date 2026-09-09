@@ -13,7 +13,6 @@ export default defineConfig({
       exclude: [
         "lib/prefs/**", // Preferences UI, not testable without GTK4
         "lib/extension/cheatsheet.js", // UI-only (St/Clutter widgets)
-        "lib/extension/indicator.js", // UI-only (Quick Settings panel)
         "lib/extension/extension-theme-manager.js", // UI-only (stylesheet management)
         "**/*.test.js",
         "**/mocks/**",
