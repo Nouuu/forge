@@ -91,4 +91,43 @@ describe("Bug forge-ojew: workspace-removed re-homes windows instead of strandin
     expect(nodeB.parentNode).toBe(mo0ws0);
     expect(mo0ws0.getNodeByType(NODE_TYPES.WINDOW)).toEqual(expect.arrayContaining([nodeA, nodeB]));
   });
+
+  it("re-homes windows when the REMOVED workspace is index 0 and the survivor slides into it", () => {
+    // Mutter's workspace indices are GList positions, so removing index k makes
+    // every later workspace slide down one. The rehome runs BEFORE
+    // renumberWorkspacesAfterRemoval, so it reads a post-removal live index against
+    // a still-pre-renumber tree. For k > 0 that is harmless — Mutter relocates to
+    // l->prev at k-1, which never renumbers — but for k == 0 the neighbour is
+    // l->next, which slides into index 0 and collides with the doomed node's own
+    // name. The case above removes index 1, the one arrangement where the stale
+    // name is accidentally correct; this one covers k == 0.
+    const { monitor: mon0ws0 } = getWorkspaceAndMonitor(ctx, 0, 0);
+
+    // All tracked windows live (in the tree) on the FIRST workspace — the doomed one.
+    const { win: winA, node: nodeA } = addWindow("A", mon0ws0.nodeValue, ctx.workspaces[0]);
+    const { win: winB, node: nodeB } = addWindow("B", mon0ws0.nodeValue, ctx.workspaces[0]);
+
+    const survivor = tree.findNode("mo0ws1");
+    expect(survivor.getNodeByType(NODE_TYPES.WINDOW).length).toBe(0);
+    expect(tree.getNodeByType(NODE_TYPES.WINDOW).length).toBe(2);
+
+    // Simulate Mutter: workspace 0 has already left the list, so the survivor
+    // (formerly index 1) now reports index 0, and both windows report it as their
+    // live workspace. The tree is still pre-renumber: `ws0` is the DOOMED node.
+    ctx.workspaces[1]._index = 0;
+    winA._workspace = ctx.workspaces[1];
+    winB._workspace = ctx.workspaces[1];
+
+    wm._rehomeWorkspaceWindowsBeforeRemoval(0);
+    tree.removeWorkspace(0);
+    tree.workspaceManager.renumberWorkspacesAfterRemoval(0);
+
+    // Windows are NOT stranded: still tracked, and under the survivor's monitor node.
+    const remaining = tree.getNodeByType(NODE_TYPES.WINDOW);
+    expect(remaining).toContain(nodeA);
+    expect(remaining).toContain(nodeB);
+    expect(remaining.length).toBe(2);
+    expect(nodeA.parentNode).toBe(survivor);
+    expect(nodeB.parentNode).toBe(survivor);
+  });
 });

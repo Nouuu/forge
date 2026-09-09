@@ -58,50 +58,42 @@ See **[docs/dev/](docs/dev/)** for the detailed reference: [architecture.md](doc
 - `legacy`/`gnome-3-36` - GNOME 3.36 support (feature-frozen)
 
 
-<!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:7510c1e2 -->
-## Beads Issue Tracker
+## Issue Tracking
 
-This project uses **bd (beads)** for issue tracking. Run `bd prime` to see full workflow context and commands.
-
-### Quick Reference
-
-```bash
-bd ready              # Find available work
-bd show <id>          # View issue details
-bd update <id> --claim  # Claim work
-bd close <id>         # Complete work
-```
+This fork does **not** run a tracker inside the repository. Upstream
+(`jcrussell/forge`) uses **bd (beads)** — a Dolt-backed issue store synced over
+`refs/dolt/data` — but none of its data is distributed: `.beads/` ships only hooks and
+config (`dolt/` and `issues.jsonl` are gitignored), and this fork's remote carries no
+`refs/dolt/*`. The `forge-xxxx` identifiers throughout the commit history, code
+comments and regression-test headers are therefore upstream references that cannot be
+resolved locally — treat them as stable labels, not as queryable tickets.
 
 ### Rules
 
-- Use `bd` for ALL task tracking — do NOT use TodoWrite, TaskCreate, or markdown TODO lists
-- Run `bd prime` for detailed command reference and session close protocol
-- Use `bd remember` for persistent knowledge — do NOT use MEMORY.md files
+- Track follow-up work in this fork's GitHub issues, not in files. Do not add markdown
+  TODO lists to the repo.
+- `TodoWrite` is fine for within-session task lists; it is not persistence.
+- Durable knowledge goes to the session memory directory, not to a `MEMORY.md` in the
+  repo.
+- When fixing a defect, keep the existing traceability convention: reference the issue
+  id in the commit subject, in a comment at the fix site, and in the header of the
+  pinned `tests/regression/bug-<id>-<slug>.test.js`.
 
-**Architecture in one line:** issues live in a local Dolt DB; sync uses `refs/dolt/data` on your git remote; `.beads/issues.jsonl` is a passive export. See https://github.com/gastownhall/beads/blob/main/docs/SYNC_CONCEPTS.md for details and anti-patterns.
+> Re-adopting beads is a deliberate choice, not a default: it would need `bd` installed
+> and a fresh local database. Only worth it if this fork takes on enough in-flight work
+> to justify a tracker, or starts upstreaming and needs to speak the maintainer's ids.
 
 ## Session Completion
 
-**When ending a work session**, you MUST complete ALL steps below. Work is NOT complete until `git push` succeeds.
+**When ending a work session**, complete the steps below, then stop and report.
 
-**MANDATORY WORKFLOW:**
+1. **Run quality gates** (if code changed) - tests, linters, type check, build
+2. **Note remaining work** - anything needing follow-up goes to this fork's GitHub issues
+3. **Show the state** - `git status` and `git diff --stat`, so the change set is visible
+4. **Clean up** - clear stashes, remove scratch artifacts
+5. **Hand off** - what changed, what was verified, what is still open
 
-1. **File issues for remaining work** - Create issues for anything that needs follow-up
-2. **Run quality gates** (if code changed) - Tests, linters, builds
-3. **Update issue status** - Close finished work, update in-progress items
-4. **PUSH TO REMOTE** - This is MANDATORY:
-   ```bash
-   git pull --rebase
-   git push
-   git status  # MUST show "up to date with origin"
-   ```
-5. **Clean up** - Clear stashes, prune remote branches
-6. **Verify** - All changes committed AND pushed
-7. **Hand off** - Provide context for next session
-
-**CRITICAL RULES:**
-- Work is NOT complete until `git push` succeeds
-- NEVER stop before pushing - that leaves work stranded locally
-- NEVER say "ready to push when you are" - YOU must push
-- If push fails, resolve and retry until it succeeds
-<!-- END BEADS INTEGRATION -->
+**Committing and pushing are the maintainer's call.** Do not commit or push unless
+asked explicitly, in this session, for this change. Prepare the work and report it;
+never push on your own initiative, and never treat an earlier approval as covering a
+later change.

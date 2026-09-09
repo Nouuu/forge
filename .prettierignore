@@ -19,3 +19,5 @@ node_modules
 .beads
 .claude
 .scratch
+.specify
+coverage

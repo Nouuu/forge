@@ -29,6 +29,13 @@ coverage/
 # Python virtualenv (local tooling, not part of the extension)
 .venv/
 
+# Agent tooling (local, not part of the extension)
+.specify/
+.claude/skills/
+
 # Editor / toolchain local state
 .idea/
 mise.toml
+
+# Spec-kit reverse-engineered artifacts (local agent tooling)
+specs/
