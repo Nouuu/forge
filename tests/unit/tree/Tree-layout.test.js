@@ -586,15 +586,110 @@ describe("Tree Layout Algorithms", () => {
       const container = new Node(NODE_TYPES.CON, new St.Bin());
       container.layout = LAYOUT_TYPES.TABBED;
       container.rect = { x: 0, y: 0, width: 1000, height: 20 };
-      container.childNodes = [
+      const children = [
         new Node(NODE_TYPES.CON, new St.Bin()),
         new Node(NODE_TYPES.CON, new St.Bin()),
       ];
+      container.childNodes = children;
 
-      const child = new Node(NODE_TYPES.CON, new St.Bin());
-      bottomCtx.tree.processTabbed(container, child, { stackedHeight: 35 }, 0);
+      const child = children[0];
+      // tiledChildren is REQUIRED by _applyDecorationRect. Omitting it used to make
+      // this test pass through the forge-s7qo catch (TypeError -> decoration
+      // destroyed), so it exercised the self-heal, not the placement it claims to.
+      bottomCtx.tree.processTabbed(
+        container,
+        child,
+        { stackedHeight: 35, tiledChildren: children },
+        0
+      );
 
       expect(child.rect.height).toBeGreaterThanOrEqual(1);
+      // The decoration survived: the placement path really ran.
+      expect(container.decoration).not.toBeNull();
+      expect(container.decoration.height).toBe(35);
+    });
+
+    // G003: the bar column is placed with the UNCAPPED total, so a column taller
+    // than the container anchored at `y + height - totalBars` climbs above the
+    // container's own top edge. Overflow must go downward, as it does for "top".
+    it("never places the stacked bar column above the container top (bottom)", () => {
+      const container = new Node(NODE_TYPES.CON, new St.Bin());
+      container.layout = LAYOUT_TYPES.STACKED;
+      container.rect = { x: 0, y: 0, width: 1000, height: 100 };
+
+      const children = [0, 1, 2, 3, 4].map(() => new Node(NODE_TYPES.CON, new St.Bin()));
+      container.childNodes = children;
+      const params = { stackedHeight: 35, tiledChildren: children }; // 175 > 100
+
+      children.forEach((child, i) => bottomCtx.tree.processStacked(container, child, params, i));
+
+      const renderRect = bottomCtx.tree.processGap(container);
+      expect(container.decoration.y).toBeGreaterThanOrEqual(renderRect.y);
+    });
+
+    // G008: the trailing child.render() sat OUTSIDE the forge-s7qo try/catch, so a
+    // throw from Node.render (it derefs this.tab.get_child_at_index(1)) escaped
+    // processStacked -> processNode -> Tree.render and aborted the whole pass.
+    it("does not let a throw from child.render() escape the layout pass", () => {
+      const container = new Node(NODE_TYPES.CON, new St.Bin());
+      container.layout = LAYOUT_TYPES.STACKED;
+      container.rect = { x: 0, y: 0, width: 1000, height: 800 };
+
+      const child = new Node(NODE_TYPES.CON, new St.Bin());
+      container.childNodes = [child];
+      child.tab = {
+        get_child_at_index: () => {
+          throw new Error("Object St.Button has been already deallocated");
+        },
+        get_parent: () => null,
+      };
+
+      expect(() =>
+        bottomCtx.tree.processStacked(
+          container,
+          child,
+          { stackedHeight: 35, tiledChildren: [child] },
+          0
+        )
+      ).not.toThrow();
+    });
+  });
+
+  // G005: applyMargins subtracted the four margin settings with no clamp. The prefs
+  // spinners cap each at 100 px, but a direct gsettings or settings.json write can
+  // still exceed the work area, and a negative rect then falls through processGap's
+  // `nodeWidth > gap * 2` guard unchanged and makes Tree.apply skip every child —
+  // windows silently keep stale geometry.
+  describe("applyMargins", () => {
+    const withMargins = (margins) => createTreeFixture({ settings: margins, fullExtWm: true });
+
+    it("subtracts the four margins from the work area", () => {
+      const marginCtx = withMargins({
+        "window-margin-top": 10,
+        "window-margin-bottom": 20,
+        "window-margin-left": 30,
+        "window-margin-right": 40,
+      });
+
+      const rect = marginCtx.tree.applyMargins({ x: 0, y: 0, width: 1000, height: 800 });
+
+      expect(rect).toEqual({ x: 30, y: 10, width: 1000 - 70, height: 800 - 30 });
+      marginCtx.cleanup();
+    });
+
+    it("never produces a negative width or height", () => {
+      const marginCtx = withMargins({
+        "window-margin-top": 500,
+        "window-margin-bottom": 500,
+        "window-margin-left": 800,
+        "window-margin-right": 800,
+      });
+
+      const rect = marginCtx.tree.applyMargins({ x: 0, y: 0, width: 1000, height: 800 });
+
+      expect(rect.width).toBeGreaterThanOrEqual(0);
+      expect(rect.height).toBeGreaterThanOrEqual(0);
+      marginCtx.cleanup();
     });
   });
 

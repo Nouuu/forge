@@ -51,6 +51,7 @@ describe("Bug forge-l64o: settings changes reach the render pipeline", () => {
     ["window-maximize-on-single", "lib/extension/window.js:1723"],
     ["split-border-toggle", "lib/extension/decoration.js:112"],
     ["focus-border-radius", "lib/extension/decoration.js:248"],
+    ["showtab-decoration-enabled", "lib/extension/tree.js:2344"],
   ])("re-renders on %s (read at %s)", (key) => {
     const renderSpy = vi.spyOn(wm(), "renderTree").mockImplementation(() => {});
 

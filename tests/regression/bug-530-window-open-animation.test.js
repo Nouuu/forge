@@ -78,6 +78,29 @@ describe("Bug #530: first placement preserves the window-open animation", () => 
     expect(spy).toHaveBeenCalledTimes(1);
   });
 
+  // G015: Tree.apply cleared firstRender for every tiled child, including one whose
+  // move() early-returned. move() is the only reader, so a window that never got
+  // placed lost its one-shot and had its open effect stripped on the next render —
+  // exactly what #530 exists to prevent. move() is now the sole authority.
+  it("keeps the one-shot when move() early-returns under a live grab", () => {
+    const { meta, node } = newTrackedWindow();
+    const spy = vi.spyOn(meta.get_compositor_private(), "remove_all_transitions");
+
+    meta.firstRender = true;
+    // A live Forge grab makes move() return before it consumes the flag.
+    node.grabMode = true;
+    ctx.tree.render("test-grabbed");
+    expect(spy).not.toHaveBeenCalled();
+    expect(meta.firstRender).toBe(true);
+
+    // Grab over: the deferred first placement must still keep the open effect.
+    node.grabMode = null;
+    meta.move_resize_frame(false, 5, 5, 300, 300);
+    ctx.tree.render("test-after-grab");
+
+    expect(spy).not.toHaveBeenCalled();
+  });
+
   it("render path: first render preserves transitions, a real re-placement strips", () => {
     const { meta } = newTrackedWindow();
     const spy = vi.spyOn(meta.get_compositor_private(), "remove_all_transitions");
