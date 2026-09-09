@@ -101,6 +101,25 @@ describe("FocusManager", () => {
       expect(focusSpy).not.toHaveBeenCalled();
       expect(raiseSpy).not.toHaveBeenCalled();
     });
+
+    // The third `return false` exit — settings gone, which happens between
+    // disable() nulling ext.settings and the already-scheduled source firing. It
+    // returned without zeroing the id, so the next pointerLoopInit/_removeSignals
+    // called GLib.Source.remove on an id the source had already self-destructed.
+    it("returns false and clears the timeout id when ext.settings is null", () => {
+      const { focusSpy, raiseSpy } = placeWindowUnderPointer();
+      wm().shouldFocusOnHover = true;
+      wm().disabled = false;
+      wm().ext.settings = null;
+      wm()._pointerFocusTimeoutId = 99;
+
+      const result = wm()._focusWindowUnderPointer();
+
+      expect(result).toBe(false);
+      expect(wm()._pointerFocusTimeoutId).toBe(0);
+      expect(focusSpy).not.toHaveBeenCalled();
+      expect(raiseSpy).not.toHaveBeenCalled();
+    });
   });
 
   describe("_focusWindowUnderPointer() - continuing guards (return true, no focus)", () => {
