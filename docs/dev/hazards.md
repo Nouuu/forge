@@ -84,11 +84,19 @@ Mutter 49) called directly, so it crashes on the other version.
 A `GLib.timeout_add` / `idle_add` whose id is not removed on the owning object's
 teardown keeps firing against a dead object.
 
-- **Guardrail (partial):** each owner stores its source id and removes it on
-  teardown (`config-sync.js`, `focus.js`, `window.js`), but there is no shared
-  helper and no static rule.
-- **Gap:** no `no-untracked-timeout` rule and no central register/clear helper —
-  the next site can silently reintroduce the leak. Future work.
+- **Guardrail:** `tests/unit/extension/source-id-hygiene.test.js` — a fence that
+  DISCOVERS the ids by parsing `lib/` rather than listing them, then asserts each one
+  is released on its owner's teardown (`WindowManager._removeSignals`,
+  `ConfigSync.destroy`, the per-window sweep in `disable()`), and that no site
+  discards its id outright. Add a timeout anywhere in `lib/` and the fence fails
+  until it is cleared — no test edit needed, which is the point: a hand-maintained
+  list drifts exactly like the one it guards.
+- **Why not a lint rule:** `no-untracked-timeout` was the obvious answer and is the
+  wrong one. All 12 sites already store their id, so a per-node rule sees nothing
+  wrong; the defect lives in the *teardown*, a different function, out of a lint
+  rule's reach.
+- **Gap:** `lib/prefs/widgets.js` (`_saveSourceId`) is not fenced — it lives in the
+  prefs process, which is torn down wholesale, so a stale source cannot outlive it.
 
 ### 7. Multi-writer expando state on a `Meta.Window`
 Forge parks bookkeeping directly on the `Meta.Window` — `_forgeSetAbove`,
