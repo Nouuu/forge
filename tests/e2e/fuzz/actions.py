@@ -88,7 +88,6 @@ TILING_ACTIONS = [
     ),
     _action("GapSize", 2, lambda r: {"amount": r.choice([2, 4, -2, -4])}),
     _action("FloatToggle", 3, lambda r: dict(DEFAULT_FLOAT_LAYOUT)),
-    _action("FloatNonPersistentToggle", 2, lambda r: dict(DEFAULT_FLOAT_LAYOUT)),
     # Workspace-level toggles (forge-cnrc): wholesale state churn across the WHOLE active
     # workspace, not a single window — float/unfloat every window (ActiveTileToggle) or flip
     # the monocle layout (MonocleToggle). Exercises mass float/decoration/tree-rebuild paths
@@ -108,7 +107,10 @@ TILING_ACTIONS = [
     # the float-toggle body, so it needs the float layout). ConfigReload re-reads windows.json +
     # reimports config (the reload/re-apply path).
     _action("ShowTabDecorationToggle", 3, lambda r: {}),
-    _action("FloatClassToggle", 2, lambda r: dict(DEFAULT_FLOAT_LAYOUT)),
+    # Weight 4, not 2: it absorbs the weight of FloatNonPersistentToggle, an alias
+    # that dispatched to this exact same class-wide body under a name that promised
+    # non-persistence it never delivered. Removed; the distribution is unchanged.
+    _action("FloatClassToggle", 4, lambda r: dict(DEFAULT_FLOAT_LAYOUT)),
     _action("ConfigReload", 1, lambda r: {}),
     # Remaining keybinding-dispatched commands, added for full keybinding coverage (forge-cnrc).
     # Low value (cosmetic/pointer/config-export) but cheap and real bound actions. FocusBorderToggle

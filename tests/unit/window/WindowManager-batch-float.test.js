@@ -93,6 +93,66 @@ describe("WindowManager - Batch Float Operations", () => {
     });
   });
 
+  describe("floatAllWindows() always-on-top reconciliation", () => {
+    // G3: floatAllWindows/unfloatAllWindows assigned w.mode directly, so the
+    // TilingModeToggle path skipped the make_above/unmake_above reconciliation the
+    // `float` setter does — unlike floatWorkspace/unfloatWorkspace, which use it.
+    // renderTree short-circuits to decoration-only while tiling-mode-enabled is
+    // false, so processFloats never caught up either.
+    it("pins the windows it floats when always-on-top is enabled", () => {
+      const { monitor } = getWorkspaceAndMonitor(ctx);
+      const metaWindow1 = createMockWindow({ id: 1 });
+      const nodeWindow1 = ctx.tree.createNode(monitor.nodeValue, NODE_TYPES.WINDOW, metaWindow1);
+      nodeWindow1.mode = WINDOW_MODES.TILE;
+
+      wm().floatAllWindows();
+
+      expect(metaWindow1.is_above()).toBe(true);
+      expect(metaWindow1._forgeSetAbove).toBe(true);
+    });
+
+    it("unpins its own pin when the windows are unfloated", () => {
+      const { monitor } = getWorkspaceAndMonitor(ctx);
+      const metaWindow1 = createMockWindow({ id: 1 });
+      const nodeWindow1 = ctx.tree.createNode(monitor.nodeValue, NODE_TYPES.WINDOW, metaWindow1);
+      nodeWindow1.mode = WINDOW_MODES.TILE;
+
+      wm().floatAllWindows();
+      wm().unfloatAllWindows();
+
+      expect(nodeWindow1.isTile()).toBe(true);
+      expect(metaWindow1.is_above()).toBe(false);
+    });
+
+    it("leaves a pin the user applied alone", () => {
+      const { monitor } = getWorkspaceAndMonitor(ctx);
+      const metaWindow1 = createMockWindow({ id: 1 });
+      const nodeWindow1 = ctx.tree.createNode(monitor.nodeValue, NODE_TYPES.WINDOW, metaWindow1);
+      nodeWindow1.mode = WINDOW_MODES.TILE;
+      metaWindow1.make_above(); // the USER pinned it
+
+      wm().floatAllWindows();
+      wm().unfloatAllWindows();
+
+      expect(metaWindow1.is_above()).toBe(true);
+    });
+
+    it("keeps an already-floating window floating across the cycle", () => {
+      const { monitor } = getWorkspaceAndMonitor(ctx);
+      const metaWindow1 = createMockWindow({ id: 1 });
+      const nodeWindow1 = ctx.tree.createNode(monitor.nodeValue, NODE_TYPES.WINDOW, metaWindow1);
+      nodeWindow1.mode = WINDOW_MODES.FLOAT;
+
+      wm().floatAllWindows();
+      expect(nodeWindow1.prevFloat).toBe(true);
+
+      wm().unfloatAllWindows();
+
+      expect(nodeWindow1.isFloat()).toBe(true);
+      expect(nodeWindow1.prevFloat).toBe(false);
+    });
+  });
+
   describe("unfloatAllWindows()", () => {
     it("should unfloat all windows that were not previously floating", () => {
       const { monitor } = getWorkspaceAndMonitor(ctx);

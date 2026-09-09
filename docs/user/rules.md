@@ -30,7 +30,7 @@ Each override:
 | Field | Required | Meaning |
 | --- | --- | --- |
 | `wmClass` | no* | Window class to match. **Exact** match (case-sensitive); comma-separates a list of exact classes. |
-| `wmTitle` | no* | Window title. Matching differs by mode — see below. |
+| `wmTitle` | no* | Window title. Case-insensitive substring; `!` prefix negates; comma-separates alternatives. |
 | `mode` | yes | `float` = keep out of tiling; `tile` = force into tiling. |
 | `wmId` | — | Runtime-only (written by the per-window toggle); don't set by hand. |
 
@@ -38,12 +38,9 @@ Each override:
 bundled config ships one (`{"wmTitle": "Picture-in-Picture", "mode": "float"}`) to
 float browser PIP windows whatever their class.
 
-`wmTitle` matching is **not** the same in both modes today:
-
-| `mode` | `wmTitle` matching |
-| --- | --- |
-| `float` | Case-insensitive substring; `!` prefix negates; comma-separates alternatives. |
-| `tile` | Case-sensitive substring only — no negation, no comma list. |
+`wmTitle` matches the same way in both modes. A single space (`" "`) is the one
+exception: it means "the window whose title is literally one space", and is compared
+for equality rather than as a substring.
 
 After hand-editing, reload with **`Super+Shift+r`**.
 

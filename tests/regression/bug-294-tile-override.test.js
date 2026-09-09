@@ -144,6 +144,34 @@ describe("Bug #294: Explicit TILE override for windows that default to float", (
     });
   });
 
+  // G5: wmTitle matched case-sensitively here and case-insensitively (with `!`
+  // negation and comma alternatives) in the float matcher, while docs/user/rules.md
+  // documents one wmTitle semantic. The two matchers now share one helper.
+  describe("wmTitle matching is the same as for float rules", () => {
+    const tileWindow = (title) =>
+      createMockWindow({ wm_class: "Term", id: "t-1", title, allows_resize: false });
+
+    it("matches a title case-insensitively", () => {
+      ctx.configMgr.windowProps.overrides = [{ wmTitle: "black box", mode: "tile" }];
+
+      expect(ctx.windowManager.isFloatingExempt(tileWindow("Black Box"))).toBe(false);
+    });
+
+    it("accepts comma-separated alternatives", () => {
+      ctx.configMgr.windowProps.overrides = [{ wmTitle: "Kitty,Black Box", mode: "tile" }];
+
+      expect(ctx.windowManager.isFloatingExempt(tileWindow("Black Box"))).toBe(false);
+      expect(ctx.windowManager.isFloatingExempt(tileWindow("Alacritty"))).toBe(true);
+    });
+
+    it("honours the ! negation prefix", () => {
+      ctx.configMgr.windowProps.overrides = [{ wmTitle: "!Preferences", mode: "tile" }];
+
+      expect(ctx.windowManager.isFloatingExempt(tileWindow("Black Box"))).toBe(false);
+      expect(ctx.windowManager.isFloatingExempt(tileWindow("Preferences"))).toBe(true);
+    });
+  });
+
   describe("TILE override vs FLOAT override precedence", () => {
     it("should tile when TILE override exists even if FLOAT override also exists for different criteria", () => {
       // Complex scenario: class-based float, but title-based tile

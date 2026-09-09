@@ -73,6 +73,73 @@ describe("FocusManager", () => {
     });
   });
 
+  describe("_focusWindowUnderPointer() - already-focused no-op", () => {
+    // The loop runs every 16 ms, so a pointer resting motionless over a window
+    // drove ~62 focus()+raise() calls per second with nothing short-circuiting on
+    // the window already holding focus.
+    it("does not re-focus or re-raise the window that already has focus", () => {
+      const { metaWindow, focusSpy, raiseSpy } = placeWindowUnderPointer();
+      wm().shouldFocusOnHover = true;
+      global.display.focus_window = metaWindow;
+
+      const result = wm()._focusWindowUnderPointer();
+
+      expect(focusSpy).not.toHaveBeenCalled();
+      expect(raiseSpy).not.toHaveBeenCalled();
+      expect(result).toBe(true);
+    });
+
+    it("still focuses when the pointer moves to a different window", () => {
+      const { metaWindow, focusSpy, raiseSpy } = placeWindowUnderPointer();
+      wm().shouldFocusOnHover = true;
+      global.display.focus_window = createMockWindow({ id: 999, workspace: workspace0() });
+
+      wm()._focusWindowUnderPointer();
+
+      expect(focusSpy).toHaveBeenCalledWith(12345);
+      expect(raiseSpy).toHaveBeenCalled();
+      expect(metaWindow).toBeDefined();
+    });
+  });
+
+  // G14: the loop refuses to steal focus FROM a dialog, but _getMetaWindowAtPointer
+  // happily returns one as the hover target, so hover can focus INTO a dialog.
+  // Characterised, not changed: the asymmetry is the intended one. Refusing to
+  // steal focus protects an active modal prompt (#483); refusing to focus into a
+  // hovered dialog would instead break focus-follows-mouse for every dialog the
+  // user deliberately points at.
+  describe("_focusWindowUnderPointer() - dialog asymmetry (characterisation)", () => {
+    it("focuses INTO a hovered dialog", () => {
+      const dialog = createMockWindow({
+        rect: new Rectangle({ x: 0, y: 0, width: 960, height: 1080 }),
+        workspace: workspace0(),
+        window_type: WindowType.DIALOG,
+      });
+      global.get_window_actors.mockReturnValue([{ meta_window: dialog }]);
+      global.get_pointer.mockReturnValue([480, 540]);
+      const focusSpy = vi.spyOn(dialog, "focus");
+      wm().shouldFocusOnHover = true;
+      global.display.focus_window = null;
+
+      wm()._focusWindowUnderPointer();
+
+      expect(focusSpy).toHaveBeenCalled();
+    });
+
+    it("refuses to steal focus FROM a dialog", () => {
+      const { focusSpy } = placeWindowUnderPointer();
+      wm().shouldFocusOnHover = true;
+      global.display.focus_window = createMockWindow({
+        id: 998,
+        window_type: WindowType.MODAL_DIALOG,
+      });
+
+      wm()._focusWindowUnderPointer();
+
+      expect(focusSpy).not.toHaveBeenCalled();
+    });
+  });
+
   describe("_focusWindowUnderPointer() - disabling guards (return false)", () => {
     it("returns false and clears the timeout id when shouldFocusOnHover is false", () => {
       const { focusSpy, raiseSpy } = placeWindowUnderPointer();
