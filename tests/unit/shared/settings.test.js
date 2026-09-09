@@ -178,6 +178,11 @@ describe("ConfigManager", () => {
       configManager.loadFile("/custom", "file.json", defaultFile);
 
       expect(mockStream.write_all).toHaveBeenCalled();
+      // The stream must be closed, not left for the GC to reclaim: every other
+      // write path in these files goes through replace_contents(), which closes
+      // for itself. Dropping a GFileOutputStream holds the fd until GJS collects
+      // the wrapper, and seeding runs on every first launch of a fresh profile.
+      expect(mockStream.close).toHaveBeenCalled();
 
       vi.restoreAllMocks();
     });
