@@ -532,19 +532,51 @@ describe("ConfigSync", () => {
   });
 
   describe("destroy cleans up", () => {
+    // Both tests below assert the handler fires BEFORE destroy() as well as after.
+    // Without that first assertion they pass whether or not destroy() disconnects
+    // anything: the default mock's hasPortableConfig() is false, so the handler
+    // early-returns before the debounce, and the GLib mock's timeout_add never
+    // invokes its callback. A green test that survives deleting
+    // _disconnectSettingsSignals() is not a test — and an undisconnected GSettings
+    // "changed" handler surviving disable() is exactly the forge-5y6j bug class.
     it("should not trigger exports after destroy", () => {
+      configMgr.hasPortableConfig = () => true;
       configSync.configFilesLoaded = true;
       configSync._connectSettingsSignals();
 
-      // Destroy cleans up signals
+      const timeoutSpy = vi.spyOn(GLib, "timeout_add").mockImplementation(() => 42);
+
+      // The handler is live: this is what makes the post-destroy assertion falsifiable.
+      settings._emit("changed", "tiling-mode-enabled");
+      expect(timeoutSpy).toHaveBeenCalledTimes(1);
+
       configSync.destroy();
+      timeoutSpy.mockClear();
 
       // Trigger a settings change — handler should be disconnected
       settings._emit("changed", "tiling-mode-enabled");
+      expect(timeoutSpy).not.toHaveBeenCalled();
 
-      // No export should occur
-      expect(configMgr.settingsProps).toBeNull();
-      expect(configMgr.keybindingsProps).toBeNull();
+      timeoutSpy.mockRestore();
+    });
+
+    it("should not trigger exports from the keybindings schema after destroy", () => {
+      configMgr.hasPortableConfig = () => true;
+      configSync.configFilesLoaded = true;
+      configSync._connectSettingsSignals();
+
+      const timeoutSpy = vi.spyOn(GLib, "timeout_add").mockImplementation(() => 42);
+
+      kbdSettings._emit("changed", "window-focus-left");
+      expect(timeoutSpy).toHaveBeenCalledTimes(1);
+
+      configSync.destroy();
+      timeoutSpy.mockClear();
+
+      kbdSettings._emit("changed", "window-focus-left");
+      expect(timeoutSpy).not.toHaveBeenCalled();
+
+      timeoutSpy.mockRestore();
     });
   });
 });
