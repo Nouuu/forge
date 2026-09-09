@@ -112,6 +112,22 @@ describe("WindowManager - Workspace Management", () => {
     });
   });
 
+  // floatWorkspace / unfloatWorkspace both open with `if (!workspaceWindows) return;`
+  // — a guard that could never fire, because getWindowsOnWorkspace dereferenced
+  // tree.findNode's result directly and threw first. The `ws{n}` node is genuinely
+  // absent during the destroy-then-reload window opened by workspaces-reordered.
+  describe("getWindowsOnWorkspace with a missing workspace node", () => {
+    it("returns null instead of throwing when the ws node is absent", () => {
+      expect(() => wm().getWindowsOnWorkspace(99)).not.toThrow();
+      expect(wm().getWindowsOnWorkspace(99)).toBeNull();
+    });
+
+    it("lets floatWorkspace and unfloatWorkspace reach their own guard", () => {
+      expect(() => wm().floatWorkspace(99)).not.toThrow();
+      expect(() => wm().unfloatWorkspace(99)).not.toThrow();
+    });
+  });
+
   describe("isActiveWindowWorkspaceTiled", () => {
     it("should return true when window workspace is not skipped", () => {
       ctx.settings.get_string.mockImplementation((key) => {

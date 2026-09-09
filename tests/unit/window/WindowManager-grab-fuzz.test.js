@@ -116,6 +116,10 @@ describe("WindowManager - grab-sequence fuzzer", () => {
       // Per-grab state is fully released (forge-leqs / forge-62ja).
       expect(wm.grabOp, `${where}: stale grabOp`).toBeNull();
       expect(wm._draggedNodeWindow, `${where}: stale _draggedNodeWindow`).toBeNull();
+      // The Bug #151 pointer snapshot is per-grab state too: getDragPointer()
+      // compares the live pointer against it to tell a touch drag from a mouse
+      // drag, so a snapshot surviving into the next grab can misclassify one.
+      expect(wm._grabStartPointer, `${where}: stale _grabStartPointer`).toBeNull();
 
       // No surviving node holds an orphaned preview overlay.
       const withPreview = wm.allNodeWindows.filter((n) => n.previewHint);
