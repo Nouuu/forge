@@ -142,7 +142,29 @@ export class Settings extends withSignals() {
   set_value(key, value) {
     this._settings.set(key, value);
   }
+
+  /**
+   * Two-way property binding. The real GSettings.bind writes the key into the
+   * object property immediately and keeps both sides in sync; tests only need the
+   * initial push plus the settings -> object direction, which is what the quick
+   * settings toggle relies on.
+   */
+  bind(key, object, property, _flags) {
+    object[property] = this.get_boolean(key);
+    this.connect(`changed::${key}`, () => {
+      object[property] = this.get_boolean(key);
+    });
+  }
 }
+
+export const SettingsBindFlags = {
+  DEFAULT: 0,
+  GET: 1 << 0,
+  SET: 1 << 1,
+  NO_SENSITIVITY: 1 << 2,
+  GET_NO_CHANGES: 1 << 3,
+  INVERT_BOOLEAN: 1 << 4,
+};
 
 export const FileCreateFlags = {
   NONE: 0,
@@ -168,6 +190,7 @@ export const FileCopyFlags = {
 export default {
   File,
   Settings,
+  SettingsBindFlags,
   FileCreateFlags,
   FileCopyFlags,
   FileQueryInfoFlags,

@@ -14,7 +14,7 @@ vi.mock("gi://GObject", () => GnomeMocks.GObject);
 
 // Create shared mock objects that tests can modify
 // Using vi.hoisted() ensures these are created before mocks and are mutable
-const { mockOverview, mockWm, mockPanel } = vi.hoisted(() => {
+const { mockOverview, mockWm, mockPanel, mockSessionMode } = vi.hoisted(() => {
   return {
     mockOverview: {
       visible: false,
@@ -33,6 +33,12 @@ const { mockOverview, mockWm, mockPanel } = vi.hoisted(() => {
           addExternalIndicator: () => {},
         },
       },
+    },
+    // The quick-settings menu hides its Settings action on the lock screen.
+    mockSessionMode: {
+      allowSettings: true,
+      currentMode: "user",
+      isLocked: false,
     },
   };
 });
@@ -59,7 +65,63 @@ vi.mock("resource:///org/gnome/shell/ui/main.js", () => ({
   overview: mockOverview,
   wm: mockWm,
   panel: mockPanel,
+  sessionMode: mockSessionMode,
   notify: () => {},
+}));
+
+// Quick Settings widgets (lib/extension/indicator.js). GNOME's real classes are
+// St/Clutter actors; these keep just the surface the indicator touches — the menu
+// API, the indicator slot, and enough of a GObject base for registerClass.
+vi.mock("resource:///org/gnome/shell/ui/quickSettings.js", () => ({
+  QuickMenuToggle: class QuickMenuToggle extends GnomeMocks.GObject.Object {
+    constructor(params = {}) {
+      super();
+      Object.assign(this, params);
+      this.menu = {
+        _settingsActions: {},
+        _items: [],
+        setHeader: (icon, title, subtitle) => {
+          this.menu._header = { icon, title, subtitle };
+        },
+        addMenuItem: (item) => this.menu._items.push(item),
+        addAction: (label, callback) => {
+          const item = { label, callback, visible: true };
+          this.menu._items.push(item);
+          return item;
+        },
+      };
+    }
+  },
+  SystemIndicator: class SystemIndicator extends GnomeMocks.GObject.Object {
+    constructor() {
+      super();
+      this.quickSettingsItems = [];
+      this._indicators = [];
+    }
+    _addIndicator() {
+      const indicator = new GnomeMocks.St.Icon();
+      this._indicators.push(indicator);
+      return indicator;
+    }
+    destroy() {
+      this._destroyed = true;
+    }
+  },
+}));
+
+vi.mock("resource:///org/gnome/shell/ui/popupMenu.js", () => ({
+  PopupSwitchMenuItem: class PopupSwitchMenuItem extends GnomeMocks.GObject.Object {
+    constructor(title, active) {
+      super();
+      this.label = title;
+      this.state = active;
+    }
+    // The real widget updates the switch WITHOUT re-emitting 'toggled'.
+    setToggleState(state) {
+      this.state = state;
+    }
+  },
+  PopupSeparatorMenuItem: class PopupSeparatorMenuItem extends GnomeMocks.GObject.Object {},
 }));
 
 // Also set global.Main to use the same overview object reference
@@ -67,6 +129,7 @@ global.Main = {
   overview: mockOverview,
   wm: mockWm,
   panel: mockPanel,
+  sessionMode: mockSessionMode,
   notify: () => {},
 };
 
