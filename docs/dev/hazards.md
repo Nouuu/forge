@@ -67,6 +67,21 @@ has been destroyed/reparented — e.g. tab teardown racing a render (`forge-v2yz
   null a dangling actor ref from the actor's own `destroy` handler.
 - **Guardrail (runtime):** e2e fuzzer hazard sequences (spawn/drag/close
   adjacency) + the "already disposed" log markers.
+- **Guardrail (unit):** `tests/unit/window/WindowManager-teardown-fuzz.test.js`.
+  `disable()` is where a throw stops being a bug report and becomes an outage —
+  GNOME catches it, marks the extension errored and will not load it again without
+  the user intervening — and it runs at the worst moments (lock, suspend, update).
+  The fuzzer builds a randomized shell state (arbitrary layouts, floats, pinned and
+  fullscreen-demoted floats, a finalized wrapper, an in-flight grab, armed sources)
+  and asserts what teardown owes: no throw, no surviving GLib source, no surviving
+  handler, nothing Forge parented left in `window_group`, and idempotence. It found
+  the last unguarded deref of a finalized wrapper — `windowsAllWorkspaces` sorting
+  by `get_stable_sequence()`, which put a throw inside both `disable()` and
+  `trackCurrentWindows()`.
+- **Gap:** the drop-preview actor's release through `disable()` is not asserted —
+  the gesture that builds it is not reproducible in the unit fixture (measured: 0 of
+  40 seeds). `WindowManager-grab-fuzz` covers its release through
+  `_handleGrabOpEnd`.
 
 ### 5. Mutter version drift
 A `Meta.Window` API whose signature/availability changed across releases (most at
@@ -76,9 +91,19 @@ Mutter 49) called directly, so it crashes on the other version.
   maximize/unmaximize APIs everywhere except `lib/extension/compat.js`, forcing
   all callers through the version-dispatch shims. Full drift map + recipe:
   [compat.md](compat.md).
-- **Gap:** a few drifting calls don't yet route through `compat.js` (e.g. the
-  seat lookup in `focus.js`, some `get_active_workspace*` sites). Candidates for a
-  future rule/shim.
+- **Guardrail (capability probe):** `Compat.getDefaultSeat()` covers the one
+  Clutter API Forge called outside compat. It is probed, not version-dispatched:
+  there is no documented cutoff, only two accessors (`global.backend`, Shell's, and
+  `Clutter.get_default_backend()`, Clutter's) that have each been the current one.
+  Its caller sits inside the focus handler, so a throw there broke focus on every
+  window change — and the setting that reaches it (`move-pointer-focus-enabled`)
+  appears nowhere in `tests/e2e`, so that path had never run against a real shell on
+  any supported GNOME version.
+- **Gap:** `get_active_workspace*` is called directly at ten sites, split between
+  `global.workspace_manager` and `global.display.get_workspace_manager()`, some with
+  optional chaining and some without. No drift is documented for either accessor, so
+  this is an inconsistency to settle rather than a shim to write — do not add a
+  version dispatch without first establishing a cutoff (see "Adding a new shim").
 
 ### 6. GLib source-id leaks
 A `GLib.timeout_add` / `idle_add` whose id is not removed on the owning object's
@@ -155,7 +180,8 @@ covered on its own and nobody had written the transition BETWEEN two of them:
   empty-container invariants after tree mutations; the same rule family the e2e
   fuzzer checks, run inline on every dev render (log-and-continue).
 - **Seeded unit fuzzers** (`tests/unit/window/WindowManager-grab-fuzz.test.js`,
-  `WindowManager-above-fuzz.test.js`, `WindowManager-lifecycle-fuzz.test.js`) — deterministic operation sequences against the
+  `WindowManager-above-fuzz.test.js`, `WindowManager-lifecycle-fuzz.test.js`,
+  `WindowManager-teardown-fuzz.test.js`) — deterministic operation sequences against the
   real handlers, asserting the invariants those handlers own. Cheaper and more
   targeted than the e2e fuzzer; use one when a class has several writers of one
   piece of state.

@@ -6,6 +6,7 @@ import {
   finalizeWindow,
   getWorkspaceAndMonitor,
 } from "../mocks/helpers/index.js";
+import { withSignals } from "../mocks/helpers/signalMixin.js";
 
 /**
  * Bug #328 hardening: disconnectSignals() had no guard, so one
@@ -61,6 +62,50 @@ describe("Bug #328: disconnect on destroyed targets must not abort cleanup", () 
     expect(disconnectB).toHaveBeenCalledWith(102);
     expect(metaB.windowSignals).toBeUndefined();
     expect(wm()._signalsBound).toBe(false);
+  });
+
+  // Found by the teardown fuzzer, same family as forge-h7ba / forge-olv3: the LAST
+  // unguarded deref of a possibly-finalized wrapper. windowsAllWorkspaces sorts the
+  // tab list by get_stable_sequence(), which throws on a finalized window — and the
+  // sort runs before any caller can filter. That put a throw directly inside
+  // disable() (via _removeSignals) and inside trackCurrentWindows (via reloadTree,
+  // which monitor hot-plug now triggers), aborting teardown or a whole re-track.
+  describe("windowsAllWorkspaces tolerates a finalized wrapper in the tab list", () => {
+    const twoWindowsOneDead = () => {
+      const live = createMockWindow({ id: 9101, workspace: ctx.workspaces[0] });
+      const dead = createMockWindow({ id: 9102, workspace: ctx.workspaces[0] });
+      finalizeWindow(dead);
+      global.display.get_tab_list.mockReturnValue([dead, live]);
+      return { live, dead };
+    };
+
+    it("skips the dead wrapper instead of throwing from the sort", () => {
+      const { live } = twoWindowsOneDead();
+
+      let windows;
+      expect(() => {
+        windows = ctx.windowManager.windowsAllWorkspaces;
+      }).not.toThrow();
+
+      expect(windows).toEqual([live]);
+    });
+
+    it("keeps disable() from throwing", () => {
+      twoWindowsOneDead();
+      // _removeSignals early-returns unless _bindSignals ran, and _bindSignals needs
+      // a settings object with a signal system (same graft as bug-5y6j).
+      const SignalBox = withSignals();
+      ctx.extension.settings = Object.assign(new SignalBox(), ctx.extension.settings);
+      ctx.windowManager._bindSignals();
+
+      expect(() => ctx.windowManager.disable()).not.toThrow();
+    });
+
+    it("keeps trackCurrentWindows() from throwing", () => {
+      twoWindowsOneDead();
+
+      expect(() => ctx.windowManager.trackCurrentWindows()).not.toThrow();
+    });
   });
 
   it("a missing target with pending signal ids is a no-op, not a TypeError", () => {

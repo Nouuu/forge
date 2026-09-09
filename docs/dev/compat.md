@@ -27,6 +27,14 @@ and self-documents which API landed where.
 | `unmaximize(w)` | `unmaximize(BOTH)` | `set_unmaximize_flags(BOTH)` + `unmaximize()` |
 | `getMaximizeFlags` | `get_maximized()` | `get_maximize_flags()` |
 
+`compat.js` also holds two **capability probes**, which branch on whether a method
+exists rather than on a version — for APIs with no documented cutoff to dispatch on:
+
+| Probe | Prefers | Falls back to |
+| --- | --- | --- |
+| `isAlwaysOnAllWorkspaces` | `is_always_on_all_workspaces()` | `is_on_all_workspaces()` |
+| `getDefaultSeat` | `global.backend.get_default_seat()` | `Clutter.get_default_backend()`, else `null` |
+
 ## Drift map (reference)
 
 `meta_window_*` across the tags Forge supports:

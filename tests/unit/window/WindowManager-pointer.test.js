@@ -7,6 +7,7 @@ import {
   getWorkspaceAndMonitor,
 } from "../../mocks/helpers/index.js";
 import { Rectangle, WindowType } from "../../mocks/gnome/Meta.js";
+import Clutter from "gi://Clutter";
 import { mockSeat } from "../../mocks/gnome/Clutter.js";
 
 /**
@@ -122,6 +123,98 @@ describe("WindowManager - Focus-Follows-Pointer Behavior", () => {
       wm().movePointerWith(nodeWindow);
 
       expect(wm().lastFocusedWindow).toBe(nodeWindow);
+    });
+  });
+
+  // The seat lookup is the one Clutter API Forge calls that is NOT routed through
+  // compat.js, and the setting that reaches it (move-pointer-focus-enabled) appears
+  // nowhere in tests/e2e — so this path has never run against a real shell on any of
+  // the six GNOME versions CI covers. It sits inside the focus handler, so a throw
+  // here breaks focus on every window change, not just the pointer warp.
+  describe("warpPointerToNodeWindow seat lookup", () => {
+    const nodeUnderTest = () => {
+      const metaWindow = createMockWindow({
+        rect: new Rectangle({ x: 0, y: 0, width: 1920, height: 1080 }),
+        workspace: workspace0(),
+      });
+      const { monitor } = getWorkspaceAndMonitor(ctx);
+      return ctx.tree.createNode(monitor.nodeValue, NODE_TYPES.WINDOW, metaWindow);
+    };
+
+    it("warps through the seat when the backend provides one", () => {
+      wm().warpPointerToNodeWindow(nodeUnderTest());
+
+      expect(mockSeat.warp_pointer).toHaveBeenCalled();
+    });
+
+    it("does not throw when the backend accessor is unavailable", () => {
+      // Mutter/Clutter introspection has moved this accessor before; if it is gone
+      // on some supported version the focus path must degrade, not break.
+      const real = Clutter.get_default_backend;
+      Clutter.get_default_backend = undefined;
+      try {
+        expect(() => wm().warpPointerToNodeWindow(nodeUnderTest())).not.toThrow();
+      } finally {
+        Clutter.get_default_backend = real;
+      }
+    });
+
+    it("prefers the Shell backend's seat when one is exposed", () => {
+      // global.backend is GNOME Shell's own accessor; Clutter.get_default_backend()
+      // is Clutter's. Both have been the current one at different points, so Forge
+      // asks Shell first and falls back — this pins that order.
+      const shellWarp = vi.fn();
+      global.backend = { get_default_seat: () => ({ warp_pointer: shellWarp }) };
+      try {
+        wm().warpPointerToNodeWindow(nodeUnderTest());
+
+        expect(shellWarp).toHaveBeenCalled();
+        expect(mockSeat.warp_pointer).not.toHaveBeenCalled();
+      } finally {
+        delete global.backend;
+      }
+    });
+
+    it("falls back to Clutter when the Shell backend exposes no seat", () => {
+      global.backend = { get_default_seat: () => null };
+      try {
+        wm().warpPointerToNodeWindow(nodeUnderTest());
+
+        expect(mockSeat.warp_pointer).toHaveBeenCalled();
+      } finally {
+        delete global.backend;
+      }
+    });
+
+    it("does not throw when the backend accessor itself throws", () => {
+      const real = Clutter.get_default_backend;
+      Clutter.get_default_backend = () => {
+        throw new Error("Clutter backend unavailable");
+      };
+      try {
+        expect(() => wm().warpPointerToNodeWindow(nodeUnderTest())).not.toThrow();
+      } finally {
+        Clutter.get_default_backend = real;
+      }
+    });
+
+    it("does not throw when the backend returns no seat", () => {
+      const real = Clutter.get_default_backend;
+      Clutter.get_default_backend = () => ({ get_default_seat: () => null });
+      try {
+        expect(() => wm().warpPointerToNodeWindow(nodeUnderTest())).not.toThrow();
+        expect(mockSeat.warp_pointer).not.toHaveBeenCalled();
+      } finally {
+        Clutter.get_default_backend = real;
+      }
+    });
+
+    it("does not throw when warp_pointer itself fails", () => {
+      mockSeat.warp_pointer.mockImplementationOnce(() => {
+        throw new Error("Object Clutter.Seat has been already deallocated");
+      });
+
+      expect(() => wm().warpPointerToNodeWindow(nodeUnderTest())).not.toThrow();
     });
   });
 
