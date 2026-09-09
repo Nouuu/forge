@@ -7,8 +7,11 @@ count_maximized_windows() — which feature-detects is_maximized()/get_maximized
 independently of Forge. Because the assertions are behavioral, each test
 exercises whichever compat branch runs on the container's Mutter version
 automatically (run via `make e2e-test-all` for full matrix coverage); no
-version-gating is needed. NOTE: Compat.getMaximizeFlags() has no callers and so
-is not exercised here.
+version-gating is needed. NOTE: Compat.getMaximizeFlags() is not driven end-to-end
+here. It does have callers (four in lib/extension/window.js), but they sit on the
+lone-maximize-preserved and snap paths rather than on the two maximize/unmaximize
+behaviours this file drives; its own branches are covered by
+tests/unit/extension/compat.test.js.
 """
 
 import time

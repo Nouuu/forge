@@ -81,5 +81,5 @@ you prefer.
 Dragging a window can tile it (see [layouts.md](layouts.md#drag-to-tile)). The
 **`mod-mask-mouse-tile`** setting picks the modifier you hold while dragging for the
 tile preview to appear: `None` (default — any drag tiles), or `Super` / `Ctrl` /
-`Alt` (only tile while that modifier is held). `preview-hint-enabled` controls
-whether the drop-zone hint is drawn.
+`Alt` / `Shift` (only tile while that modifier is held). `preview-hint-enabled`
+controls whether the drop-zone hint is drawn; it is **off** by default.

@@ -25,7 +25,11 @@ are enabled in **Preferences → Tiling → Behavior**. See [layouts.md](layouts
 
 ## Enabling debug logs
 
-Logging is **off by default** and only active in development builds. Turn it on:
+Logging is **off by default**, and in a **shipped build these two settings do
+nothing**: the logger hard-forces level `OFF` when `production` is true, whatever
+`logging-enabled` and `log-level` say. To get logs you need a development build
+(`make dev`, which flips `production` to false); only then do the settings below
+apply:
 
 ```bash
 gsettings set org.gnome.shell.extensions.forge logging-enabled true

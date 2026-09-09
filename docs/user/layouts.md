@@ -92,8 +92,11 @@ window keeps its place in the tree and re-tiles when you toggle it back.
 
 ## Drag to tile
 
-Drag a window over another and Forge shows a **preview hint** (left / right / top /
-bottom / center) of where it will land; drop to tile it there. A center drop creates
-a tabbed or stacked container (`dnd-center-layout`, default `tabbed`). Whether you
-must hold a modifier while dragging is set by the drag mask — see
-[keybindings.md](keybindings.md#drag-to-tile).
+Drag a window over another and drop it to tile it there (left / right / top / bottom
+/ center). Forge can draw a **preview hint** of where it will land, but that hint is
+off by default — turn on `preview-hint-enabled` to see it.
+
+What a **center** drop does is set by `dnd-center-layout`: `tabbed` (the default) or
+`stacked` wraps the two windows in a container of that layout, and `swap` exchanges
+the two windows in place instead. Whether you must hold a modifier while dragging is
+set by the drag mask — see [keybindings.md](keybindings.md#drag-to-tile).

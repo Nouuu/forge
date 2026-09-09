@@ -92,8 +92,10 @@ crashes later.
   connect/disconnect display, workspace-manager, and per-window signals; the
   defensive disconnect ignores throws on already-finalized GObjects (Bug #328).
 - Managers own their own signals: `WorkspaceManager._workspaceSignals` is a
-  `Map<wsIndex, signalIds>` unbound in `removeWorkspace`/`destroy`
-  (`workspace.js`).
+  `Map<wsIndex, { workspace, signals }>` unbound in `removeWorkspace`/`destroy`
+  (`workspace.js`). It carries the `Meta.Workspace` alongside the ids because a
+  `workspaces-reordered` permutes index↔object with no add/remove signal, so the map
+  must be able to disconnect from the workspace it actually bound (forge-gw2c).
 - **Idle/timeout source IDs are reset in a `finally`** so a single throw can't
   wedge them. If `_renderTreeSrcId` stuck non-zero, every later `renderTree()`
   would no-op and new windows would stay floating (Bug #531 / forge-cuv; see

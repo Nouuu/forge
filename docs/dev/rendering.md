@@ -54,9 +54,12 @@ float decision is never re-evaluated.
 
 ### `move()` — the universal placement chokepoint (`window.js`)
 
-Every tiled window is positioned here. It early-returns on a missing/grabbed/
-**fullscreen** window and otherwise always calls `Compat.unmaximize()` before
-`move_resize_frame`.
+Every tiled window is positioned here. It early-returns on a missing window and on
+one under a live Forge grab (`grabMode` / `_draggedNodeWindow`, unless the caller
+passes `commitDuringGrab`), and otherwise always calls `Compat.unmaximize()` before
+`move_resize_frame`. It has **no fullscreen check** — the fullscreen exclusion lives
+in `Tree.apply`'s tiled-children filter, which is where fullscreen-dependent
+placement logic belongs.
 
 ### Fullscreen / maximize gotchas
 
@@ -93,8 +96,17 @@ find its monitor/workspace node does. Confirm the trigger from logs before
 Float is the node's `mode` (`FLOAT`), set by `processFloats` each render — a float
 keeps its tree node, it is not detached.
 
-- **`isFloatingExempt`** precedence: a per-window/class **tile** override wins first,
-  then float-by-type, then float overrides. Toggled via `toggleFloatingMode`
+- **`isFloatingExempt`** precedence is a three-step ladder, not two:
+  1. An explicit per-window (`wmId`) or per-title (`wmTitle`) **tile** override wins
+     outright.
+  2. Otherwise a per-window/per-title **float** override wins (forge-11k) — this is
+     what lets a "Picture-in-Picture" float rule beat the bundled class-only tile
+     rules for Chrome/Brave/Chromium.
+  3. Only then does a **bare class-only** tile override apply, and it does *not* drag
+     float-by-role windows (dialogs, modals, transients, overlays) into the grid
+     (forge-jbkg).
+
+  Toggled via `toggleFloatingMode`
   (`window.js`); `Super+c` = per-window, `Super+Shift+c` = class-wide. A
   per-window remove must never delete a class-wide override.
 - **Always-on-top** is re-pinned (`make_above`) by `processFloats` on every render,

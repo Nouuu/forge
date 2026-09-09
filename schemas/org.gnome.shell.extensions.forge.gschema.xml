@@ -140,8 +140,8 @@
         <key type="s" name="dnd-center-layout">
             <default>'tabbed'</default>
             <summary>
-                The default center layout when dragging/dropping a window.
-                The values are `tabbed` and `stacked`.
+                What a center drop does when dragging one window onto another.
+                The values are `tabbed`, `stacked` and `swap`.
             </summary>
         </key>
         <key type="b" name="move-pointer-focus-enabled">

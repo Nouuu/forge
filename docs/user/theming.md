@@ -28,7 +28,13 @@ Forge loads a user stylesheet from:
 ```
 
 It's seeded from the bundled default on first run (and re-synced by `patchCss` on
-update). Edit it and reload with **`Super+Shift+r`**, or log out/in.
+update).
+
+**A hand-edited stylesheet needs a shell restart** (`Alt+F2` → `r` on X11, or log
+out/in on Wayland). `Super+Shift+r` reloads window rules and portable config only —
+it does not touch the stylesheet. Changing a colour from **Preferences → Appearance**
+does reload it live, because prefs writes the `css-updated` key the extension
+watches.
 
 Selectors Forge exposes (see the bundled `stylesheet.css` for the full set):
 

@@ -27,8 +27,15 @@ media) — or as a workaround for the vertical-monitor limitation below.
 - **Vertical / portrait monitor setups are not fully supported** — focus and
   navigation across a portrait secondary monitor can misbehave. Excluding that
   monitor via `monitor-skip-tile` is the current workaround.
-- **Dynamic workspaces are not supported** — use a fixed number of workspaces.
+- **Dynamic workspaces work**, but the tree is keyed by workspace *index*: adding or
+  removing a workspace renumbers every `ws{n}` / `mo{m}ws{n}` node, and the
+  `workspace-skip-tile` / `monitor-skip-tile` lists are raw indices that are **not**
+  renumbered with it. A skip entry can therefore end up pointing at a different
+  workspace than the one you excluded.
 
-Hot-plugging a monitor is handled (the tree adds/repairs monitor nodes on
-`monitors-changed`); if a layout looks wrong after a display change, reload with
-`Super+Shift+r` and see [troubleshooting.md](troubleshooting.md).
+Hot-plugging a monitor is **not** handled by a dedicated signal: Forge listens to
+`workareas-changed`, and there is no code path that adds or removes monitor nodes for
+a display change. The tree recovers only incidentally — a new window that cannot find
+its `mo{m}ws{n}` node triggers a full `reloadTree()`. If a layout looks wrong after a
+display change, reload with `Super+Shift+r` and see
+[troubleshooting.md](troubleshooting.md).
