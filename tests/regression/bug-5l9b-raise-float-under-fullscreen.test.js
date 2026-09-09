@@ -39,7 +39,7 @@ describe("forge-5l9b: queued raise-float must not undo the fullscreen demotion",
     const node = wm().tree.findNode(win);
     node.mode = WINDOW_MODES.FLOAT;
     win.make_above();
-    node._forgeSetAbove = true;
+    win._forgeSetAbove = true;
     return { win, node };
   }
 
@@ -69,7 +69,7 @@ describe("forge-5l9b: queued raise-float must not undo the fullscreen demotion",
     other.make_fullscreen();
     wm()._reconcileFullscreenFloatDemotion();
     expect(float.win.is_above()).toBe(false);
-    expect(float.node._aboveDemotedForFullscreen).toBe(true);
+    expect(float.win._aboveDemotedForFullscreen).toBe(true);
 
     const raiseSpy = vi.spyOn(float.win, "raise");
     raiseFloatCallback();
@@ -97,7 +97,7 @@ describe("forge-5l9b: queued raise-float must not undo the fullscreen demotion",
     wm()._reconcileFullscreenFloatDemotion();
     other.unmake_fullscreen();
     wm()._reconcileFullscreenFloatDemotion();
-    expect(float.node._aboveDemotedForFullscreen).toBeFalsy();
+    expect(float.win._aboveDemotedForFullscreen).toBeFalsy();
 
     const raiseFloatCallback = fireFocusAndGetRaiseFloat(float.win);
     const raiseSpy = vi.spyOn(float.win, "raise");

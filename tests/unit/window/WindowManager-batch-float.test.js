@@ -362,6 +362,48 @@ describe("WindowManager - Batch Float Operations", () => {
       expect(unmakeAbove1).toHaveBeenCalled();
       expect(unmakeAbove2).toHaveBeenCalled();
     });
+
+    // G1/G12: the pin is gone after cleanup, so the ownership flags must go with
+    // it. A stale `_forgeSetAbove` makes _restoreAllDemotedFloats re-pin the window
+    // the user just unpinned, and makes a later unfloat strip a pin the USER owns.
+    it("should clear the Forge pin-ownership flags it invalidates", () => {
+      const { monitor } = getWorkspaceAndMonitor(ctx);
+
+      const metaWindow1 = createMockWindow({ id: 1 });
+      const nodeWindow1 = ctx.tree.createNode(monitor.nodeValue, NODE_TYPES.WINDOW, metaWindow1);
+
+      nodeWindow1.mode = WINDOW_MODES.FLOAT;
+      metaWindow1.above = true;
+      metaWindow1._forgeSetAbove = true;
+      metaWindow1._aboveDemotedForFullscreen = true;
+
+      wm().cleanupAlwaysFloat();
+
+      expect(metaWindow1._forgeSetAbove).toBe(false);
+      expect(metaWindow1._aboveDemotedForFullscreen).toBe(false);
+    });
+
+    // G1: turning the setting off runs cleanup, then the reconcile pass takes the
+    // setting-off early return into _restoreAllDemotedFloats. That must not undo
+    // the cleanup that just ran.
+    it("should leave nothing for _restoreAllDemotedFloats to re-pin", () => {
+      const { monitor } = getWorkspaceAndMonitor(ctx);
+
+      const metaWindow1 = createMockWindow({ id: 1 });
+      const nodeWindow1 = ctx.tree.createNode(monitor.nodeValue, NODE_TYPES.WINDOW, metaWindow1);
+
+      nodeWindow1.mode = WINDOW_MODES.FLOAT;
+      metaWindow1.above = true;
+      metaWindow1._forgeSetAbove = true;
+      metaWindow1._aboveDemotedForFullscreen = true;
+
+      wm().cleanupAlwaysFloat();
+      const makeAboveSpy = vi.spyOn(metaWindow1, "make_above");
+      wm()._restoreAllDemotedFloats();
+
+      expect(makeAboveSpy).not.toHaveBeenCalled();
+      expect(metaWindow1.is_above()).toBe(false);
+    });
   });
 
   describe("restoreAlwaysFloat()", () => {
@@ -448,6 +490,60 @@ describe("WindowManager - Batch Float Operations", () => {
       // Restore adds it back
       wm().restoreAlwaysFloat();
       expect(makeAboveSpy).toHaveBeenCalled();
+    });
+
+    // G2: a pin restoreAlwaysFloat creates is Forge's. Without the flag it is
+    // invisible to _reconcileFullscreenFloatDemotion and to `set float(false)`, so
+    // it can neither be demoted under a fullscreen window nor cleared by unfloating.
+    it("should claim the pin it creates as Forge-owned", () => {
+      const { monitor } = getWorkspaceAndMonitor(ctx);
+
+      const metaWindow1 = createMockWindow({ id: 1 });
+      const nodeWindow1 = ctx.tree.createNode(monitor.nodeValue, NODE_TYPES.WINDOW, metaWindow1);
+
+      nodeWindow1.mode = WINDOW_MODES.FLOAT;
+      metaWindow1.above = false;
+
+      wm().restoreAlwaysFloat();
+
+      expect(metaWindow1.is_above()).toBe(true);
+      expect(metaWindow1._forgeSetAbove).toBe(true);
+    });
+
+    // G2: a pin the USER already applied stays the user's. Claiming it would let a
+    // later unfloat remove a pin Forge does not own — the case FR-003 and bug-319
+    // exist to prevent.
+    it("should not claim a pin the user already applied", () => {
+      const { monitor } = getWorkspaceAndMonitor(ctx);
+
+      const metaWindow1 = createMockWindow({ id: 1 });
+      const nodeWindow1 = ctx.tree.createNode(monitor.nodeValue, NODE_TYPES.WINDOW, metaWindow1);
+
+      nodeWindow1.mode = WINDOW_MODES.FLOAT;
+      metaWindow1.above = true;
+
+      wm().restoreAlwaysFloat();
+
+      expect(metaWindow1._forgeSetAbove).toBeFalsy();
+    });
+
+    // G2: Bug #289 parity with the `float` setter, which excludes fullscreen windows
+    // from the pin. Pinning one puts it above the panel and every dialog.
+    it("should not pin a fullscreen float (Bug #289 parity)", () => {
+      const { monitor } = getWorkspaceAndMonitor(ctx);
+
+      const metaWindow1 = createMockWindow({ id: 1, fullscreen: true });
+      const nodeWindow1 = ctx.tree.createNode(monitor.nodeValue, NODE_TYPES.WINDOW, metaWindow1);
+
+      nodeWindow1.mode = WINDOW_MODES.FLOAT;
+      metaWindow1.above = false;
+
+      const makeAboveSpy = vi.spyOn(metaWindow1, "make_above");
+
+      wm().restoreAlwaysFloat();
+
+      expect(makeAboveSpy).not.toHaveBeenCalled();
+      expect(metaWindow1._forgeSetAbove).toBeFalsy();
     });
   });
 

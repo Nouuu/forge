@@ -120,6 +120,26 @@ describe("forge-jnfk: Wayland focus stacking restores above-state", () => {
     expect(removeSpy).toHaveBeenCalledWith(42);
   });
 
+  // The transient-pin teardown must not undo a pin Forge owns for another reason.
+  // A window can carry BOTH markers: the always-on-top float pin (_forgeSetAbove)
+  // and a transient focus pin on top of it. disable() unpins only the transient
+  // one, or an always-on-top float would come back down on every disable.
+  it("leaves a genuine always-on-top float pinned when disable() clears transient pins", () => {
+    vi.spyOn(GLib, "timeout_add").mockReturnValue(42);
+
+    ctx.tree.focus(nodeA, MotionDirection.RIGHT);
+    expect(winB._forgeTransientAbove).toBe(true);
+
+    // The same window is also an always-on-top float Forge pinned.
+    winB._forgeSetAbove = true;
+    const unmakeSpy = vi.spyOn(winB, "unmake_above");
+
+    ctx.windowManager.disable();
+
+    expect(unmakeSpy).not.toHaveBeenCalled();
+    expect(winB.is_above()).toBe(true);
+  });
+
   // forge-ph7f: rapid focus must not strand earlier windows always-on-top.
   it("does not float-eject a window carrying Forge's transient focus pin", () => {
     vi.spyOn(GLib, "timeout_add").mockReturnValue(42);

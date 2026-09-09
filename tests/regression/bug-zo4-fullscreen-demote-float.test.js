@@ -17,7 +17,8 @@ import {
  *
  * Fix: _reconcileFullscreenFloatDemotion() unmake_above()'s Forge-pinned floats
  * on a monitor that has a (non-dialog) fullscreen window, tagging them with a
- * transient _aboveDemotedForFullscreen flag, and re-pins them once that monitor
+ * transient _aboveDemotedForFullscreen flag (carried on the Meta.Window, so it
+ * survives a tree reload), and re-pins them once that monitor
  * has no fullscreen window left. Dialogs/transients and user-pinned floats are
  * never touched.
  */
@@ -36,13 +37,23 @@ describe("forge-zo4: demote always-on-top floats under a fullscreen window", () 
   });
 
   // Create a window node under the given monitor with an explicit mode.
+  //
+  // A FLOAT gets allows_resize: false so it has a reason of its own to float
+  // (Bug #294, float-by-type). Without one, any render that reaches processFloats
+  // — windowDestroy does — re-derives the mode and tiles it back: isFloatingExempt
+  // no longer counts Forge's own always-on-top pin as a user overlay, so the pin
+  // can no longer keep a window floating by itself.
   function addWindow(monitor, { mode = WINDOW_MODES.TILE, forgeAbove = false, ...overrides } = {}) {
-    const win = createMockWindow({ wm_class: "App", ...overrides });
+    const win = createMockWindow({
+      wm_class: "App",
+      ...(mode === WINDOW_MODES.FLOAT ? { allows_resize: false } : {}),
+      ...overrides,
+    });
     const node = ctx.tree.createNode(monitor.nodeValue, NODE_TYPES.WINDOW, win);
     node.mode = mode;
     if (forgeAbove) {
       win.make_above();
-      node._forgeSetAbove = true;
+      win._forgeSetAbove = true;
     }
     return { win, node };
   }
@@ -56,9 +67,9 @@ describe("forge-zo4: demote always-on-top floats under a fullscreen window", () 
     ctx.windowManager._reconcileFullscreenFloatDemotion();
 
     expect(float.win.is_above()).toBe(false);
-    expect(float.node._aboveDemotedForFullscreen).toBe(true);
+    expect(float.win._aboveDemotedForFullscreen).toBe(true);
     // The pin intent is preserved so the float can be restored.
-    expect(float.node._forgeSetAbove).toBe(true);
+    expect(float.win._forgeSetAbove).toBe(true);
   });
 
   it("lowers the demoted float so it drops below the fullscreen window", () => {
@@ -85,7 +96,7 @@ describe("forge-zo4: demote always-on-top floats under a fullscreen window", () 
     ctx.windowManager._reconcileFullscreenFloatDemotion();
 
     expect(float.win.is_above()).toBe(true);
-    expect(float.node._aboveDemotedForFullscreen).toBeFalsy();
+    expect(float.win._aboveDemotedForFullscreen).toBeFalsy();
   });
 
   it("keeps the float demoted until the LAST fullscreen window exits (refcount)", () => {
@@ -121,7 +132,7 @@ describe("forge-zo4: demote always-on-top floats under a fullscreen window", () 
     ctx.windowManager._reconcileFullscreenFloatDemotion();
 
     expect(dialog.win.is_above()).toBe(true);
-    expect(dialog.node._aboveDemotedForFullscreen).toBeFalsy();
+    expect(dialog.win._aboveDemotedForFullscreen).toBeFalsy();
   });
 
   it("does not clobber a user-pinned float (no _forgeSetAbove)", () => {
@@ -134,7 +145,7 @@ describe("forge-zo4: demote always-on-top floats under a fullscreen window", () 
     ctx.windowManager._reconcileFullscreenFloatDemotion();
 
     expect(userFloat.win.is_above()).toBe(true);
-    expect(userFloat.node._aboveDemotedForFullscreen).toBeFalsy();
+    expect(userFloat.win._aboveDemotedForFullscreen).toBeFalsy();
   });
 
   it("only demotes floats on the monitor with the fullscreen window", () => {
@@ -148,7 +159,7 @@ describe("forge-zo4: demote always-on-top floats under a fullscreen window", () 
 
     // Float on monitor 0 is untouched; the fullscreen is on monitor 1.
     expect(float0.win.is_above()).toBe(true);
-    expect(float0.node._aboveDemotedForFullscreen).toBeFalsy();
+    expect(float0.win._aboveDemotedForFullscreen).toBeFalsy();
   });
 
   it("a float that itself goes fullscreen is not demoted by its own count", () => {
@@ -159,7 +170,7 @@ describe("forge-zo4: demote always-on-top floats under a fullscreen window", () 
     ctx.windowManager._reconcileFullscreenFloatDemotion();
 
     expect(float.win.is_above()).toBe(true);
-    expect(float.node._aboveDemotedForFullscreen).toBeFalsy();
+    expect(float.win._aboveDemotedForFullscreen).toBeFalsy();
   });
 
   it("restores demoted floats when the fullscreen window is destroyed", () => {
@@ -174,7 +185,7 @@ describe("forge-zo4: demote always-on-top floats under a fullscreen window", () 
     ctx.windowManager.windowDestroy(fs.node.actor);
 
     expect(float.win.is_above()).toBe(true);
-    expect(float.node._aboveDemotedForFullscreen).toBeFalsy();
+    expect(float.win._aboveDemotedForFullscreen).toBeFalsy();
   });
 
   it("restores all demoted floats on disable()", () => {
@@ -189,7 +200,7 @@ describe("forge-zo4: demote always-on-top floats under a fullscreen window", () 
     ctx.windowManager.disable();
 
     expect(float.win.is_above()).toBe(true);
-    expect(float.node._aboveDemotedForFullscreen).toBeFalsy();
+    expect(float.win._aboveDemotedForFullscreen).toBeFalsy();
   });
 
   it("suppresses _handleUserAboveChange while it toggles above itself", () => {

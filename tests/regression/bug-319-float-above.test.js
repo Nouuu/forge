@@ -16,6 +16,9 @@ import {
  * Root Cause: The toggleFloatingMode function directly sets nodeWindow.mode
  * instead of using the nodeWindow.float setter, which handles _forgeSetAbove
  * tracking for always-on-top state.
+ *
+ * _forgeSetAbove lives on the Meta.Window, not on the tree node: a node is
+ * rebuilt by every tree reload while the GNOME pin it describes is not.
  */
 describe("Bug #319: Float always-on-top handling", () => {
   let ctx;
@@ -29,6 +32,68 @@ describe("Bug #319: Float always-on-top handling", () => {
 
   afterEach(() => {
     ctx.cleanup();
+  });
+
+  describe("pin ownership survives a tree reload", () => {
+    // The reload hole in the same bug class: tree.reload() sets
+    // `childNodes.length = 0` and trackCurrentWindows rebuilds every WINDOW node
+    // from scratch, so ownership state parked on the NODE is gone while the
+    // GNOME pin — which lives on the Meta.Window — survives. Forge then either
+    // strands the pin forever (unfloat no longer recognises it as its own) or,
+    // worse, later strips a pin the USER applied.
+    const buildFloat = () => {
+      const mw = createMockWindow({
+        wm_class: "org.gnome.Nautilus",
+        id: 3001,
+        title: "Files",
+        allows_resize: true,
+      });
+      const { monitor } = getWorkspaceAndMonitor(ctx);
+      const node = ctx.tree.createNode(monitor.nodeValue, NODE_TYPES.WINDOW, mw);
+      node.mode = WINDOW_MODES.TILE;
+      node.float = true;
+      return { mw, monitor };
+    };
+
+    // What reloadTree() does: tree.reload() then trackCurrentWindows(). Rebuilt
+    // here directly so the test does not depend on the idle_add scheduling.
+    const rebuildNode = (mw) => {
+      ctx.tree.reload();
+      const { monitor } = getWorkspaceAndMonitor(ctx);
+      const node = ctx.tree.createNode(monitor.nodeValue, NODE_TYPES.WINDOW, mw);
+      node.mode = WINDOW_MODES.FLOAT;
+      return node;
+    };
+
+    it("still recognises its own pin after the node is rebuilt", () => {
+      const { mw } = buildFloat();
+      expect(mw.is_above()).toBe(true);
+
+      const rebuilt = rebuildNode(mw);
+
+      rebuilt.float = false;
+
+      expect(mw.is_above()).toBe(false);
+      expect(rebuilt.isTile()).toBe(true);
+    });
+
+    it("still refuses to strip a user pin after the node is rebuilt", () => {
+      const mw = createMockWindow({
+        wm_class: "org.gnome.Nautilus",
+        id: 3002,
+        title: "Files",
+        allows_resize: true,
+      });
+      const { monitor } = getWorkspaceAndMonitor(ctx);
+      const node = ctx.tree.createNode(monitor.nodeValue, NODE_TYPES.WINDOW, mw);
+      node.mode = WINDOW_MODES.FLOAT;
+      mw.make_above(); // the USER pins it; Forge never claimed this one
+
+      const rebuilt = rebuildNode(mw);
+      rebuilt.float = false;
+
+      expect(mw.is_above()).toBe(true);
+    });
   });
 
   describe("_forgeSetAbove tracking", () => {
@@ -46,13 +111,13 @@ describe("Bug #319: Float always-on-top handling", () => {
       nodeWindow.mode = WINDOW_MODES.TILE;
 
       // Initially, _forgeSetAbove should be undefined or false
-      expect(nodeWindow._forgeSetAbove).toBeFalsy();
+      expect(nautilus._forgeSetAbove).toBeFalsy();
 
       // Float the window using the float setter (which toggleFloatingMode should use)
       nodeWindow.float = true;
 
       // _forgeSetAbove should be set because float-always-on-top is enabled
-      expect(nodeWindow._forgeSetAbove).toBe(true);
+      expect(nautilus._forgeSetAbove).toBe(true);
       expect(nautilus.is_above()).toBe(true);
     });
 
@@ -71,7 +136,7 @@ describe("Bug #319: Float always-on-top handling", () => {
       // Float the window (sets _forgeSetAbove)
       nodeWindow.float = true;
 
-      expect(nodeWindow._forgeSetAbove).toBe(true);
+      expect(nautilus._forgeSetAbove).toBe(true);
       expect(nautilus.is_above()).toBe(true);
 
       // Unfloat the window
@@ -79,7 +144,7 @@ describe("Bug #319: Float always-on-top handling", () => {
 
       // Bug #319: Window should no longer be above
       expect(nautilus.is_above()).toBe(false);
-      expect(nodeWindow._forgeSetAbove).toBe(false);
+      expect(nautilus._forgeSetAbove).toBe(false);
     });
 
     it("should not clear always-on-top if user set it manually", () => {
@@ -101,7 +166,7 @@ describe("Bug #319: Float always-on-top handling", () => {
       // Float the window - _forgeSetAbove should NOT be set because window was already above
       nodeWindow.float = true;
 
-      expect(nodeWindow._forgeSetAbove).toBeFalsy();
+      expect(nautilus._forgeSetAbove).toBeFalsy();
       expect(nautilus.is_above()).toBe(true);
 
       // Unfloat the window
@@ -133,7 +198,7 @@ describe("Bug #319: Float always-on-top handling", () => {
       // Window should be floating and above
       expect(nodeWindow.mode).toBe(WINDOW_MODES.FLOAT);
       expect(nautilus.is_above()).toBe(true);
-      expect(nodeWindow._forgeSetAbove).toBe(true);
+      expect(nautilus._forgeSetAbove).toBe(true);
     });
 
     it("should properly handle always-on-top when toggling float off", () => {
@@ -154,7 +219,7 @@ describe("Bug #319: Float always-on-top handling", () => {
 
       expect(nodeWindow.mode).toBe(WINDOW_MODES.FLOAT);
       expect(nautilus.is_above()).toBe(true);
-      expect(nodeWindow._forgeSetAbove).toBe(true);
+      expect(nautilus._forgeSetAbove).toBe(true);
 
       // Toggle float off
       const unfloatAction = { name: "FloatToggle", mode: WINDOW_MODES.TILE };
@@ -163,7 +228,7 @@ describe("Bug #319: Float always-on-top handling", () => {
       // Bug #319: Window should be tiled and NOT above
       expect(nodeWindow.mode).toBe(WINDOW_MODES.TILE);
       expect(nautilus.is_above()).toBe(false);
-      expect(nodeWindow._forgeSetAbove).toBe(false);
+      expect(nautilus._forgeSetAbove).toBe(false);
     });
 
     it("should not get stuck in always-on-top after multiple toggles", () => {
@@ -195,7 +260,7 @@ describe("Bug #319: Float always-on-top handling", () => {
       ctx.windowManager.toggleFloatingMode(unfloatAction, nautilus);
       // Bug #319: Should NOT be stuck in always-on-top
       expect(nautilus.is_above()).toBe(false);
-      expect(nodeWindow._forgeSetAbove).toBe(false);
+      expect(nautilus._forgeSetAbove).toBe(false);
     });
   });
 });

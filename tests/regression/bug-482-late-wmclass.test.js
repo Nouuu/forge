@@ -75,4 +75,67 @@ describe("Bug #482: late wm_class re-tiles", () => {
 
     expect(renderSpy).toHaveBeenCalledWith("wm-class-changed");
   });
+
+  // The #482 fix only works while nothing else keeps the window floating-exempt.
+  // With float-always-on-top-enabled on, the `float` setter pins the window while
+  // its class is null, and isFloatingExempt's Bug #469 clause then reads that pin
+  // — Forge's own — as a user "Always on Top" overlay. processFloats re-derives
+  // float=true from the pin it set itself, so the late class never re-tiles.
+  describe("with float-always-on-top-enabled", () => {
+    let pinCtx;
+    let pinWin;
+    let pinNode;
+
+    beforeEach(() => {
+      pinCtx = createWindowManagerFixture({
+        settings: { "float-always-on-top-enabled": true },
+      });
+      pinWin = createMockWindow({
+        wm_class: null,
+        id: 2003,
+        title: "Anki",
+        allows_resize: true,
+      });
+      const { monitor } = getWorkspaceAndMonitor(pinCtx);
+      pinNode = pinCtx.tree.createNode(monitor.nodeValue, NODE_TYPES.WINDOW, pinWin);
+      pinNode.mode = WINDOW_MODES.TILE;
+    });
+
+    afterEach(() => pinCtx.cleanup());
+
+    it("pins the window while its wm_class is null", () => {
+      pinCtx.windowManager.processFloats();
+
+      expect(pinNode.isFloat()).toBe(true);
+      expect(pinWin.is_above()).toBe(true);
+    });
+
+    it("re-tiles and unpins once wm_class arrives", () => {
+      pinCtx.windowManager.processFloats();
+      expect(pinWin.is_above()).toBe(true);
+
+      pinWin.set_wm_class("Anki");
+
+      // Forge's own pin must not read back as a user overlay.
+      expect(pinCtx.windowManager.isFloatingExempt(pinWin)).toBe(false);
+
+      pinCtx.windowManager.processFloats();
+      expect(pinNode.isTile()).toBe(true);
+      expect(pinWin.is_above()).toBe(false);
+    });
+
+    it("still treats a pin the user applied as an overlay", () => {
+      const userPinned = createMockWindow({
+        wm_class: "Anki",
+        id: 2004,
+        title: "Anki",
+        allows_resize: true,
+      });
+      const { monitor } = getWorkspaceAndMonitor(pinCtx);
+      pinCtx.tree.createNode(monitor.nodeValue, NODE_TYPES.WINDOW, userPinned);
+      userPinned.make_above();
+
+      expect(pinCtx.windowManager.isFloatingExempt(userPinned)).toBe(true);
+    });
+  });
 });
