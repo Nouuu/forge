@@ -264,3 +264,55 @@ describe("DecorationManager border lifecycle", () => {
     });
   });
 });
+
+/**
+ * hideWindowBorders runs on every render (updateBorderLayout) and inside the
+ * minimize/unminimize handlers, so a throw here aborts the rest of the pass.
+ *
+ * Its tab guard checked `!tab._destroyed` — a flag Forge never assigns anywhere in
+ * lib/. The same vacuous guard was removed from Tree._destroyTab in forge-5r0j,
+ * where the fix was a try/catch, because touching a finalized Clutter actor throws
+ * on the first property read rather than reporting itself via a flag.
+ */
+describe("DecorationManager.hideWindowBorders", () => {
+  let ctx;
+
+  beforeEach(() => {
+    ctx = createWindowManagerFixture({ settings: { "tiling-mode-enabled": true } });
+  });
+
+  afterEach(() => ctx.cleanup());
+
+  it("survives a finalized tab actor and still clears the remaining windows", () => {
+    const tabbedParent = { isStackedOrTabbed: () => true };
+    const cleared = [];
+
+    // A finalized St actor throws on the first property read — exactly what
+    // forge-5r0j documents. `_destroyed` stays undefined, so the old guard let
+    // the call through and the throw escaped the forEach.
+    const dead = {
+      windowActor: null,
+      parentNode: tabbedParent,
+      tab: {
+        get_parent: () => {
+          throw new Error("Object St.BoxLayout has been finalized");
+        },
+        remove_style_class_name: () => cleared.push("dead"),
+      },
+    };
+    const live = {
+      windowActor: null,
+      parentNode: tabbedParent,
+      tab: {
+        get_parent: () => ({}),
+        remove_style_class_name: (c) => cleared.push(c),
+      },
+    };
+
+    vi.spyOn(ctx.tree, "nodeWindows", "get").mockReturnValue([dead, live]);
+
+    expect(() => ctx.windowManager.hideWindowBorders()).not.toThrow();
+    // The window after the dead one must still have been processed.
+    expect(cleared).toContain("window-tabbed-tab-active");
+  });
+});
