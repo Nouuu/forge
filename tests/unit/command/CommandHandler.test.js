@@ -584,4 +584,39 @@ describe("CommandHandler", () => {
       expect(mockWm.renderTree).not.toHaveBeenCalled();
     });
   });
+
+  // forge-t1s9 hardened three handlers against a detached focus node (no
+  // parentNode): the float toggle, WindowResetSizes, and Move's queued callback.
+  // The layout handlers were left reading `parentNode.layout` / `.isMonitor()`
+  // straight after a `!focusNodeWindow` check, so the same shape throws out of the
+  // keybinding handler. A detached node is reachable whenever the tree is rebuilt
+  // between the key press and the dispatch (reload, workspace removal).
+  describe("layout commands with a detached focus node", () => {
+    beforeEach(() => {
+      mockNodeWindow.parentNode = null;
+    });
+
+    it.each([
+      ["Split", { name: "Split", orientation: "horizontal" }],
+      ["LayoutToggle", { name: "LayoutToggle" }],
+      ["LayoutStackedToggle", { name: "LayoutStackedToggle" }],
+      ["LayoutTabbedToggle", { name: "LayoutTabbedToggle" }],
+      ["ShowTabDecorationToggle", { name: "ShowTabDecorationToggle" }],
+    ])("%s bails instead of throwing", (_label, action) => {
+      expect(() => commandHandler.execute(action)).not.toThrow();
+    });
+
+    it("does not overwrite attachNode with a null cursor", () => {
+      // A sentinel, so the assertion distinguishes "left alone" from "set to null".
+      const sentinel = { marker: "previous attach target" };
+      mockTree.attachNode = sentinel;
+
+      commandHandler.execute({ name: "ShowTabDecorationToggle" });
+
+      // This handler does not throw on a detached node — it assigns
+      // `attachNode = focusNodeWindow.parentNode`, i.e. null, leaving the next
+      // render to place from a null cursor.
+      expect(mockTree.attachNode).toBe(sentinel);
+    });
+  });
 });
