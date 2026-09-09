@@ -19,3 +19,4 @@ node_modules
 .beads
 .claude
 .specify
+coverage

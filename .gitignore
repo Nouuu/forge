@@ -36,3 +36,6 @@ coverage/
 # Editor / toolchain local state
 .idea/
 mise.toml
+
+# Spec-kit reverse-engineered artifacts (local agent tooling)
+specs/
