@@ -1,5 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { Keybindings } from "../../../lib/extension/keybindings.js";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
+import GLib from "gi://GLib";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 
 /**
@@ -9,6 +13,15 @@ import * as Main from "resource:///org/gnome/shell/ui/main.js";
  * trigger tiling based on the configured modifier key and current modifier state.
  * Uses Clutter modifier bitmask values: Super=64, Alt=8, Ctrl=4, Shift=1, grabbed=256.
  */
+const GSCHEMA_PATH = join(
+  dirname(fileURLToPath(import.meta.url)),
+  "..",
+  "..",
+  "..",
+  "schemas",
+  "org.gnome.shell.extensions.forge.gschema.xml"
+);
+
 describe("Keybindings", () => {
   let keybindings;
   let mockExt;
@@ -98,6 +111,38 @@ describe("Keybindings", () => {
       }
     });
 
+    // G-013: the list above is hand-maintained and was presented as "all expected
+    // keybinding keys" while missing one (window-golden-ratio), so a dropped binding
+    // would only have been caught by the weaker "every value is a function" check.
+    //
+    // This fence reads the keybindings schema off disk and compares it against the
+    // live binding table BOTH ways, so neither side can drift: a schema key with no
+    // handler is a chord that does nothing, and a handler with no schema key is a
+    // chord the user can never bind. Directional and resize bindings are generated
+    // at runtime, so only the live table can be compared — a regex over the source
+    // would miss every one of them.
+    it("defines exactly the actions the keybindings schema declares", () => {
+      const schema = readFileSync(GSCHEMA_PATH, "utf8");
+      const kbdBlock = schema.match(
+        /<schema[^>]*id="org\.gnome\.shell\.extensions\.forge\.keybindings"([\s\S]*?)<\/schema>/
+      );
+      expect(kbdBlock, "keybindings schema block not found").not.toBeNull();
+
+      const schemaKeys = new Set(
+        [...kbdBlock[1].matchAll(/<key\s+type="[a-z]+"\s+name="([^"]+)"/g)].map((m) => m[1])
+      );
+      // Not an action: it configures which modifier arms drag-to-tile.
+      schemaKeys.delete("mod-mask-mouse-tile");
+
+      const bindingKeys = new Set(Object.keys(keybindings._bindings));
+
+      const schemaOnly = [...schemaKeys].filter((k) => !bindingKeys.has(k)).sort();
+      const bindingOnly = [...bindingKeys].filter((k) => !schemaKeys.has(k)).sort();
+
+      expect(schemaOnly, "schema keys with no handler — the chord would do nothing").toEqual([]);
+      expect(bindingOnly, "handlers with no schema key — the chord cannot be bound").toEqual([]);
+    });
+
     it("should define bindings as callable functions", () => {
       for (const key of Object.keys(keybindings._bindings)) {
         expect(typeof keybindings._bindings[key]).toBe("function");
@@ -160,6 +205,93 @@ describe("Keybindings", () => {
       keybindings.buildBindingDefinitions();
       keybindings._bindings["window-resize-top-decrease"]();
       expect(mockExt.extWm.command).toHaveBeenCalledWith({ name: "WindowResizeTop", amount: -25 });
+    });
+  });
+
+  // G-011 (input-commands): these three callbacks had no unit test at all — the
+  // suite only asserted that the keys exist and are functions. Two of them spawn a
+  // process and are wrapped in a try/catch precisely because a spawn can fail
+  // (missing binary, bad user command); nothing pinned that guard, so a refactor
+  // could drop it and turn a typo in `launch-app-command` into a throw out of a
+  // keybinding handler.
+  describe("process-spawning bindings", () => {
+    beforeEach(() => {
+      GLib.spawn_command_line_async.mockClear();
+      GLib.spawn_command_line_async.mockImplementation(() => true);
+      Main.notify.mockClear?.();
+    });
+
+    describe("prefs-app-launch", () => {
+      it("spawns the configured command", () => {
+        mockExt.settings.get_string.mockReturnValue("gnome-terminal");
+
+        keybindings._bindings["prefs-app-launch"]();
+
+        expect(GLib.spawn_command_line_async).toHaveBeenCalledWith("gnome-terminal");
+      });
+
+      it("does nothing when the command is empty", () => {
+        mockExt.settings.get_string.mockReturnValue("");
+
+        keybindings._bindings["prefs-app-launch"]();
+
+        expect(GLib.spawn_command_line_async).not.toHaveBeenCalled();
+      });
+
+      it("notifies instead of throwing when the spawn fails", () => {
+        mockExt.settings.get_string.mockReturnValue("does-not-exist");
+        GLib.spawn_command_line_async.mockImplementation(() => {
+          throw new Error("Failed to execute child process");
+        });
+
+        expect(() => keybindings._bindings["prefs-app-launch"]()).not.toThrow();
+        expect(Main.notify).toHaveBeenCalledWith(
+          "Forge",
+          expect.stringContaining("does-not-exist")
+        );
+      });
+    });
+
+    describe("prefs-lock-screen", () => {
+      it("spawns loginctl", () => {
+        keybindings._bindings["prefs-lock-screen"]();
+
+        expect(GLib.spawn_command_line_async).toHaveBeenCalledWith("loginctl lock-session");
+      });
+
+      it("swallows a spawn failure instead of throwing", () => {
+        GLib.spawn_command_line_async.mockImplementation(() => {
+          throw new Error("loginctl: command not found");
+        });
+
+        expect(() => keybindings._bindings["prefs-lock-screen"]()).not.toThrow();
+      });
+    });
+  });
+
+  describe("prefs-cheatsheet-toggle", () => {
+    it("shows a hidden cheatsheet", () => {
+      keybindings.cheatsheet = { visible: false, show: vi.fn(), hide: vi.fn() };
+
+      keybindings._bindings["prefs-cheatsheet-toggle"]();
+
+      expect(keybindings.cheatsheet.show).toHaveBeenCalled();
+      expect(keybindings.cheatsheet.hide).not.toHaveBeenCalled();
+    });
+
+    it("hides a visible cheatsheet", () => {
+      keybindings.cheatsheet = { visible: true, show: vi.fn(), hide: vi.fn() };
+
+      keybindings._bindings["prefs-cheatsheet-toggle"]();
+
+      expect(keybindings.cheatsheet.hide).toHaveBeenCalled();
+      expect(keybindings.cheatsheet.show).not.toHaveBeenCalled();
+    });
+
+    it("is a no-op when no cheatsheet exists", () => {
+      keybindings.cheatsheet = null;
+
+      expect(() => keybindings._bindings["prefs-cheatsheet-toggle"]()).not.toThrow();
     });
   });
 

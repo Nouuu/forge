@@ -1,3 +1,4 @@
+import { vi } from "vitest";
 // Mock GLib namespace
 
 export function getenv(variable) {
@@ -73,8 +74,16 @@ export function mkdir_with_parents(path, mode) {
   return 0;
 }
 
+/**
+ * Spawn is a no-op that records its argument: the keybinding callbacks that use it
+ * (prefs-app-launch, prefs-lock-screen) are guarded against a throw, and the guard
+ * is only testable if the mock can be made to throw on demand.
+ */
+export const spawn_command_line_async = vi.fn(() => true);
+
 export default {
   getenv,
+  spawn_command_line_async,
   get_home_dir,
   get_user_data_dir,
   get_user_config_dir,

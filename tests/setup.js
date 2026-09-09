@@ -14,58 +14,60 @@ vi.mock("gi://GObject", () => GnomeMocks.GObject);
 
 // Create shared mock objects that tests can modify
 // Using vi.hoisted() ensures these are created before mocks and are mutable
-const { mockOverview, mockWm, mockPanel, mockSessionMode, mockLayoutManager } = vi.hoisted(() => {
-  return {
-    mockOverview: {
-      visible: false,
-      connect: (signal, callback) => Math.random(),
-      disconnect: (id) => {},
-      _signals: {},
-    },
-    // Main.layoutManager is the emitter of "monitors-changed" — MetaDisplay does
-    // NOT emit it (forge-0rb6). Unlike mockOverview this one keeps the handlers so
-    // a test can fire the signal and assert the disconnect actually happened.
-    mockLayoutManager: {
-      _handlers: new Map(),
-      _nextId: 1,
-      connect(signal, callback) {
-        const id = this._nextId++;
-        this._handlers.set(id, { signal, callback });
-        return id;
+const { mockOverview, mockWm, mockPanel, mockSessionMode, mockLayoutManager, mockNotify } =
+  vi.hoisted(() => {
+    return {
+      mockNotify: vi.fn(),
+      mockOverview: {
+        visible: false,
+        connect: (signal, callback) => Math.random(),
+        disconnect: (id) => {},
+        _signals: {},
       },
-      disconnect(id) {
-        this._handlers.delete(id);
-      },
-      emit(signal, ...args) {
-        for (const { signal: s, callback } of [...this._handlers.values()]) {
-          if (s === signal) callback(this, ...args);
-        }
-      },
-      _reset() {
-        this._handlers.clear();
-        this._nextId = 1;
-      },
-    },
-    mockWm: {
-      addKeybinding: () => {},
-      removeKeybinding: () => {},
-      allowKeybinding: () => {},
-    },
-    mockPanel: {
-      statusArea: {
-        quickSettings: {
-          addExternalIndicator: () => {},
+      // Main.layoutManager is the emitter of "monitors-changed" — MetaDisplay does
+      // NOT emit it (forge-0rb6). Unlike mockOverview this one keeps the handlers so
+      // a test can fire the signal and assert the disconnect actually happened.
+      mockLayoutManager: {
+        _handlers: new Map(),
+        _nextId: 1,
+        connect(signal, callback) {
+          const id = this._nextId++;
+          this._handlers.set(id, { signal, callback });
+          return id;
+        },
+        disconnect(id) {
+          this._handlers.delete(id);
+        },
+        emit(signal, ...args) {
+          for (const { signal: s, callback } of [...this._handlers.values()]) {
+            if (s === signal) callback(this, ...args);
+          }
+        },
+        _reset() {
+          this._handlers.clear();
+          this._nextId = 1;
         },
       },
-    },
-    // The quick-settings menu hides its Settings action on the lock screen.
-    mockSessionMode: {
-      allowSettings: true,
-      currentMode: "user",
-      isLocked: false,
-    },
-  };
-});
+      mockWm: {
+        addKeybinding: () => {},
+        removeKeybinding: () => {},
+        allowKeybinding: () => {},
+      },
+      mockPanel: {
+        statusArea: {
+          quickSettings: {
+            addExternalIndicator: () => {},
+          },
+        },
+      },
+      // The quick-settings menu hides its Settings action on the lock screen.
+      mockSessionMode: {
+        allowSettings: true,
+        currentMode: "user",
+        isLocked: false,
+      },
+    };
+  });
 
 // Mock GNOME Shell resources
 vi.mock("resource:///org/gnome/shell/misc/config.js", () => ({
@@ -91,7 +93,9 @@ vi.mock("resource:///org/gnome/shell/ui/main.js", () => ({
   panel: mockPanel,
   sessionMode: mockSessionMode,
   layoutManager: mockLayoutManager,
-  notify: () => {},
+  // A spy, not a stub: keybinding handlers report a failed spawn through it, and
+  // that report is the whole observable behaviour of the guard.
+  notify: mockNotify,
 }));
 
 // Quick Settings widgets (lib/extension/indicator.js). GNOME's real classes are
