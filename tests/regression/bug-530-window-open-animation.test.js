@@ -101,6 +101,40 @@ describe("Bug #530: first placement preserves the window-open animation", () => 
     expect(spy).not.toHaveBeenCalled();
   });
 
+  // Found by the per-window bookkeeping fuzzer. tree.reload() empties the tree, so
+  // trackCurrentWindows re-enters trackWindow with existNodeWindow null for EVERY
+  // live window and re-armed the one-shot. #530 is about a genuinely new window;
+  // handing the flag back to windows that are not new means the first placement
+  // after any reload skips remove_all_transitions() and leaves an in-flight shell
+  // effect running while Forge repositions the window. Reloads are not rare — enable,
+  // workspaces-reordered, the no-meta-monws fallback, and now monitor hot-plug.
+  it("does not re-arm the one-shot when a reload re-tracks a live window", () => {
+    const { meta } = newTrackedWindow();
+    const spy = vi.spyOn(meta.get_compositor_private(), "remove_all_transitions");
+
+    meta.firstRender = true;
+    wm().move(meta, otherRect);
+    expect(meta.firstRender).toBe(false);
+    expect(spy).not.toHaveBeenCalled();
+
+    // What reloadTree does: wipe the tree, then re-track the same Meta.Windows.
+    // renderTree is stubbed so this asserts what trackWindow itself does with the
+    // flag — whether the trailing render happens to consume it again depends on
+    // whether the window lands on a different rect, which is not a contract.
+    const renderSpy = vi.spyOn(wm(), "renderTree").mockImplementation(() => {});
+    global.display.get_tab_list.mockReturnValue([meta]);
+    ctx.tree.reload();
+    wm().trackCurrentWindows();
+    renderSpy.mockRestore();
+
+    expect(meta.firstRender).toBe(false);
+
+    // So the next placement still cancels in-flight effects.
+    meta.move_resize_frame(false, 5, 5, 300, 300);
+    wm().move(meta, rect);
+    expect(spy).toHaveBeenCalled();
+  });
+
   it("render path: first render preserves transitions, a real re-placement strips", () => {
     const { meta } = newTrackedWindow();
     const spy = vi.spyOn(meta.get_compositor_private(), "remove_all_transitions");

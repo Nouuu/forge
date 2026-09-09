@@ -90,6 +90,54 @@ teardown keeps firing against a dead object.
 - **Gap:** no `no-untracked-timeout` rule and no central register/clear helper —
   the next site can silently reintroduce the leak. Future work.
 
+### 7. Multi-writer expando state on a `Meta.Window`
+Forge parks bookkeeping directly on the `Meta.Window` — `_forgeSetAbove`,
+`_aboveDemotedForFullscreen`, `_forgeTransientAbove`, `_forgeStackTimeoutId`,
+`windowSignals`, `firstRender`. Each is written from several places and read from
+several others. The defect shape is always the same: one writer changes the world
+without maintaining the flag that describes it, and the state starts lying.
+
+Every instance shipped green under example-based tests, because each path was
+covered on its own and nobody had written the transition BETWEEN two of them:
+
+- `cleanupAlwaysFloat` unpinned without clearing ownership, so the reconcile
+  re-pinned what the user had just disabled.
+- `restoreAlwaysFloat` pinned without claiming ownership — and, later, re-pinned a
+  float the reconcile had deliberately suspended, lifting it back over a fullscreen
+  window.
+- the `float` setter re-applied that same suspended pin on every render, since
+  `processFloats` re-derives `float = true` each time.
+- ownership lived on the tree NODE, which every `Tree.reload()` destroys, while the
+  GNOME pin it describes lives on the window and survives.
+- `_handleUserAboveChange` did not drop ownership when the USER unpinned.
+
+- **Guardrails:** two seeded fuzzers, one per group of flags.
+  `WindowManager-above-fuzz.test.js` covers the always-on-top pair;
+  `WindowManager-lifecycle-fuzz.test.js` covers `windowSignals` / `actorSignals`
+  (re-tracking must never re-connect) and `firstRender` (a one-shot nothing may
+  re-arm). Both replay randomized operation sequences against the real handlers and
+  check their invariants **after every operation**, not once at the end — an
+  end-state check misses a violation a later call papers over, which is how the
+  first version of the above-fuzzer missed half the defects it was written for.
+  Both end with a deterministic coda for the transitions a random walk almost never
+  reaches in sequence (demote-then-restore through each restore path; track → move
+  → re-track → move).
+
+  Three defects were found by these fuzzers rather than by review: `restoreAlwaysFloat`
+  lifting a demoted float back over a fullscreen window, the `float` setter
+  re-applying that suspended pin on every render, and `trackWindow` re-arming the
+  `firstRender` one-shot on every reload (`= true` where `??= true` was meant).
+
+- **Writing one:** model the shell faithfully or the fuzzer reports states the
+  system cannot reach. Three false alarms came from a sloppy model — a destroyed
+  window left in the tab list, a `reload` missing its trailing `renderTree`, and
+  `move()` applied to an untracked window. Each cost a debugging round; each was the
+  test being wrong, not the code. State invariants against behaviour where you can
+  (`__forgePinned`, `__stripped`) rather than against the flag under test, or the
+  invariant just restates the implementation.
+- **Gap:** `actorSignals` teardown on `windowDestroy` is not asserted (the wrapper
+  is finalized, so the ids die with it — verified, not pinned).
+
 ## Cross-cutting guardrails
 
 - **`tsc --checkJs` + `strictNullChecks`** (blocking) — null-safety on typed GNOME
@@ -98,6 +146,11 @@ teardown keeps firing against a dead object.
 - **`tree.verifyIntegrity()`** (dev builds) — parent-ref / cycle / duplicate /
   empty-container invariants after tree mutations; the same rule family the e2e
   fuzzer checks, run inline on every dev render (log-and-continue).
+- **Seeded unit fuzzers** (`tests/unit/window/WindowManager-grab-fuzz.test.js`,
+  `WindowManager-above-fuzz.test.js`, `WindowManager-lifecycle-fuzz.test.js`) — deterministic operation sequences against the
+  real handlers, asserting the invariants those handlers own. Cheaper and more
+  targeted than the e2e fuzzer; use one when a class has several writers of one
+  piece of state.
 - **Seeded e2e fuzzer** (`tests/e2e/fuzz/`) — stateless step executor with an
   oracle bundle (liveness eval, `fuzzCheckInvariants`, log scan) after every step;
   ddmin shrinker for repros. Invariant list: `tests/e2e/README.md`.

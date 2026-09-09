@@ -188,6 +188,62 @@ describe("forge-zo4: demote always-on-top floats under a fullscreen window", () 
     expect(float.win._aboveDemotedForFullscreen).toBeFalsy();
   });
 
+  // Found by the ownership fuzzer (WindowManager-above-fuzz): toggling
+  // float-always-on-top back ON while a fullscreen window is up ran
+  // restoreAlwaysFloat over a float the reconcile had demoted, lifting it straight
+  // back over the fullscreen surface — the exact regression this file exists to
+  // prevent, reached through the settings path instead of the render path.
+  it("does not re-pin a demoted float over a still-fullscreen window", () => {
+    const { monitor } = getWorkspaceAndMonitor(ctx, 0, 0);
+    const float = addWindow(monitor, { mode: WINDOW_MODES.FLOAT, forgeAbove: true });
+    const { win: other } = addWindow(monitor);
+
+    other.make_fullscreen();
+    ctx.windowManager._reconcileFullscreenFloatDemotion();
+    expect(float.win.is_above()).toBe(false);
+    expect(float.win._aboveDemotedForFullscreen).toBe(true);
+
+    // The user toggles the setting back on while the fullscreen window is still up.
+    ctx.windowManager.restoreAlwaysFloat();
+
+    expect(float.win.is_above()).toBe(false);
+    // Ownership is still claimed, so the reconcile can put it back afterwards.
+    expect(float.win._forgeSetAbove).toBe(true);
+    expect(float.win._aboveDemotedForFullscreen).toBe(true);
+
+    // ...and it does, once the fullscreen window goes.
+    other.unmake_fullscreen();
+    ctx.windowManager._reconcileFullscreenFloatDemotion();
+    expect(float.win.is_above()).toBe(true);
+    expect(float.win._aboveDemotedForFullscreen).toBeFalsy();
+  });
+
+  // Also found by the ownership fuzzer, same class as the restoreAlwaysFloat case
+  // above but through the OTHER writer: processFloats re-derives `float = true` on
+  // every render, and the setter re-applied the pin the reconcile had just
+  // suspended. The reconcile that runs later in the same pipeline put it back, so
+  // the end state was right — but every render during a fullscreen session paid for
+  // a make_above / unmake_above / lower round-trip that should never start.
+  it("the float setter does not re-apply a pin the reconcile suspended", () => {
+    const { monitor } = getWorkspaceAndMonitor(ctx, 0, 0);
+    const float = addWindow(monitor, { mode: WINDOW_MODES.FLOAT, forgeAbove: true });
+    const { win: other } = addWindow(monitor);
+
+    other.make_fullscreen();
+    ctx.windowManager._reconcileFullscreenFloatDemotion();
+    expect(float.win._aboveDemotedForFullscreen).toBe(true);
+
+    const makeAboveSpy = vi.spyOn(float.win, "make_above");
+
+    // What processFloats does on the next render.
+    float.node.float = true;
+
+    expect(makeAboveSpy).not.toHaveBeenCalled();
+    expect(float.win.is_above()).toBe(false);
+    expect(float.win._aboveDemotedForFullscreen).toBe(true);
+    expect(float.win._forgeSetAbove).toBe(true);
+  });
+
   it("restores all demoted floats on disable()", () => {
     const { monitor } = getWorkspaceAndMonitor(ctx, 0, 0);
     const float = addWindow(monitor, { mode: WINDOW_MODES.FLOAT, forgeAbove: true });
