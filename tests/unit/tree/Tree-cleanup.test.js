@@ -89,6 +89,22 @@ describe("Tree Cleanup and Container Management", () => {
     it("returns false for null", () => {
       expect(ctx.tree.removeNode(null)).toBe(false);
     });
+
+    // removeChild is reached directly by render/destroy paths that removeNode's
+    // guards do not front (tree.js:1913/:1918/:2230, window.js:1157). Throwing a
+    // bare template string there aborts the surrounding handler with no stack, so
+    // the failure surfaces as an unexplained mid-render abort.
+    it("throws a real Error, not a string, when the node is not a child", () => {
+      const { monitor } = getWorkspaceAndMonitor(ctx);
+      const node = ctx.tree.createNode(monitor.nodeValue, NODE_TYPES.WINDOW, createMockWindow());
+
+      // Detach it once so `index` is null; a second removeChild then takes the
+      // not-found branch. (removeChild resolves through node.parentNode, so the
+      // receiver is irrelevant — a detached argument is what reaches the throw.)
+      monitor.removeChild(node);
+
+      expect(() => monitor.removeChild(node)).toThrow(Error);
+    });
   });
 
   describe("removeNode - Single Child Container Cleanup", () => {

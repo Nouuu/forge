@@ -213,6 +213,25 @@ describe("Tree Operations", () => {
     });
   });
 
+  // split() returns null on every non-creating exit (forge-clsp), and its type check
+  // admits MONITOR/CON/WINDOW without ever verifying parentNode — so a detached node
+  // of one of those types threw inside the keybinding handler instead of taking a
+  // null exit like every other guard in the function.
+  describe("split with a detached node", () => {
+    it("returns null instead of throwing", () => {
+      const { monitor } = getWorkspaceAndMonitor(ctx);
+      const node = ctx.tree.createNode(monitor.nodeValue, NODE_TYPES.WINDOW, createMockWindow());
+      monitor.removeChild(node);
+      expect(node.parentNode).toBeNull();
+
+      let result;
+      expect(() => {
+        result = ctx.tree.split(node, ORIENTATION_TYPES.HORIZONTAL, true);
+      }).not.toThrow();
+      expect(result).toBeNull();
+    });
+  });
+
   describe("swapPairs", () => {
     it("should swap two windows in same parent", () => {
       const { monitor } = getWorkspaceAndMonitor(ctx);
