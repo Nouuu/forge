@@ -885,6 +885,15 @@ class ShellProxy:
         )
         return self.eval(js) == "ok"
 
+    def get_workspace_skip_tile(self) -> str:
+        """Read Forge's `workspace-skip-tile` GSetting as the extension holds it."""
+        self._ensure_bridge()
+        return self.eval(
+            "(function(){const f=Main.extensionManager.lookup('forge@jmmaranan.com');"
+            "if(!f||!f.stateObj||!f.stateObj.settings)return 'no-ext';"
+            "return f.stateObj.settings.get_string('workspace-skip-tile');})()"
+        )
+
     def set_workspace_skip_tile(self, value: str = "") -> bool:
         """Reset Forge's `workspace-skip-tile` GSetting (which workspaces are floated).
 
@@ -1045,6 +1054,146 @@ class ShellProxy:
     return 'ok';
 })();""").substitute(all_lines=all_lines)
         self.eval(js)
+
+    # --- session lifecycle -------------------------------------------------------
+
+    def push_session_mode(self, mode: str) -> str:
+        """Enter a session mode ("unlock-dialog" = the lock screen) and return the
+        resulting currentMode. Drives the same Main.sessionMode 'updated' signal the
+        real lock screen does, so the extension's session handler runs for real."""
+        return self.eval(
+            f"(function(){{ Main.sessionMode.pushMode('{mode}'); "
+            "return Main.sessionMode.currentMode; })()"
+        )
+
+    def pop_session_mode(self, mode: str) -> str:
+        """Leave a session mode pushed by push_session_mode; returns currentMode."""
+        return self.eval(
+            f"(function(){{ Main.sessionMode.popMode('{mode}'); "
+            "return Main.sessionMode.currentMode; })()"
+        )
+
+    def get_extension_state(self) -> dict:
+        """Forge's ExtensionState and error string, as the extension manager sees them.
+
+        state: 1=ENABLED 2=DISABLED 3=ERROR 7=DEACTIVATING 8=ACTIVATING.
+        """
+        raw = self.eval(
+            "(function(){ const e = Main.extensionManager.lookup('forge@jmmaranan.com'); "
+            "return JSON.stringify({state: e.state, error: String(e.error || '')}); })()"
+        )
+        return json.loads(raw) if isinstance(raw, str) else raw
+
+    def cycle_extension(self) -> dict:
+        """disable() then enable() Forge through the extension manager and wait for it
+        to settle. Returns the final get_extension_state().
+
+        This is the ONLY path that runs WindowManager.disable() — the lock screen
+        leaves extWm alone (extension.js keeps the tree across a lock on purpose).
+        enableExtension is asynchronous (state 8 = ACTIVATING first), hence the wait.
+        The bridge is torn down with the extension's globals; _ensure_bridge reinstalls.
+        """
+        self.eval("Main.extensionManager.disableExtension('forge@jmmaranan.com')")
+        self.eval("Main.extensionManager.enableExtension('forge@jmmaranan.com')")
+        from framework.wait import wait_for  # local import: wait imports constants
+
+        state = wait_for(
+            self.get_extension_state,
+            predicate=lambda s: s["state"] in (1, 3),
+            message="extension did not settle after disable/enable",
+        )
+        self._bridge_installed = False
+        return state
+
+    # --- monitor hot-plug ----------------------------------------------------------
+
+    _VIRTUAL_MONITOR_MODE = "1920x1080@60.000"
+
+    def _display_config_call(self, method: str, args=None):
+        """Call org.gnome.Mutter.DisplayConfig from THIS process, over the proxy's bus.
+
+        Never through Shell.Eval: DisplayConfig lives in the gnome-shell process, so a
+        call_sync issued from inside Eval blocks the very main loop that has to answer
+        it — a guaranteed 25 s timeout, and a frozen shell for the duration.
+        """
+        if not self._proxy:
+            self.connect()
+        return self._proxy.get_connection().call_sync(
+            "org.gnome.Mutter.DisplayConfig",
+            "/org/gnome/Mutter/DisplayConfig",
+            "org.gnome.Mutter.DisplayConfig",
+            method,
+            args,
+            None,
+            Gio.DBusCallFlags.NONE,
+            10000,
+            None,
+        )
+
+    def set_virtual_monitor_count(self, count: int) -> None:
+        """Enable exactly `count` of the session's virtual monitors, left to right.
+
+        Goes through org.gnome.Mutter.DisplayConfig.ApplyMonitorsConfig, which is what
+        a display-settings change does — and Mutter then emits the same
+        Main.layoutManager::monitors-changed a physical unplug/replug does, so the
+        extension's hot-plug path runs for real. Only meaningful on the Wayland
+        headless lane (GNOME 49+), where the session is started with
+        --virtual-monitor; the X11/Xvfb lane has a single fixed output.
+
+        Method 1 = temporary: the change is not persisted to monitors.xml.
+        """
+        state = self._display_config_call("GetCurrentState")
+        serial = state.get_child_value(0).get_uint32()
+        monitors = state.get_child_value(1)
+        names = [
+            monitors.get_child_value(i).get_child_value(0).get_child_value(0).get_string()
+            for i in range(monitors.n_children())
+        ]
+        if count > len(names):
+            raise ValueError(f"session has {len(names)} virtual monitors, asked for {count}")
+
+        logical = ", ".join(
+            f"({i * 1920}, 0, 1.0, 0, {'true' if i == 0 else 'false'}, "
+            f"[('{names[i]}', '{self._VIRTUAL_MONITOR_MODE}', {{}})])"
+            for i in range(count)
+        )
+        # Typed parse: without the signature GLib cannot infer the empty a{sv} dicts.
+        args = GLib.Variant.parse(
+            GLib.VariantType("(uua(iiduba(ssa{sv}))a{sv})"),
+            f"({serial}, 1, [{logical}], {{}})",
+            None,
+            None,
+        )
+        self._display_config_call("ApplyMonitorsConfig", args)
+
+    def activate_window_on_monitor(self, monitor_index: int) -> str:
+        """Focus one NORMAL window currently on `monitor_index`; 'none' if there is none.
+
+        ensure_focus() picks windows[0] when nothing is focused, which on a
+        multi-monitor workspace is not necessarily on the monitor a test wants to
+        operate from — moving "the focused window" twice can move the same one twice.
+        """
+        return self.eval(
+            "(function(){ const ws = global.workspace_manager.get_active_workspace(); "
+            "const w = ws.list_windows().find(x => x.get_window_type() === Meta.WindowType.NORMAL "
+            f"&& x.get_monitor() === {int(monitor_index)}); if (!w) return 'none'; "
+            "w.activate(global.get_current_time()); return 'ok'; })()"
+        )
+
+    def get_forge_monitor_nodes(self) -> list:
+        """The tree's MONITOR node ids (mo{m}ws{n}), sorted. Empty if no tree."""
+        raw = self.eval(
+            "(function(){ const s = Main.extensionManager.lookup('forge@jmmaranan.com').stateObj; "
+            "const t = s?.extWm?._tree; if (!t) return '[]'; "
+            "return JSON.stringify(t.getNodeByType('MONITOR').map(n => n.nodeValue).sort()); })()"
+        )
+        return json.loads(raw) if isinstance(raw, str) else raw
+
+    def get_window_group_child_count(self) -> int:
+        """Number of actors parented in global.window_group — the leak gauge for
+        scaffold bins (forge-h6jc): Forge parents one St.Bin per workspace and per
+        monitor there, and a hot-plug that rebuilt without releasing would grow it."""
+        return int(self.eval("global.window_group.get_n_children()"))
 
     def get_pointer(self) -> tuple:
         """Read the current absolute pointer position.

@@ -414,9 +414,13 @@
       try {
         const r = root();
         if (!r) return JSON.stringify({ error: "Tree not available" });
+        // Skip the WORKSPACE node: it is an HSPLIT too, and on a multi-monitor
+        // session its >=2 children are MONITOR nodes, not windows — the first
+        // match would then be a container whose "last child" cannot be activated.
         const container = firstMatch(
           r,
-          (n) => n.layout === layout && (n.childNodes || []).length >= 2
+          (n) =>
+            n.layout === layout && n.nodeType !== "WORKSPACE" && (n.childNodes || []).length >= 2
         );
         if (!container) {
           return JSON.stringify({ error: "No >=2-child " + layout + " container" });

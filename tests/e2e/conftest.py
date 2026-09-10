@@ -262,16 +262,24 @@ def _warm_text_editor(shell_proxy, check_forge_ready):
         _close_all_windows(shell_proxy)
 
     # The session runs with num-workspaces=2 / dynamic-workspaces=false, so
-    # workspace state is real. Make sure the warmup didn't leave us off ws 0.
+    # workspace state is real. Round-trip ws 0 -> 1 -> 0 programmatically, which
+    # both restores ws 0 if the warmup left it and arms the workspace shortcuts:
+    # on the 2-monitor headless Wayland session Mutter dispatches NO workspace
+    # keybinding (Super+Page_Down, Ctrl+Alt+Down, ...) until one
+    # Meta.Workspace.activate() has happened — with or without Forge enabled. The
+    # first test to press one in a fresh session (test_workflow_snap_gap, early in
+    # the workflow lane) failed on that lane while every later test passed, because
+    # _close_all_windows had activated a workspace in between.
     try:
-        if shell_proxy.get_active_workspace_index() != 0:
-            shell_proxy.eval(
-                "(function(){"
-                "global.workspace_manager.get_workspace_by_index(0)"
-                ".activate(global.get_current_time()); return 'ok';})();"
-            )
+        shell_proxy.eval(
+            "(function(){"
+            "const wm = global.workspace_manager;"
+            "wm.get_workspace_by_index(1).activate(global.get_current_time());"
+            "wm.get_workspace_by_index(0).activate(global.get_current_time());"
+            "return 'ok';})();"
+        )
     except Exception as e:
-        warnings.warn(f"Could not restore active workspace to 0 after warmup: {e}")
+        warnings.warn(f"Could not round-trip the workspaces after warmup: {e}")
 
 
 @pytest.fixture(scope="session")

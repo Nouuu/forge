@@ -171,3 +171,94 @@ class TestMoveWindowBetweenWorkspaces:
         assert count_final == count_original, (
             f"Window count should be restored: {count_original} -> {count_final}"
         )
+
+
+_REMOVE_WORKSPACE_JS = """
+(function() {
+    var wsm = global.workspace_manager;
+    var ws = wsm.get_workspace_by_index(%d);
+    if (!ws) return 'missing';
+    wsm.remove_workspace(ws, global.get_current_time());
+    return 'ok';
+})();
+"""
+
+_APPEND_WORKSPACE_JS = """
+(function() {
+    global.workspace_manager.append_new_workspace(false, global.get_current_time());
+    return 'ok';
+})();
+"""
+
+
+class TestSkipListFollowsRenumbering:
+    """workspaces-monitors G6: `workspace-skip-tile` follows a removed workspace.
+
+    The tree renumbers its ws{n} nodes when a workspace is removed so it keeps
+    tracking the same Meta.Workspace as it shifts; the skip list stored raw indices
+    and was left behind, so the exclusion silently re-pointed at a DIFFERENT
+    workspace — routinely, under GNOME's dynamic workspaces. The session pins
+    dynamic-workspaces=false, so the removal is driven directly through
+    Meta.WorkspaceManager here; the workspace-removed signal Forge handles is the
+    same one either way.
+    """
+
+    def test_removing_a_lower_workspace_shifts_the_exclusion_down(self, shell_proxy, test_window):
+        count = shell_proxy.get_workspace_count()
+        assert count >= 2
+        try:
+            # Exclude the LAST workspace, then remove workspace 0 beneath it.
+            shell_proxy.set_workspace_skip_tile(str(count - 1))
+            wait_for(
+                lambda: shell_proxy.is_workspace_tiling_skipped(count - 1),
+                predicate=bool,
+                message="setup: workspace was not excluded",
+            )
+
+            assert shell_proxy.eval(_REMOVE_WORKSPACE_JS % 0) == "ok"
+            wait_for(
+                shell_proxy.get_workspace_count,
+                predicate=lambda n: n == count - 1,
+                message="workspace 0 was not removed",
+            )
+
+            # The exclusion followed the workspace to its new index.
+            wait_for(
+                shell_proxy.get_workspace_skip_tile,
+                predicate=lambda v: v == str(count - 2),
+                message="skip list did not shift down with the renumbering",
+            )
+            assert shell_proxy.is_workspace_tiling_skipped(count - 2)
+            # ...and nothing else picked it up.
+            for i in range(count - 2):
+                assert not shell_proxy.is_workspace_tiling_skipped(i), (
+                    f"workspace {i} became excluded by mistake"
+                )
+        finally:
+            shell_proxy.set_workspace_skip_tile("")
+            while shell_proxy.get_workspace_count() < count:
+                shell_proxy.eval(_APPEND_WORKSPACE_JS)
+                wait_for(shell_proxy.get_workspace_count, predicate=lambda n: n >= 1)
+
+    def test_removing_the_excluded_workspace_drops_its_entry(self, shell_proxy, test_window):
+        count = shell_proxy.get_workspace_count()
+        assert count >= 2
+        try:
+            shell_proxy.set_workspace_skip_tile(str(count - 1))
+            wait_for(lambda: shell_proxy.is_workspace_tiling_skipped(count - 1), predicate=bool)
+
+            assert shell_proxy.eval(_REMOVE_WORKSPACE_JS % (count - 1)) == "ok"
+            wait_for(shell_proxy.get_workspace_count, predicate=lambda n: n == count - 1)
+
+            # Its workspace is gone; leaving the entry would exclude whatever slid
+            # into that slot next.
+            wait_for(
+                shell_proxy.get_workspace_skip_tile,
+                predicate=lambda v: v == "",
+                message="removed workspace's entry was not dropped from the skip list",
+            )
+        finally:
+            shell_proxy.set_workspace_skip_tile("")
+            while shell_proxy.get_workspace_count() < count:
+                shell_proxy.eval(_APPEND_WORKSPACE_JS)
+                wait_for(shell_proxy.get_workspace_count, predicate=lambda n: n >= 1)
