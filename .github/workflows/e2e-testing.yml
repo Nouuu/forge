@@ -111,7 +111,7 @@ jobs:
           docker exec $POD chown -R gnomeshell:gnomeshell /app/e2e-results
 
           echo "Running E2E tests..."
-          docker exec --user gnomeshell -e DISPLAY=:99 $POD \
+          docker exec --user gnomeshell -e DISPLAY=:99 -e FORGE_E2E_TIMEOUT_SCALE=2 $POD \
             set-env.sh /app/scripts/run-tests.sh
 
       - name: Upload test results
@@ -187,7 +187,7 @@ jobs:
           # DISPATCH_MODE=keybinding routes input_sim via synthetic keypresses;
           # -k isolates ONE test (run-tests.sh runs `pytest tests/ $ARGS`, so a
           # node id would be appended and run the whole suite — use -k).
-          docker exec --user gnomeshell -e DISPLAY=:99 -e DISPATCH_MODE=keybinding $POD \
+          docker exec --user gnomeshell -e DISPLAY=:99 -e FORGE_E2E_TIMEOUT_SCALE=2 -e DISPATCH_MODE=keybinding $POD \
             set-env.sh /app/scripts/run-tests.sh -k ${KB_TEST}
 
       - name: Upload keybinding-gate results
@@ -263,7 +263,7 @@ jobs:
           docker exec -e FORGE_E2E_VIRTUAL_MONITORS=2 $POD /usr/local/bin/start-user-session.sh 99
           docker exec $POD chown -R gnomeshell:gnomeshell /app/e2e-results
           # -k isolates the single multimonitor test; -rs reports skip reasons.
-          docker exec --user gnomeshell -e DISPLAY=:99 $POD \
+          docker exec --user gnomeshell -e DISPLAY=:99 -e FORGE_E2E_TIMEOUT_SCALE=2 $POD \
             set-env.sh /app/scripts/run-tests.sh -k ${MM_TEST} -rs
 
       - name: Assert the multi-monitor test actually ran (not skipped)

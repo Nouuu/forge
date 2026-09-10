@@ -109,6 +109,14 @@ atomic-only, so the atomic lane must keep running by default.
 - **End every state-changing step in a `wait_for_*`** on its own post-condition — there is
   no flake-rerun plugin, so this polling is the only stability mechanism, and longer
   sequences multiply the gates.
+- **Wait ceilings scale with `FORGE_E2E_TIMEOUT_SCALE`** (default `1`; CI passes `2`).
+  GitHub runners finish the suite ~40 % slower than a workstation, and the flakes that
+  produced were all `WaitTimeoutError`s on conditions that do become true, just later.
+  Only `Timeout.*` (the ceilings) scales — a wait returns the moment its predicate holds,
+  so a fast machine is unaffected and a genuine regression still fails, at 2× the deadline.
+  The fixed settles in `Timing.*` are deliberately not scaled. Do not reach for this to
+  make a failing test pass locally: a test that only passes at `2` on your machine has a
+  real timing bug.
 - For focus-dependent steps use `invoke_forge_action(..., focus_window=...)` (and
   `also_activate=True` for async-finalized actions like keyboard resize). Positional hints
   cannot disambiguate STACKED/TABBED children (shared rect) — target those via focus
@@ -243,6 +251,7 @@ because this list used to stop at step 4.
 - **`framework/input_simulator.py`** — `InputSimulator` class wrapping `xdotool` for keyboard shortcuts, mouse clicks, and window focus simulation.
 - **`framework/window_helper.py`** — `WindowHelper` with higher-level operations: open windows, arrange layouts, verify tiling state.
 - **`framework/constants.py`** — Shared constants (timeouts, extension UUID, key names).
+  `Timeout.*` are ceilings scaled by `FORGE_E2E_TIMEOUT_SCALE`; `Timing.*` are fixed settles.
 - **`framework/workflow.py`** — Helpers for the workflow lane: `step()` (per-step screencast label + failure annotation) and `invoke_resize()` (deterministic keyboard-resize driver, also used by the atomic resize tests).
 
 ## Formatting & Linting

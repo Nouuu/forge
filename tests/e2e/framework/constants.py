@@ -5,6 +5,35 @@ Centralizes timing values, tolerances, and configuration to avoid
 magic numbers scattered throughout the codebase.
 """
 
+import os
+
+
+def _timeout_scale() -> float:
+    """Multiplier for wait CEILINGS, from FORGE_E2E_TIMEOUT_SCALE (default 1).
+
+    GitHub runners finish the suite ~40% slower than a workstation (≈690 s vs
+    ≈480 s), and three different tests flaked there on three different GNOME
+    legs in one day — every one a WaitTimeoutError on a condition that does
+    become true, just later. Scaling only the ceilings (Timeout.*) gives a slow
+    runner room without slowing anything: a wait returns the moment its
+    predicate holds, so a fast machine is unaffected, and a genuine regression —
+    a predicate that never holds — still fails, only at 2× the deadline.
+
+    The fixed settles in Timing.* are deliberately NOT scaled: those are sleeps,
+    and scaling them would slow every test everywhere.
+    """
+    raw = os.environ.get("FORGE_E2E_TIMEOUT_SCALE", "1")
+    try:
+        scale = float(raw)
+    except ValueError as exc:
+        raise ValueError(f"FORGE_E2E_TIMEOUT_SCALE must be a number, got {raw!r}") from exc
+    if scale < 1:
+        raise ValueError(f"FORGE_E2E_TIMEOUT_SCALE must be >= 1, got {scale}")
+    return scale
+
+
+TIMEOUT_SCALE = _timeout_scale()
+
 
 class Timing:
     """Timing constants for test synchronization (in seconds)."""
@@ -55,12 +84,18 @@ class Tolerance:
 
 
 class Timeout:
-    """Timeout values for various operations (in seconds)."""
+    """Timeout values for various operations (in seconds).
 
-    DEFAULT = 5.0  # Default timeout for wait operations
-    WINDOW = 10.0  # Timeout for window operations
-    SHELL = 60.0  # Timeout for shell startup
-    LAYOUT = 5.0  # Timeout for layout operations
+    These are CEILINGS on how long a wait may poll before declaring failure,
+    scaled by FORGE_E2E_TIMEOUT_SCALE (see _timeout_scale). A wait returns as
+    soon as its predicate holds, so raising a ceiling costs nothing on a
+    machine that meets it.
+    """
+
+    DEFAULT = 5.0 * TIMEOUT_SCALE  # Default timeout for wait operations
+    WINDOW = 10.0 * TIMEOUT_SCALE  # Timeout for window operations
+    SHELL = 60.0 * TIMEOUT_SCALE  # Timeout for shell startup
+    LAYOUT = 5.0 * TIMEOUT_SCALE  # Timeout for layout operations
 
 
 class RetryConfig:

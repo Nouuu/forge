@@ -1046,6 +1046,23 @@ class ShellProxy:
 })();""").substitute(all_lines=all_lines)
         self.eval(js)
 
+    def get_pointer(self) -> tuple:
+        """Read the current absolute pointer position.
+
+        Used by the move-pointer-focus test: Forge warps the pointer through
+        Clutter's seat, and that call is version-sensitive with no unit coverage
+        against a real shell — reading the position back is what proves the warp
+        landed rather than throwing.
+
+        Returns:
+            (x, y) as ints.
+        """
+        result = self.eval(
+            "(function() { const p = global.get_pointer(); return `${p[0]},${p[1]}`; })()"
+        )
+        x, y = str(result).split(",")
+        return int(x), int(y)
+
     def simulate_mouse_move(self, x: int, y: int) -> None:
         """Move the virtual mouse pointer to absolute coordinates."""
         self._ensure_virtual_devices()
