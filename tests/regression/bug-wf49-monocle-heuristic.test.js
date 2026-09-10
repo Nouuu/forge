@@ -138,9 +138,13 @@ describe("forge-wf49: workspace monocle heuristic", () => {
       tileOn(mon0, 1);
       tileOn(mon0, 2);
       tileOn(mon1, 3);
-      tileOn(mon1, 4);
+      const w4 = tileOn(mon1, 4);
 
-      global.display.get_current_monitor.mockReturnValue(1);
+      // Focus on monitor 1, pointer resting on monitor 0: the keyboard action must
+      // follow the FOCUS. (With move-pointer-focus off the two routinely differ.)
+      w4.nodeValue.get_monitor = () => 1;
+      multi.display.get_focus_window.mockReturnValue(w4.nodeValue);
+      global.display.get_current_monitor.mockReturnValue(0);
       multi.windowManager.toggleWorkspaceMonocle();
 
       // Monitor 1 collapsed into one tabbed container...
@@ -161,7 +165,9 @@ describe("forge-wf49: workspace monocle heuristic", () => {
       tileOn(mon0, 1);
       tileOn(mon0, 2);
 
-      // A monitor index with no node for this workspace (stale scaffold).
+      // Neither the focus nor the pointer resolves to a node for this workspace
+      // (stale scaffold, or an index Mutter reports before the tree caught up).
+      multi.display.get_focus_window.mockReturnValue(null);
       global.display.get_current_monitor.mockReturnValue(7);
 
       expect(() => multi.windowManager.toggleWorkspaceMonocle()).not.toThrow();
