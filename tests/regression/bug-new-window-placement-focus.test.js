@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach } from "vitest";
+import { describe, it, expect, afterEach, vi } from "vitest";
 import {
   createMockWindow,
   createWindowManagerFixture,
@@ -50,6 +50,36 @@ describe("Bug new-window-placement-focus: 'focus' homes a new window on the focu
     wm().trackWindow(null, metaWindow);
 
     expect(monitorOf(wm().findNodeWindow(metaWindow))).toBe(0);
+  });
+
+  it("moves the window Mutter mapped on the pointer monitor over to the focus monitor", () => {
+    setup(0);
+    // Mutter places the new window on the pointer's monitor and reports it after map.
+    const metaWindow = createMockWindow({ workspace: ctx.workspaces[0], monitor: -1 });
+    wm().trackWindow(null, metaWindow);
+    metaWindow._monitor = 1;
+    const move = vi.spyOn(metaWindow, "move_to_monitor");
+
+    wm().updateMetaWorkspaceMonitor("window-entered-monitor", 1, metaWindow);
+
+    expect(move).toHaveBeenCalledWith(0);
+    expect(monitorOf(wm().findNodeWindow(metaWindow))).toBe(0);
+  });
+
+  it("does not keep pulling the window back once it has been placed", () => {
+    setup(0);
+    const metaWindow = createMockWindow({ workspace: ctx.workspaces[0], monitor: -1 });
+    wm().trackWindow(null, metaWindow);
+    metaWindow._monitor = 1;
+    wm().updateMetaWorkspaceMonitor("window-entered-monitor", 1, metaWindow);
+    const move = vi.spyOn(metaWindow, "move_to_monitor");
+
+    // The user drags it to monitor 1 later: a normal re-home, no tug of war.
+    metaWindow._monitor = 1;
+    wm().updateMetaWorkspaceMonitor("window-entered-monitor", 1, metaWindow);
+
+    expect(move).not.toHaveBeenCalled();
+    expect(monitorOf(wm().findNodeWindow(metaWindow))).toBe(1);
   });
 
   it("falls back to the pointer monitor when nothing is focused", () => {
