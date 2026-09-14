@@ -181,8 +181,12 @@ disable:
 	gnome-extensions disable "$(UUID)" || echo "Nothing to disable"
 
 install:
-	mkdir -p $(INSTALL_PATH)
-	cp -r temp/* $(INSTALL_PATH)
+	mkdir -p $(INSTALL_PATH)/schemas
+	for f in temp/*; do [ "$$f" = temp/schemas ] || cp -r "$$f" $(INSTALL_PATH)/; done
+	cp temp/schemas/*.gschema.xml $(INSTALL_PATH)/schemas/
+	# gnome-shell keeps gschemas.compiled mmapped: swap it by rename, never rewrite in place
+	cp temp/schemas/gschemas.compiled $(INSTALL_PATH)/schemas/gschemas.compiled.tmp
+	mv -f $(INSTALL_PATH)/schemas/gschemas.compiled.tmp $(INSTALL_PATH)/schemas/gschemas.compiled
 
 uninstall:
 	rm -rf $(INSTALL_PATH)
