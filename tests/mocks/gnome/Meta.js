@@ -107,7 +107,12 @@ export class Window extends withSignals() {
   // notify::wm-class signal Forge listens for. forge-3qq (#482).
   set_wm_class(value) {
     this.wm_class = value;
-    this.emit("notify::wm-class");
+    this.emit("notify::wm-class", this);
+  }
+
+  set_title(value) {
+    this.title = value;
+    this.emit("notify::title", this);
   }
 
   get_title() {
