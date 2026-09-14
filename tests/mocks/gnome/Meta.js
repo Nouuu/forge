@@ -474,6 +474,14 @@ export function __setWayland(value) {
   _wayland = value;
 }
 
+let _workspacesOnlyOnPrimary = false;
+export function prefs_get_workspaces_only_on_primary() {
+  return _workspacesOnlyOnPrimary;
+}
+export function __setWorkspacesOnlyOnPrimary(value) {
+  _workspacesOnlyOnPrimary = value;
+}
+
 export default {
   Rectangle,
   Window,
@@ -491,4 +499,6 @@ export default {
   external_binding_name_for_action,
   is_wayland_compositor,
   __setWayland,
+  prefs_get_workspaces_only_on_primary,
+  __setWorkspacesOnlyOnPrimary,
 };

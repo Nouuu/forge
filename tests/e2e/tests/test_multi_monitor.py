@@ -263,3 +263,81 @@ class TestMonocleScope:
             predicate=lambda on1: len(on1) == 2 and all(w["rect"]["width"] < 1700 for w in on1),
             message="monitor 1 did not return to a split after toggling monocle off",
         )
+
+
+class TestWorkspaceSwitchKeepsSecondary:
+    """workspaces-monitors US7: a workspace switch on the primary never touches the secondary.
+
+    Fires the home sweep the way DING does (a `workspace-changed` on a primary window)
+    and pins the secondary's home subtree and geometry across a ws0 -> ws1 -> ws0 trip.
+    """
+
+    @staticmethod
+    def _secondary_home(shell_proxy) -> dict:
+        # ROOT > ws0 > [mo0ws0, mo1ws0]: the secondary's one and only home.
+        return shell_proxy.get_tree_structure()["children"][0]["children"][1]
+
+    @staticmethod
+    def _secondary_rects(shell_proxy) -> list:
+        return sorted(
+            (w["rect"]["x"], w["rect"]["width"])
+            for w in shell_proxy.get_windows()
+            if w["rect"]["x"] >= MONITOR_1_X
+        )
+
+    def test_workspace_switch_keeps_secondary_layout(self, shell_proxy, four_windows):
+        if shell_proxy.get_monitor_count() < 2:
+            pytest.skip("requires 2 virtual monitors (FORGE_E2E_VIRTUAL_MONITORS=2)")
+
+        for expected_on_1 in (1, 2):
+            assert shell_proxy.activate_window_on_monitor(0) == "ok"
+            assert shell_proxy.move_focused_window_to_monitor(1) == "ok"
+            wait_for(
+                lambda: [w for w in shell_proxy.get_windows() if w["rect"]["x"] >= MONITOR_1_X],
+                predicate=lambda on1, n=expected_on_1: len(on1) == n,
+                message=f"setup: expected {expected_on_1} window(s) on monitor 1",
+            )
+        wait_for(
+            lambda: self._secondary_rects(shell_proxy),
+            predicate=lambda r: len(r) == 2 and all(850 < width < 1000 for _, width in r),
+            message="setup: expected two half-width windows on monitor 1",
+        )
+        home_before = self._secondary_home(shell_proxy)
+        rects_before = self._secondary_rects(shell_proxy)
+        assert home_before["childCount"] == 2, home_before
+
+        # Round 1: ws1 becomes active and one of the two primary windows follows it
+        # there; round 2: back to ws0, and it is brought back (1 stayed + 1 returned).
+        for ws_index, primary_count in ((1, 1), (0, 2)):
+            shell_proxy.activate_workspace(ws_index)
+            wait_for(
+                shell_proxy.get_active_workspace_index,
+                predicate=lambda i, want=ws_index: i == want,
+                message=f"workspace {ws_index} did not become active",
+            )
+            # What DING does on every switch: re-parent a window onto the active
+            # workspace, which emits workspace-changed and triggers Forge's home sweep.
+            moved = shell_proxy.eval(
+                "(() => { const Meta = imports.gi.Meta;"
+                " const w = global.get_window_actors().map((a) => a.meta_window)"
+                "   .find((m) => m && m.get_monitor() === 0"
+                "     && m.get_window_type() === Meta.WindowType.NORMAL"
+                "     && !m.is_on_all_workspaces()"
+                f"     && m.get_workspace().index() !== {ws_index});"
+                " if (!w) return JSON.stringify({ error: 'no primary window to move' });"
+                f" w.change_workspace_by_index({ws_index}, false);"
+                " return JSON.stringify({ ok: true }); })()"
+            )
+            assert moved == {"ok": True}, moved
+            wait_for(
+                lambda: shell_proxy.get_tree_structure()["children"][ws_index]["children"][0],
+                predicate=lambda mo0, n=primary_count: mo0["childCount"] == n,
+                message=f"the moved primary window should be tracked under ws{ws_index}",
+            )
+
+            assert self._secondary_home(shell_proxy) == home_before, (
+                f"secondary home changed after switching to ws{ws_index}"
+            )
+            assert self._secondary_rects(shell_proxy) == rects_before, (
+                f"secondary geometry changed after switching to ws{ws_index}"
+            )

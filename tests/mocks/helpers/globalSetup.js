@@ -38,6 +38,7 @@ export function createMockDisplay(options = {}) {
   return addSignalSupport({
     get_workspace_manager: vi.fn(),
     get_n_monitors: vi.fn(() => monitorCount),
+    get_primary_monitor: vi.fn(() => 0),
     get_focus_window: vi.fn(getFocusWindow),
     get_current_monitor: vi.fn(() => 0),
     get_current_time: vi.fn(() => 12345),
