@@ -8,10 +8,11 @@ vertically, landscape monitors split horizontally.
 
 `new-window-placement` (Preferences → general settings):
 
-- **`pointer`** (default) — a new window tiles on the monitor with the pointer /
-  active window.
+- **`pointer`** (default) — a new window tiles on the monitor with the pointer.
 - **`window-actual`** — a new window tiles on the monitor it actually opened on
   (respects app-restored geometry).
+- **`focus`** — a new window tiles on the focused window's monitor (pointer monitor
+  when nothing is focused).
 
 If windows open on the "wrong" monitor, try switching this setting.
 

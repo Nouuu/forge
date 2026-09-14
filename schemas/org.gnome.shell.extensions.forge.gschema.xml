@@ -177,9 +177,10 @@
             <choices>
                 <choice value="pointer"/>
                 <choice value="window-actual"/>
+                <choice value="focus"/>
             </choices>
             <default>'pointer'</default>
-            <summary>Initial monitor for a new window: 'pointer' (active/pointer monitor) or 'window-actual' (the window's own monitor)</summary>
+            <summary>Initial monitor for a new window: 'pointer' (pointer monitor), 'window-actual' (the window's own monitor) or 'focus' (the focused window's monitor)</summary>
         </key>
         <key type="b" name="preview-hint-enabled">
             <default>false</default>

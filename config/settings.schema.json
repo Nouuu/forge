@@ -92,8 +92,8 @@
         },
         "new-window-placement": {
           "type": "string",
-          "description": "Initial monitor for a new window: 'pointer' (active/pointer monitor) or 'window-actual' (the window's own monitor)",
-          "enum": ["pointer", "window-actual"],
+          "description": "Initial monitor for a new window: 'pointer' (pointer monitor), 'window-actual' (the window's own monitor) or 'focus' (the focused window's monitor)",
+          "enum": ["pointer", "window-actual", "focus"],
           "default": "pointer"
         }
       },

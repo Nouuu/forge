@@ -249,6 +249,14 @@ msgid "Corner radius of the focus borders (0 for square corners)"
 msgstr ""
 
 #: lib/prefs/appearance.js
+msgid "Show tab bar"
+msgstr ""
+
+#: lib/prefs/appearance.js
+msgid "Draw the title bar for stacked and tabbed containers"
+msgstr ""
+
+#: lib/prefs/appearance.js
 msgid "Tab margin"
 msgstr ""
 
@@ -629,6 +637,14 @@ msgid "Window focus follows the pointer"
 msgstr ""
 
 #: lib/prefs/settings.js
+msgid "Focus on Hover only while tiling"
+msgstr ""
+
+#: lib/prefs/settings.js
+msgid "Suspends focus-follows-pointer when tiling is off"
+msgstr ""
+
+#: lib/prefs/settings.js
 msgid "Move pointer with focused window"
 msgstr ""
 
@@ -706,11 +722,15 @@ msgid "Which monitor a new window initially homes to"
 msgstr ""
 
 #: lib/prefs/settings.js
-msgid "Pointer / active monitor"
+msgid "Pointer monitor"
 msgstr ""
 
 #: lib/prefs/settings.js
 msgid "Window's own monitor"
+msgstr ""
+
+#: lib/prefs/settings.js
+msgid "Focused window's monitor"
 msgstr ""
 
 #: lib/prefs/settings.js
@@ -735,7 +755,8 @@ msgstr ""
 
 #: lib/prefs/settings.js
 msgid ""
-"Disables tiling on specified workspaces. Starts from 0, separated by commas"
+"Disables tiling on specified workspaces. Starts from 0, separated by commas. "
+"Indices follow workspaces as they are added or removed"
 msgstr ""
 
 #: lib/prefs/settings.js
@@ -893,8 +914,8 @@ msgstr ""
 
 #: schemas/org.gnome.shell.extensions.forge.gschema.xml
 msgid ""
-"The default center layout when dragging/dropping a window. The values are "
-"`tabbed` and `stacked`."
+"What a center drop does when dragging one window onto another. The values "
+"are `tabbed`, `stacked` and `swap`."
 msgstr ""
 
 #: schemas/org.gnome.shell.extensions.forge.gschema.xml
@@ -932,8 +953,8 @@ msgstr ""
 
 #: schemas/org.gnome.shell.extensions.forge.gschema.xml
 msgid ""
-"Initial monitor for a new window: 'pointer' (active/pointer monitor) or "
-"'window-actual' (the window's own monitor)"
+"Initial monitor for a new window: 'pointer' (pointer monitor), 'window-"
+"actual' (the window's own monitor) or 'focus' (the focused window's monitor)"
 msgstr ""
 
 #: schemas/org.gnome.shell.extensions.forge.gschema.xml
