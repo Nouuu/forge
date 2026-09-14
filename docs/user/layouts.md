@@ -32,7 +32,8 @@ Instead of splitting space, a container can show one child at a time:
 - `auto-exit-tabbed` (on by default) drops a container back to a split when only one
   tab remains.
 - `default-window-layout` (`tiled` | `tabbed` | `stacked`) sets the layout a newly
-  *split* container starts in.
+  *split* container starts in, and with `tabbed`/`stacked` a new window joins the
+  focused window as a tab of that container instead of splitting next to it.
 
 ### Tab bar appearance
 
