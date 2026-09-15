@@ -1378,12 +1378,11 @@ describe("WindowManager - moveWindowToPointer Comprehensive", () => {
       setPointer(100, 540);
       wm().nodeWinAtPointer = target;
 
-      const splitSpy = vi.spyOn(ctx.tree, "split");
-
       wm().moveWindowToPointer(dragged, false);
 
-      // Should call split because stackedCon is not monitor parent
-      expect(splitSpy).toHaveBeenCalled();
+      // LEFT matches the HSPLIT parent: plain sibling before the stacked container.
+      expect(monitor.childNodes).toEqual([dragged, stackedCon]);
+      expect(stackedCon.childNodes).toEqual([target, other]);
     });
 
     it("should insert window before stacked CON when dropping TOP", () => {
@@ -1422,11 +1421,10 @@ describe("WindowManager - moveWindowToPointer Comprehensive", () => {
       setPointer(960, 600);
       wm().nodeWinAtPointer = target;
 
-      const splitSpy = vi.spyOn(ctx.tree, "split");
-
       wm().moveWindowToPointer(dragged, false);
 
-      expect(splitSpy).toHaveBeenCalled();
+      // TOP matches the VSPLIT parent: plain sibling before the stacked container.
+      expect(monitor.childNodes).toEqual([dragged, stackedCon]);
     });
   });
 
