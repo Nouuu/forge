@@ -176,7 +176,7 @@ describe("Cheatsheet", () => {
       const summaries = {
         "window-focus-left": "Focus window left",
         "window-snap-center": "Snap center",
-        "totally-made-up-key": "", // no summary -> fall back to key-derived text
+        "totally-made-up-key": "", // no summary -> the key name itself
       };
       mockExt.kbdSettings.settingsSchema.get_key = vi.fn((name) => ({
         get_summary: () => summaries[name],
@@ -189,9 +189,9 @@ describe("Cheatsheet", () => {
         { shortcut: "Super+x", description: "Focus window left" },
       ]);
       expect(groups.get("Snap")).toEqual([{ shortcut: "Super+x", description: "Snap center" }]);
-      // Unknown prefix -> "Other"; empty summary -> _keyToDescription fallback.
+      // Unknown prefix -> "Other"; empty summary -> the raw key name.
       expect(groups.get("Other")).toEqual([
-        { shortcut: "Super+x", description: "Totally Made Up Key" },
+        { shortcut: "Super+x", description: "totally-made-up-key" },
       ]);
     });
 

@@ -317,7 +317,6 @@ export function createWorkspaceManagerFixture(options = {}) {
   const mockTree = {
     addWorkspace: vi.fn(() => true),
     removeWorkspace: vi.fn(() => true),
-    nodeWorkpaces: [],
     findNode: vi.fn(),
   };
 

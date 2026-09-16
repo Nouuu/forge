@@ -25,7 +25,7 @@ describe("Tree", () => {
   describe("Constructor", () => {
     it("should initialize workspaces", () => {
       // Should have created workspace nodes
-      const workspaces = ctx.tree.nodeWorkpaces;
+      const workspaces = ctx.tree.getNodeByType(NODE_TYPES.WORKSPACE);
       expect(workspaces.length).toBeGreaterThan(0);
     });
   });
@@ -38,7 +38,7 @@ describe("Tree", () => {
     });
 
     it("should find workspace node", () => {
-      const workspaces = ctx.tree.nodeWorkpaces;
+      const workspaces = ctx.tree.getNodeByType(NODE_TYPES.WORKSPACE);
       if (workspaces.length > 0) {
         const ws = workspaces[0];
         const found = ctx.tree.findNode(ws.nodeValue);
@@ -88,7 +88,7 @@ describe("Tree", () => {
     });
 
     it("should set node settings from tree", () => {
-      const workspace = ctx.tree.nodeWorkpaces[0];
+      const workspace = ctx.tree.getNodeByType(NODE_TYPES.WORKSPACE)[0];
       const newNode = ctx.tree.createNode(workspace.nodeValue, NODE_TYPES.CON, new St.Bin());
 
       expect(newNode.settings).toBe(ctx.tree.settings);
@@ -125,7 +125,7 @@ describe("Tree", () => {
 
   describe("nodeWorkspaces", () => {
     it("should return all workspace nodes", () => {
-      const workspaces = ctx.tree.nodeWorkpaces;
+      const workspaces = ctx.tree.getNodeByType(NODE_TYPES.WORKSPACE);
 
       expect(Array.isArray(workspaces)).toBe(true);
       workspaces.forEach((ws) => {
@@ -134,7 +134,7 @@ describe("Tree", () => {
     });
 
     it("should find workspaces initialized in constructor", () => {
-      const workspaces = ctx.tree.nodeWorkpaces;
+      const workspaces = ctx.tree.getNodeByType(NODE_TYPES.WORKSPACE);
 
       // Should have at least one workspace (from mock returning 1)
       expect(workspaces.length).toBeGreaterThanOrEqual(1);
@@ -171,21 +171,21 @@ describe("Tree", () => {
         index: () => i,
       }));
 
-      const initialCount = ctx.tree.nodeWorkpaces.length;
+      const initialCount = ctx.tree.getNodeByType(NODE_TYPES.WORKSPACE).length;
       const result = ctx.tree.addWorkspace(1);
 
       expect(result).toBe(true);
-      expect(ctx.tree.nodeWorkpaces.length).toBe(initialCount + 1);
+      expect(ctx.tree.getNodeByType(NODE_TYPES.WORKSPACE).length).toBe(initialCount + 1);
     });
 
     it("should not add duplicate workspace", () => {
-      const initialCount = ctx.tree.nodeWorkpaces.length;
+      const initialCount = ctx.tree.getNodeByType(NODE_TYPES.WORKSPACE).length;
 
       // Try to add workspace that already exists (index 0)
       const result = ctx.tree.addWorkspace(0);
 
       expect(result).toBe(false);
-      expect(ctx.tree.nodeWorkpaces.length).toBe(initialCount);
+      expect(ctx.tree.getNodeByType(NODE_TYPES.WORKSPACE).length).toBe(initialCount);
     });
 
     it("should set workspace layout to HSPLIT", () => {
@@ -215,14 +215,14 @@ describe("Tree", () => {
 
   describe("removeWorkspace", () => {
     it("should remove existing workspace", () => {
-      const workspaces = ctx.tree.nodeWorkpaces;
+      const workspaces = ctx.tree.getNodeByType(NODE_TYPES.WORKSPACE);
       const initialCount = workspaces.length;
 
       if (initialCount > 0) {
         const result = ctx.tree.removeWorkspace(0);
 
         expect(result).toBe(true);
-        expect(ctx.tree.nodeWorkpaces.length).toBe(initialCount - 1);
+        expect(ctx.tree.getNodeByType(NODE_TYPES.WORKSPACE).length).toBe(initialCount - 1);
       }
     });
 
@@ -233,7 +233,7 @@ describe("Tree", () => {
     });
 
     it("should remove workspace from tree", () => {
-      const workspaces = ctx.tree.nodeWorkpaces;
+      const workspaces = ctx.tree.getNodeByType(NODE_TYPES.WORKSPACE);
 
       if (workspaces.length > 0) {
         ctx.tree.removeWorkspace(0);
@@ -246,7 +246,7 @@ describe("Tree", () => {
 
   describe("Tree Structure Integrity", () => {
     it("should maintain parent-child relationships", () => {
-      const workspace = ctx.tree.nodeWorkpaces[0];
+      const workspace = ctx.tree.getNodeByType(NODE_TYPES.WORKSPACE)[0];
       const monitors = workspace.getNodeByType(NODE_TYPES.MONITOR);
 
       monitors.forEach((monitor) => {

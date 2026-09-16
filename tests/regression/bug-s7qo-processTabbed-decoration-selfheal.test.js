@@ -24,7 +24,9 @@ describe("Bug forge-s7qo: processTabbed recreates a nulled decoration", () => {
       fullExtWm: true,
       settings: { "tiling-mode-enabled": true, "showtab-decoration-enabled": true },
     });
-    ctx.extWm.currentMonWsNode = ctx.tree.nodeWorkpaces[0].getNodeByType(NODE_TYPES.MONITOR)[0];
+    ctx.extWm.currentMonWsNode = ctx.tree
+      .getNodeByType(NODE_TYPES.WORKSPACE)[0]
+      .getNodeByType(NODE_TYPES.MONITOR)[0];
   });
 
   it("nulls the decoration on a throw, then rebuilds it on the next render", () => {

@@ -29,7 +29,9 @@ describe("Bug forge-wrot/forge-5r0j: window tab teardown on removeChild, idempot
       fullExtWm: true,
       settings: { "tiling-mode-enabled": true, "showtab-decoration-enabled": true },
     });
-    ctx.extWm.currentMonWsNode = ctx.tree.nodeWorkpaces[0].getNodeByType(NODE_TYPES.MONITOR)[0];
+    ctx.extWm.currentMonWsNode = ctx.tree
+      .getNodeByType(NODE_TYPES.WORKSPACE)[0]
+      .getNodeByType(NODE_TYPES.MONITOR)[0];
   });
 
   it("destroys a closed WINDOW node's tab actor via removeNode (forge-wrot)", () => {

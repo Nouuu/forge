@@ -26,7 +26,9 @@ describe("Tree Cleanup and Container Management", () => {
       settings: { "auto-exit-tabbed": true },
     });
     // Setup currentMonWsNode for tests
-    ctx.extWm.currentMonWsNode = ctx.tree.nodeWorkpaces[0].getNodeByType(NODE_TYPES.MONITOR)[0];
+    ctx.extWm.currentMonWsNode = ctx.tree
+      .getNodeByType(NODE_TYPES.WORKSPACE)[0]
+      .getNodeByType(NODE_TYPES.MONITOR)[0];
   });
 
   describe("removeNode - Basic Removal", () => {
@@ -485,7 +487,7 @@ describe("Tree Cleanup and Container Management", () => {
       ctx.tree.removeNode(node1);
 
       // Tree should still be valid
-      expect(ctx.tree.nodeWorkpaces[0]).toBeDefined();
+      expect(ctx.tree.getNodeByType(NODE_TYPES.WORKSPACE)[0]).toBeDefined();
       expect(monitor.childNodes).toContain(node2);
       expect(node2.parentNode).toBe(monitor);
     });
@@ -517,7 +519,7 @@ describe("Tree Cleanup and Container Management", () => {
 
       // Monitor should be empty but still valid
       expect(monitor.childNodes).toHaveLength(0);
-      expect(ctx.tree.nodeWorkpaces[0]).toBeDefined();
+      expect(ctx.tree.getNodeByType(NODE_TYPES.WORKSPACE)[0]).toBeDefined();
     });
   });
 

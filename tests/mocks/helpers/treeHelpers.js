@@ -16,7 +16,7 @@ import { createMockWindow } from "./mockWindow.js";
  * Get workspace and monitor nodes from a tree or WindowManager
  *
  * Replaces the common 2-line pattern:
- *   const workspace = tree.nodeWorkpaces[0];
+ *   const workspace = tree.getNodeByType(NODE_TYPES.WORKSPACE)[0];
  *   const monitor = workspace.getNodeByType(NODE_TYPES.MONITOR)[0];
  *
  * @param {Object} source - WindowManager, Tree, or fixture context
@@ -33,7 +33,7 @@ export function getWorkspaceAndMonitor(source, wsIndex = 0, monIndex = 0) {
   // Extract tree from various source types
   const tree = source.tree || source;
 
-  const workspace = tree.nodeWorkpaces[wsIndex];
+  const workspace = tree.getNodeByType(NODE_TYPES.WORKSPACE)[wsIndex];
   if (!workspace) {
     throw new Error(`Workspace at index ${wsIndex} not found`);
   }
@@ -56,7 +56,7 @@ export function getWorkspaceAndMonitor(source, wsIndex = 0, monIndex = 0) {
  */
 export function getMonitors(source, wsIndex = 0) {
   const tree = source.tree || source;
-  const workspace = tree.nodeWorkpaces[wsIndex];
+  const workspace = tree.getNodeByType(NODE_TYPES.WORKSPACE)[wsIndex];
   if (!workspace) {
     throw new Error(`Workspace at index ${wsIndex} not found`);
   }

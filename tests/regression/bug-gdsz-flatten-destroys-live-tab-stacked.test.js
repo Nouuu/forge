@@ -31,7 +31,9 @@ describe("Bug #5: flatten of a nested STACKED con keeps surviving windows' tabs 
       fullExtWm: true,
       settings: { "tiling-mode-enabled": true, "showtab-decoration-enabled": true },
     });
-    ctx.extWm.currentMonWsNode = ctx.tree.nodeWorkpaces[0].getNodeByType(NODE_TYPES.MONITOR)[0];
+    ctx.extWm.currentMonWsNode = ctx.tree
+      .getNodeByType(NODE_TYPES.WORKSPACE)[0]
+      .getNodeByType(NODE_TYPES.MONITOR)[0];
   });
 
   it("nulls surviving windows' tabs so they rebuild and the next render is safe", () => {

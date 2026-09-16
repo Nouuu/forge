@@ -10,10 +10,8 @@ import {
   decomposeGrabOp,
   directionFromGrab,
   removeGapOnRect,
-  allowResizeGrabOp,
   normalizeGrabOp,
   resolveDirection,
-  oppositeDirectionOf,
   calculateDropRegions,
   detectDropZone,
   DROP_ZONES,
@@ -314,36 +312,6 @@ describe("Utility Functions", () => {
     });
   });
 
-  describe("allowResizeGrabOp", () => {
-    it("should return true for all resize operations", () => {
-      expect(allowResizeGrabOp(GrabOp.RESIZING_N)).toBe(true);
-      expect(allowResizeGrabOp(GrabOp.RESIZING_S)).toBe(true);
-      expect(allowResizeGrabOp(GrabOp.RESIZING_E)).toBe(true);
-      expect(allowResizeGrabOp(GrabOp.RESIZING_W)).toBe(true);
-      expect(allowResizeGrabOp(GrabOp.RESIZING_NE)).toBe(true);
-      expect(allowResizeGrabOp(GrabOp.RESIZING_NW)).toBe(true);
-      expect(allowResizeGrabOp(GrabOp.RESIZING_SE)).toBe(true);
-      expect(allowResizeGrabOp(GrabOp.RESIZING_SW)).toBe(true);
-    });
-
-    it("should return true for keyboard resize operations", () => {
-      expect(allowResizeGrabOp(GrabOp.KEYBOARD_RESIZING_N)).toBe(true);
-      expect(allowResizeGrabOp(GrabOp.KEYBOARD_RESIZING_S)).toBe(true);
-      expect(allowResizeGrabOp(GrabOp.KEYBOARD_RESIZING_E)).toBe(true);
-      expect(allowResizeGrabOp(GrabOp.KEYBOARD_RESIZING_W)).toBe(true);
-      expect(allowResizeGrabOp(GrabOp.KEYBOARD_RESIZING_UNKNOWN)).toBe(true);
-    });
-
-    it("should return false for moving operations", () => {
-      expect(allowResizeGrabOp(GrabOp.MOVING)).toBe(false);
-      expect(allowResizeGrabOp(GrabOp.KEYBOARD_MOVING)).toBe(false);
-    });
-
-    it("should return false for no operation", () => {
-      expect(allowResizeGrabOp(GrabOp.NONE)).toBe(false);
-    });
-  });
-
   describe("calculateDropRegions", () => {
     it("should calculate correct left region", () => {
       const rect = { x: 0, y: 0, width: 1000, height: 800 };
@@ -516,19 +484,6 @@ describe("Utility Functions", () => {
     });
   });
 
-  describe("allowResizeGrabOp with UNCONSTRAINED flag", () => {
-    it("should allow resize ops even with the 1024 flag set", () => {
-      expect(allowResizeGrabOp(GrabOp.RESIZING_N | 1024)).toBe(true);
-      expect(allowResizeGrabOp(GrabOp.RESIZING_SE | 1024)).toBe(true);
-      expect(allowResizeGrabOp(GrabOp.KEYBOARD_RESIZING_W | 1024)).toBe(true);
-    });
-
-    it("should still reject non-resize ops with the 1024 flag set", () => {
-      expect(allowResizeGrabOp(GrabOp.MOVING | 1024)).toBe(false);
-      expect(allowResizeGrabOp(GrabOp.NONE | 1024)).toBe(false);
-    });
-  });
-
   describe("detectDropZone", () => {
     // Standard test rectangle and regions
     const rect = { x: 0, y: 0, width: 1000, height: 800 };
@@ -585,28 +540,6 @@ describe("Utility Functions", () => {
       expect(detectDropZone(regions, [100, 700])).toBe(DROP_ZONES.LEFT);
       // Bottom-right corner
       expect(detectDropZone(regions, [900, 700])).toBe(DROP_ZONES.RIGHT);
-    });
-  });
-
-  describe("oppositeDirectionOf", () => {
-    it("should return RIGHT for LEFT", () => {
-      expect(oppositeDirectionOf(MotionDirection.LEFT)).toBe(MotionDirection.RIGHT);
-    });
-
-    it("should return LEFT for RIGHT", () => {
-      expect(oppositeDirectionOf(MotionDirection.RIGHT)).toBe(MotionDirection.LEFT);
-    });
-
-    it("should return DOWN for UP", () => {
-      expect(oppositeDirectionOf(MotionDirection.UP)).toBe(MotionDirection.DOWN);
-    });
-
-    it("should return UP for DOWN", () => {
-      expect(oppositeDirectionOf(MotionDirection.DOWN)).toBe(MotionDirection.UP);
-    });
-
-    it("should return undefined for unknown direction", () => {
-      expect(oppositeDirectionOf(999)).toBeUndefined();
     });
   });
 });

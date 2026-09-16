@@ -26,7 +26,9 @@ describe("Bug forge-ogmd: a decoration that throws mid-update is destroyed befor
       fullExtWm: true,
       settings: { "tiling-mode-enabled": true, "showtab-decoration-enabled": true },
     });
-    ctx.extWm.currentMonWsNode = ctx.tree.nodeWorkpaces[0].getNodeByType(NODE_TYPES.MONITOR)[0];
+    ctx.extWm.currentMonWsNode = ctx.tree
+      .getNodeByType(NODE_TYPES.WORKSPACE)[0]
+      .getNodeByType(NODE_TYPES.MONITOR)[0];
   });
 
   const drives = (layout) => {

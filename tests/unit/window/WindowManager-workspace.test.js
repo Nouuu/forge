@@ -60,13 +60,13 @@ describe("WindowManager - Workspace Management", () => {
 
     it("should return windows only from specified workspace", () => {
       // Add window to workspace 0
-      const wsNode0 = ctx.tree.nodeWorkpaces[0];
+      const wsNode0 = ctx.tree.getNodeByType(NODE_TYPES.WORKSPACE)[0];
       const monitor0 = wsNode0.getNodeByType(NODE_TYPES.MONITOR)[0];
       const metaWindow1 = createMockWindow({ id: 1, workspace: workspace0() });
       ctx.tree.createNode(monitor0.nodeValue, NODE_TYPES.WINDOW, metaWindow1);
 
       // Add window to workspace 1
-      const wsNode1 = ctx.tree.nodeWorkpaces[1];
+      const wsNode1 = ctx.tree.getNodeByType(NODE_TYPES.WORKSPACE)[1];
       const monitor1 = wsNode1.getNodeByType(NODE_TYPES.MONITOR)[0];
       const metaWindow2 = createMockWindow({ id: 2, workspace: workspace1() });
       ctx.tree.createNode(monitor1.nodeValue, NODE_TYPES.WINDOW, metaWindow2);
