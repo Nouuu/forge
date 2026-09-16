@@ -133,7 +133,7 @@ describe("Bug forge-rt10: auto-export must not resurrect deleted portable files"
     kbdSettings = createSettings();
     configMgr = createMockConfigMgr();
     configSync = new ConfigSync({ configMgr, settings, kbdSettings });
-    configSync.configFilesLoaded = true;
+    settings.set_boolean("config-file-sync-enabled", true);
     configSync._connectSettingsSignals();
   });
 

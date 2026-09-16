@@ -12,8 +12,8 @@ import { ConfigSync } from "../../lib/shared/config-sync.js";
  *     _updateStatus() renders "Last export: Never" right underneath.
  *   - prefs/portability.js _importConfig: toasts "imported successfully" on a
  *     corrupt settings.json.
- *   - config-sync.js enablePortableConfig(): sets configFilesLoaded and
- *     config-file-sync-enabled unconditionally.
+ *   - config-sync.js enablePortableConfig(): sets config-file-sync-enabled
+ *     unconditionally.
  *   - command.js ConfigExport keybinding: logs success regardless.
  *
  * importAll() reports PER FILE rather than a single boolean: it returns false
@@ -78,7 +78,6 @@ describe("Bug forge-7m2f: export/import status reaches every caller", () => {
       expect(sync.enablePortableConfig()).toBe(false);
 
       expect(settings._store.get("config-file-sync-enabled")).toBeFalsy();
-      expect(sync.configFilesLoaded).toBe(false);
       sync.destroy();
     });
 
@@ -88,7 +87,6 @@ describe("Bug forge-7m2f: export/import status reaches every caller", () => {
       expect(sync.enablePortableConfig()).toBe(true);
 
       expect(settings._store.get("config-file-sync-enabled")).toBe(true);
-      expect(sync.configFilesLoaded).toBe(true);
       sync.destroy();
     });
   });

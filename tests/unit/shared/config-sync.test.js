@@ -238,7 +238,7 @@ describe("ConfigSync", () => {
   describe("rapid changes produce one export", () => {
     it("should debounce rapid settings changes into a single export", () => {
       configMgr.hasPortableConfig = () => true; // files exist, so export is allowed
-      configSync.configFilesLoaded = true;
+      settings.set_boolean("config-file-sync-enabled", true);
       configSync._connectSettingsSignals();
 
       // Capture the last timeout callback
@@ -281,7 +281,7 @@ describe("ConfigSync", () => {
 
     beforeEach(() => {
       configMgr.hasPortableConfig = () => true;
-      configSync.configFilesLoaded = true;
+      settings.set_boolean("config-file-sync-enabled", true);
       configSync._connectSettingsSignals();
     });
 
@@ -347,9 +347,9 @@ describe("ConfigSync", () => {
   });
 
   describe("no export when config not loaded", () => {
-    it("should not auto-export when configFilesLoaded is false", () => {
-      // configFilesLoaded defaults to false
-      expect(configSync.configFilesLoaded).toBe(false);
+    it("should not auto-export when config-file-sync-enabled is false", () => {
+      // config-file-sync-enabled defaults to false
+      expect(settings.get_boolean("config-file-sync-enabled")).toBe(false);
 
       // Manually connect signals (normally init() guards this, but testing the safety check)
       configSync._connectSettingsSignals();
@@ -405,7 +405,7 @@ describe("ConfigSync", () => {
 
       // The stored choice must be respected, not overwritten back to true.
       expect(settings.get_boolean("config-file-sync-enabled")).toBe(false);
-      expect(configSync.configFilesLoaded).toBe(false);
+      expect(settings.get_boolean("config-file-sync-enabled")).toBe(false);
 
       // ...and no auto-export should fire on a subsequent change.
       const timeoutSpy = vi.spyOn(GLib, "timeout_add").mockImplementation(() => 42);
@@ -422,7 +422,7 @@ describe("ConfigSync", () => {
       configMgr.hasPortableConfig = () => true;
       settings.set_boolean("config-file-sync-enabled", false);
       configSync.init();
-      expect(configSync.configFilesLoaded).toBe(false);
+      expect(settings.get_boolean("config-file-sync-enabled")).toBe(false);
 
       const timeoutSpy = vi.spyOn(GLib, "timeout_add").mockImplementation(() => 42);
 
@@ -433,7 +433,7 @@ describe("ConfigSync", () => {
       // User flips the toggle ON at runtime.
       settings.set_boolean("config-file-sync-enabled", true);
       settings._emit("changed", "config-file-sync-enabled");
-      expect(configSync.configFilesLoaded).toBe(true);
+      expect(settings.get_boolean("config-file-sync-enabled")).toBe(true);
 
       // Now a normal change DOES schedule an export.
       settings._emit("changed", "window-gap-size");
@@ -442,7 +442,7 @@ describe("ConfigSync", () => {
       // User flips the toggle OFF again -> exports stop without a restart.
       settings.set_boolean("config-file-sync-enabled", false);
       settings._emit("changed", "config-file-sync-enabled");
-      expect(configSync.configFilesLoaded).toBe(false);
+      expect(settings.get_boolean("config-file-sync-enabled")).toBe(false);
 
       timeoutSpy.mockClear();
       settings._emit("changed", "window-gap-size");
@@ -465,7 +465,7 @@ describe("ConfigSync", () => {
 
       // Pre-store a typed key so _setSettingValue dispatches set_boolean (type 'b').
       emitting.set_boolean("tiling-mode-enabled", false);
-      sync.configFilesLoaded = true;
+      emitting.set_boolean("config-file-sync-enabled", true);
       sync._connectSettingsSignals();
 
       // Capture (do NOT run) the deferred idle that clears the guard, and observe
@@ -497,9 +497,9 @@ describe("ConfigSync", () => {
   describe("deleted portable files are not resurrected (forge-qj5n)", () => {
     it("does not auto-export when the portable files were deleted", () => {
       // User deleted settings.json/keybindings.json but left the toggle on, so
-      // init() leaves configFilesLoaded true while hasPortableConfig() is false.
+      // init() leaves config-file-sync-enabled true while hasPortableConfig() is false.
       configMgr.hasPortableConfig = () => false;
-      configSync.configFilesLoaded = true;
+      settings.set_boolean("config-file-sync-enabled", true);
       settings.set_boolean("config-file-sync-enabled", true);
       configSync._connectSettingsSignals();
 
@@ -517,7 +517,7 @@ describe("ConfigSync", () => {
 
     it("still auto-exports when portable files exist (guard is not over-broad)", () => {
       configMgr.hasPortableConfig = () => true;
-      configSync.configFilesLoaded = true;
+      settings.set_boolean("config-file-sync-enabled", true);
       settings.set_boolean("config-file-sync-enabled", true);
       configSync._connectSettingsSignals();
 
@@ -541,7 +541,7 @@ describe("ConfigSync", () => {
     // "changed" handler surviving disable() is exactly the forge-5y6j bug class.
     it("should not trigger exports after destroy", () => {
       configMgr.hasPortableConfig = () => true;
-      configSync.configFilesLoaded = true;
+      settings.set_boolean("config-file-sync-enabled", true);
       configSync._connectSettingsSignals();
 
       const timeoutSpy = vi.spyOn(GLib, "timeout_add").mockImplementation(() => 42);
@@ -562,7 +562,7 @@ describe("ConfigSync", () => {
 
     it("should not trigger exports from the keybindings schema after destroy", () => {
       configMgr.hasPortableConfig = () => true;
-      configSync.configFilesLoaded = true;
+      settings.set_boolean("config-file-sync-enabled", true);
       configSync._connectSettingsSignals();
 
       const timeoutSpy = vi.spyOn(GLib, "timeout_add").mockImplementation(() => 42);
