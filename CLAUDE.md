@@ -36,7 +36,7 @@ See **[docs/dev/](docs/dev/)** for the detailed reference: [architecture.md](doc
 
 - **Session modes**: Extension disables keybindings on lock screen but keeps tree in memory to preserve layout
 
-- **GObject Classes**: All core classes extend GObject with `static { GObject.registerClass(this); }` pattern.
+- **GObject Classes**: Only widget subclasses (GTK/Adwaita, Clutter/St, GNOME Shell UI) are registered with `static { GObject.registerClass(this); }`; every other class is a plain ES class.
 
 - **Signal Connections**: Track signal IDs for proper cleanup in disable().
 

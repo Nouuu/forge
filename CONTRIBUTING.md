@@ -49,9 +49,10 @@ testing anything.
   checks. A pre-commit hook formats staged files and runs the related unit tests, so
   commits are gated automatically.
 - Match the surrounding code's naming and idioms.
-- Core classes are `GObject`s registered with the
-  `static { GObject.registerClass(this); }` pattern; track signal IDs and disconnect
-  them on teardown (see [docs/dev/architecture.md](docs/dev/architecture.md)).
+- Only widget subclasses (GTK/Adwaita, Clutter/St, GNOME Shell UI) are registered with
+  the `static { GObject.registerClass(this); }` pattern; every other class is a plain
+  ES class. Track signal IDs and disconnect them on teardown (see
+  [docs/dev/architecture.md](docs/dev/architecture.md)).
 
 ## Understanding the codebase
 
