@@ -1,5 +1,16 @@
 // Mock Gio namespace
 import { withSignals } from "../helpers/signalMixin.js";
+import { Variant } from "./GLib.js";
+
+// GVariant type string for a plain JS value, for get_value() on a key that was
+// stored through a typed setter. Covers the four types the Forge schemas use.
+function inferType(value) {
+  if (typeof value === "boolean") return "b";
+  if (typeof value === "string") return "s";
+  if (Array.isArray(value)) return "as";
+  if (Number.isInteger(value)) return "u";
+  return "d";
+}
 
 export class File {
   constructor(path) {
@@ -135,12 +146,15 @@ export class Settings extends withSignals() {
     this._settings.set(key, value);
   }
 
+  // Real get_value returns a GVariant; typed getters keep reading the plain value,
+  // so a Variant stored through set_value is unpacked on the way in.
   get_value(key) {
-    return this._settings.get(key);
+    const value = this._settings.get(key);
+    return value instanceof Variant ? value : new Variant(inferType(value), value);
   }
 
   set_value(key, value) {
-    this._settings.set(key, value);
+    this._settings.set(key, value instanceof Variant ? value.recursiveUnpack() : value);
   }
 
   /**

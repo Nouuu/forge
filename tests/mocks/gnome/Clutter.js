@@ -69,6 +69,19 @@ export const AnimationMode = {
   EASE_OUT_QUAD: 1,
 };
 
+// X11-derived modifier masks, frozen across Clutter 13-16 (GNOME 45-50).
+export const ModifierType = {
+  SHIFT_MASK: 1 << 0,
+  LOCK_MASK: 1 << 1,
+  CONTROL_MASK: 1 << 2,
+  MOD1_MASK: 1 << 3,
+  MOD2_MASK: 1 << 4,
+  MOD3_MASK: 1 << 5,
+  MOD4_MASK: 1 << 6,
+  MOD5_MASK: 1 << 7,
+  BUTTON1_MASK: 1 << 8,
+};
+
 // Clutter key symbol + event-handler return constants used by the cheatsheet.
 export const KEY_Escape = 0xff1b;
 export const EVENT_STOP = true;
@@ -109,6 +122,7 @@ export default {
   ActorAlign,
   Orientation,
   AnimationMode,
+  ModifierType,
   KEY_Escape,
   EVENT_STOP,
   EVENT_PROPAGATE,

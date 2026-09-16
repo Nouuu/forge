@@ -81,6 +81,38 @@ export function mkdir_with_parents(path, mode) {
  */
 export const spawn_command_line_async = vi.fn(() => true);
 
+/**
+ * Minimal GLib.Variant: a type string and a value. Every unpack flavour returns
+ * the plain JS value, which is what the real one does for the b/u/s/as types the
+ * Forge schemas use.
+ */
+export class Variant {
+  constructor(typeString, value) {
+    this._type = typeString;
+    this._value = value;
+  }
+
+  static new(typeString, value) {
+    return new Variant(typeString, value);
+  }
+
+  get_type_string() {
+    return this._type;
+  }
+
+  unpack() {
+    return this._value;
+  }
+
+  deepUnpack() {
+    return this._value;
+  }
+
+  recursiveUnpack() {
+    return this._value;
+  }
+}
+
 export default {
   getenv,
   spawn_command_line_async,
@@ -100,4 +132,5 @@ export default {
   source_remove,
   Source,
   mkdir_with_parents,
+  Variant,
 };
