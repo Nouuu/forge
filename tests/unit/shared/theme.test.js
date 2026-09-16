@@ -327,8 +327,12 @@ describe("ThemeManagerBase", () => {
   });
 
   describe("reloadStylesheet", () => {
-    it("should throw error (abstract method)", () => {
-      expect(() => themeManager.reloadStylesheet()).toThrow("Must implement reloadStylesheet");
+    it("bumps css-updated so the extension process reloads the stylesheet", () => {
+      const before = mockSettings.get_string("css-updated");
+      themeManager.reloadStylesheet();
+      const after = mockSettings.get_string("css-updated");
+      expect(after).not.toBe(before);
+      expect(Number(after)).toBeGreaterThan(0);
     });
   });
 
