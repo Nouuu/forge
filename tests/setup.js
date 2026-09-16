@@ -65,6 +65,9 @@ const { mockOverview, mockWm, mockPanel, mockSessionMode, mockLayoutManager, moc
         allowSettings: true,
         currentMode: "user",
         isLocked: false,
+        // extension.js connects "updated" on enable and disconnects on disable.
+        connect: (signal, callback) => Math.random(),
+        disconnect: (id) => {},
       },
     };
   });

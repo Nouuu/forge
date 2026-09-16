@@ -29,6 +29,7 @@ import {
   SETTINGS_OVERRIDES,
   shouldApplyOverride,
   overridesGatedBy,
+  overridesConflictingWithBindings,
   reconcileAction,
 } from "./lib/shared/gnome-overrides.js";
 
@@ -57,7 +58,7 @@ export default class ForgeExtension extends Extension {
         // Skip overrides the user has opted out of (forge-9fo). A gated-off
         // override is neither applied nor saved, so disable() has nothing to
         // restore for it — handled before any Gio.Settings construction.
-        if (!shouldApplyOverride(desc, this.settings)) {
+        if (!shouldApplyOverride(desc, this.settings, this.kbdSettings)) {
           Logger.info(`Skipping GNOME override: ${desc.schemaId} '${desc.key}' disabled in prefs`);
           continue;
         }
@@ -88,6 +89,11 @@ export default class ForgeExtension extends Extension {
       if (!settings) throw new Error("enable: settings unavailable");
       this._overrideReconcileIds = ["tiling-mode-enabled", "disable-edge-tiling"].map((key) =>
         settings.connect(`changed::${key}`, () => this._reconcileOverridesFor(key))
+      );
+      // Same for overrides that follow a Forge keybinding (`conflictsWith`): drop
+      // <Super>l from prefs and GNOME's Super+L lock comes back at once.
+      this._kbdReconcileId = this.kbdSettings.connect("changed", () =>
+        this._reconcileBindingOverrides()
       );
 
       this.configMgr = new ConfigManager(this);
@@ -203,6 +209,22 @@ export default class ForgeExtension extends Extension {
     }
   }
 
+  /** Keybindings changed: apply/restore every `conflictsWith` override. */
+  _reconcileBindingOverrides() {
+    const settings = this.settings;
+    const kbdSettings = this.kbdSettings;
+    if (!this._savedSettings || !this._gnomeSettings || !settings || !kbdSettings) return;
+    try {
+      for (const desc of overridesConflictingWithBindings()) {
+        const action = reconcileAction(desc, settings, this._isOverrideSaved(desc), kbdSettings);
+        if (action === "apply") this._applyOverride(desc);
+        else if (action === "restore") this._restoreOverride(desc);
+      }
+    } catch (e) {
+      Logger.warn(`Failed to reconcile GNOME overrides for keybindings: ${e}`);
+    }
+  }
+
   disable() {
     Logger.info("disable");
 
@@ -219,6 +241,10 @@ export default class ForgeExtension extends Extension {
         this.settings?.disconnect(id);
       }
       this._overrideReconcileIds = null;
+    }
+    if (this._kbdReconcileId) {
+      this.kbdSettings?.disconnect(this._kbdReconcileId);
+      this._kbdReconcileId = null;
     }
 
     // Restore GNOME settings and keybindings (#461, #288)

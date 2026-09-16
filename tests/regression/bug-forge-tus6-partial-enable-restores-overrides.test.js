@@ -15,7 +15,9 @@ vi.mock("../../lib/extension/indicator.js", () => ({
 
 // The realistic throw site: config import writes GSettings and can fail on a
 // corrupt/unreadable ~/.config/forge.
-vi.mock("../../lib/shared/config-sync.js", () => ({
+vi.mock("../../lib/shared/config-sync.js", async (importOriginal) => ({
+  // Keep the real exports (gnome-overrides.js reads KEYBINDING_KEYS from here).
+  ...(await importOriginal()),
   ConfigSync: class ConfigSync {
     init() {
       throw new Error("simulated config import failure");
@@ -81,10 +83,15 @@ describe("forge-tus6: a failed enable() must not leave GNOME settings clobbered"
   function buildExtension() {
     const ext = new ForgeExtension();
     const forgeSettings = new MockSettings("org.gnome.shell.extensions.forge");
-    // Ungate every gated override so all of them actually apply.
+    // Ungate every gated override so all of them actually apply: the edge-tiling
+    // booleans, and <Super>l bound so the Super+L override has a conflict to free.
     forgeSettings.set_boolean("disable-edge-tiling", true);
     forgeSettings.set_boolean("tiling-mode-enabled", true);
-    ext.getSettings = vi.fn(() => forgeSettings);
+    const kbdSettings = new MockSettings("org.gnome.shell.extensions.forge.keybindings");
+    kbdSettings.set_strv("window-focus-right", ["<Super>l", "<Super>Right"]);
+    ext.getSettings = vi.fn((schemaId) =>
+      schemaId === "org.gnome.shell.extensions.forge.keybindings" ? kbdSettings : forgeSettings
+    );
     return ext;
   }
 
