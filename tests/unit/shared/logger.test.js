@@ -47,66 +47,6 @@ describe("Logger", () => {
     });
   });
 
-  describe("format", () => {
-    it("should replace single placeholder", () => {
-      const result = Logger.format("Hello {}", "World");
-      expect(result).toBe("Hello World");
-    });
-
-    it("should replace multiple placeholders", () => {
-      const result = Logger.format("{} + {} = {}", 1, 2, 3);
-      expect(result).toBe("1 + 2 = 3");
-    });
-
-    it("should replace placeholders in order", () => {
-      const result = Logger.format("{} {} {}", "a", "b", "c");
-      expect(result).toBe("a b c");
-    });
-
-    it("should handle no placeholders", () => {
-      const result = Logger.format("No placeholders");
-      expect(result).toBe("No placeholders");
-    });
-
-    it("should handle more params than placeholders", () => {
-      const result = Logger.format("Only {}", "one", "two", "three");
-      expect(result).toBe("Only one");
-    });
-
-    it("should handle empty string", () => {
-      const result = Logger.format("");
-      expect(result).toBe("");
-    });
-  });
-
-  describe("fatal", () => {
-    it("should log when logging is enabled", () => {
-      Logger.fatal("test message");
-      expect(logSpy).toHaveBeenCalledWith("[Forge] [FATAL]", "test message");
-    });
-
-    it("should not log when logging is disabled", () => {
-      mockSettings.get_boolean.mockReturnValue(false);
-      Logger.init(mockSettings);
-
-      Logger.fatal("test message");
-      expect(logSpy).not.toHaveBeenCalled();
-    });
-
-    it("should log with multiple arguments", () => {
-      Logger.fatal("error", "code", 123);
-      expect(logSpy).toHaveBeenCalledWith("[Forge] [FATAL]", "error", "code", 123);
-    });
-
-    it("should always log when level is ALL", () => {
-      mockSettings.get_uint.mockReturnValue(Logger.LOG_LEVELS.ALL);
-      Logger.init(mockSettings);
-
-      Logger.fatal("message");
-      expect(logSpy).toHaveBeenCalled();
-    });
-  });
-
   describe("error", () => {
     it("should log when level is ERROR or higher", () => {
       mockSettings.get_uint.mockReturnValue(Logger.LOG_LEVELS.ERROR);
@@ -265,38 +205,35 @@ describe("Logger", () => {
       logSpy.mockClear();
     });
 
-    it("should only log fatal when level is FATAL", () => {
+    it("should log nothing when level is FATAL (no level below ERROR emits)", () => {
       mockSettings.get_uint.mockReturnValue(Logger.LOG_LEVELS.FATAL);
       Logger.init(mockSettings);
 
-      Logger.fatal("fatal");
       Logger.error("error");
       Logger.warn("warn");
       Logger.info("info");
       Logger.debug("debug");
       Logger.trace("trace");
 
-      expect(logSpy).toHaveBeenCalledTimes(1);
-      expect(logSpy).toHaveBeenCalledWith("[Forge] [FATAL]", "fatal");
+      expect(logSpy).not.toHaveBeenCalled();
     });
 
-    it("should log fatal and error when level is ERROR", () => {
+    it("should log only error when level is ERROR", () => {
       mockSettings.get_uint.mockReturnValue(Logger.LOG_LEVELS.ERROR);
       Logger.init(mockSettings);
 
-      Logger.fatal("fatal");
       Logger.error("error");
       Logger.warn("warn");
       Logger.info("info");
 
-      expect(logSpy).toHaveBeenCalledTimes(2);
+      expect(logSpy).toHaveBeenCalledTimes(1);
+      expect(logSpy).toHaveBeenCalledWith("[Forge] [ERROR]", "error");
     });
 
     it("should log all messages when level is ALL", () => {
       mockSettings.get_uint.mockReturnValue(Logger.LOG_LEVELS.ALL);
       Logger.init(mockSettings);
 
-      Logger.fatal("fatal");
       Logger.error("error");
       Logger.warn("warn");
       Logger.info("info");
@@ -304,14 +241,13 @@ describe("Logger", () => {
       Logger.trace("trace");
       Logger.log("log");
 
-      expect(logSpy).toHaveBeenCalledTimes(7);
+      expect(logSpy).toHaveBeenCalledTimes(6);
     });
 
     it("should not log anything when level is OFF", () => {
       mockSettings.get_uint.mockReturnValue(Logger.LOG_LEVELS.OFF);
       Logger.init(mockSettings);
 
-      Logger.fatal("fatal");
       Logger.error("error");
       Logger.warn("warn");
       Logger.info("info");
@@ -328,7 +264,6 @@ describe("Logger", () => {
       // Re-initialize Logger with null settings
       Logger.init(null);
 
-      Logger.fatal("test");
       Logger.error("test");
       Logger.warn("test");
 
@@ -344,8 +279,8 @@ describe("Logger", () => {
       mockSettings.get_boolean.mockClear();
       mockSettings.get_uint.mockClear();
 
-      Logger.fatal("test");
       Logger.error("test");
+      Logger.warn("test");
 
       // No output, and the stale settings object is never touched again.
       expect(logSpy).not.toHaveBeenCalled();
