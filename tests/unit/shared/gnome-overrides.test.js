@@ -67,7 +67,28 @@ describe("shouldApplyOverride: binding-conflict gate (bug super-l-lock-cleared-w
 
   it("models the Super+L lock override as conflicting with the <Super>l accelerator", () => {
     expect(screensaver.conflictsWith).toBe("<Super>l");
-    expect(overridesConflictingWithBindings()).toEqual([screensaver]);
+    expect(overridesConflictingWithBindings()).toContain(screensaver);
+  });
+
+  it("models the four Super+arrow overrides as conflicting with the arrow accelerators", () => {
+    const byKey = Object.fromEntries(
+      overridesConflictingWithBindings().map((d) => [d.key, d.conflictsWith])
+    );
+    expect(byKey).toEqual({
+      "toggle-tiled-left": "<Super>Left",
+      "toggle-tiled-right": "<Super>Right",
+      maximize: "<Super>Up",
+      unmaximize: "<Super>Down",
+      screensaver: "<Super>l",
+    });
+  });
+
+  it("skips a Super+arrow override once the arrow is gone from Forge's focus bindings", () => {
+    const maximize = SETTINGS_OVERRIDES.find((d) => d.key === "maximize");
+    const arrows = kbdWith({ "window-focus-up": ["<Super>k", "<Super>Up"] });
+    const vimOnly = kbdWith({ "window-focus-up": ["<Super>k"] });
+    expect(shouldApplyOverride(maximize, noGate, arrows)).toBe(true);
+    expect(shouldApplyOverride(maximize, noGate, vimOnly)).toBe(false);
   });
 
   it("applies while some Forge keybinding carries <Super>l (the shipped default)", () => {

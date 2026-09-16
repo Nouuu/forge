@@ -69,6 +69,9 @@ const KBD = "org.gnome.shell.extensions.forge.keybindings";
  * some Forge keybinding carries that accelerator verbatim, and a `changed`
  * listener on the keybindings schema reconciles it at runtime (forge-abk
  * mechanics), so removing `<Super>l` in prefs hands the lock back immediately.
+ * The four Super+arrow overrides (toggle-tiled-left/right, maximize/unmaximize,
+ * commit 776b836 — same pure key-collision rationale) follow their arrows the
+ * same way.
  */
 describe("Bug super-l-lock-cleared-without-binding: Super+L override follows the binding", () => {
   let created;
@@ -163,6 +166,22 @@ describe("Bug super-l-lock-cleared-without-binding: Super+L override follows the
 
     ext.disable();
     expect(mediaKeys.get_strv("screensaver")).toEqual(["<Super>l"]);
+  });
+
+  it("frees Super+Left only while window-focus-left carries <Super>Left, and hands it back when it goes", () => {
+    const mutterKeys = new Gio.Settings({ schemaId: "org.gnome.mutter.keybindings" });
+    mutterKeys.set_strv("toggle-tiled-left", ["<Super>Left"]);
+    kbdSettings.set_strv("window-focus-left", ["<Super>h", "<Super>Left"]);
+    const ext = buildExtension();
+
+    ext.enable();
+    expect(mutterKeys.get_strv("toggle-tiled-left")).toEqual([]);
+
+    kbdSettings.set_strv("window-focus-left", ["<Super>h"]);
+    kbdSettings.emit("changed", "window-focus-left");
+    expect(mutterKeys.get_strv("toggle-tiled-left")).toEqual(["<Super>Left"]);
+
+    ext.disable();
   });
 
   it("connects one keybindings listener on enable and drops it on disable", () => {
