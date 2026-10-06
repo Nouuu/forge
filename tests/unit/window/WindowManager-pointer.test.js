@@ -37,11 +37,11 @@ describe("WindowManager - Focus-Follows-Pointer Behavior", () => {
 
   describe("movePointerWith", () => {
     it("should return early when nodeWindow is null", () => {
-      expect(() => wm().movePointerWith(null)).not.toThrow();
+      expect(() => wm().focusManager.movePointerWith(null)).not.toThrow();
     });
 
     it("should return early when nodeWindow has no _data", () => {
-      expect(() => wm().movePointerWith({})).not.toThrow();
+      expect(() => wm().focusManager.movePointerWith({})).not.toThrow();
     });
 
     it("should not warp pointer when move-pointer-focus-enabled is false", () => {
@@ -59,9 +59,9 @@ describe("WindowManager - Focus-Follows-Pointer Behavior", () => {
 
       const nodeWindow = ctx.tree.createNode(monitor.nodeValue, NODE_TYPES.WINDOW, metaWindow);
 
-      const warpSpy = vi.spyOn(wm(), "warpPointerToNodeWindow");
+      const warpSpy = vi.spyOn(wm().focusManager, "warpPointerToNodeWindow");
 
-      wm().movePointerWith(nodeWindow);
+      wm().focusManager.movePointerWith(nodeWindow);
 
       expect(warpSpy).not.toHaveBeenCalled();
     });
@@ -83,7 +83,7 @@ describe("WindowManager - Focus-Follows-Pointer Behavior", () => {
 
       const canMoveSpy = vi.spyOn(wm(), "canMovePointerInsideNodeWindow");
 
-      wm().movePointerWith(nodeWindow);
+      wm().focusManager.movePointerWith(nodeWindow);
 
       expect(canMoveSpy).toHaveBeenCalledWith(nodeWindow);
     });
@@ -105,7 +105,7 @@ describe("WindowManager - Focus-Follows-Pointer Behavior", () => {
 
       const canMoveSpy = vi.spyOn(wm(), "canMovePointerInsideNodeWindow");
 
-      wm().movePointerWith(nodeWindow, { force: true });
+      wm().focusManager.movePointerWith(nodeWindow, { force: true });
 
       expect(canMoveSpy).toHaveBeenCalledWith(nodeWindow);
     });
@@ -120,7 +120,7 @@ describe("WindowManager - Focus-Follows-Pointer Behavior", () => {
 
       const nodeWindow = ctx.tree.createNode(monitor.nodeValue, NODE_TYPES.WINDOW, metaWindow);
 
-      wm().movePointerWith(nodeWindow);
+      wm().focusManager.movePointerWith(nodeWindow);
 
       expect(wm().lastFocusedWindow).toBe(nodeWindow);
     });
@@ -151,7 +151,7 @@ describe("WindowManager - Focus-Follows-Pointer Behavior", () => {
     };
 
     it("warps through the seat when the backend provides one", () => {
-      wm().warpPointerToNodeWindow(nodeUnderTest());
+      wm().focusManager.warpPointerToNodeWindow(nodeUnderTest());
 
       expect(mockSeat.warp_pointer).toHaveBeenCalled();
     });
@@ -160,7 +160,7 @@ describe("WindowManager - Focus-Follows-Pointer Behavior", () => {
       const real = Clutter.get_default_backend;
       Clutter.get_default_backend = undefined;
       try {
-        wm().warpPointerToNodeWindow(nodeUnderTest());
+        wm().focusManager.warpPointerToNodeWindow(nodeUnderTest());
 
         expect(mockSeat.warp_pointer).toHaveBeenCalled();
       } finally {
@@ -170,7 +170,7 @@ describe("WindowManager - Focus-Follows-Pointer Behavior", () => {
 
     it("does not throw when the stage has no context", () => {
       withStageContext(undefined, () => {
-        expect(() => wm().warpPointerToNodeWindow(nodeUnderTest())).not.toThrow();
+        expect(() => wm().focusManager.warpPointerToNodeWindow(nodeUnderTest())).not.toThrow();
         expect(mockSeat.warp_pointer).not.toHaveBeenCalled();
       });
     });
@@ -182,13 +182,13 @@ describe("WindowManager - Focus-Follows-Pointer Behavior", () => {
         },
       };
       withStageContext(context, () => {
-        expect(() => wm().warpPointerToNodeWindow(nodeUnderTest())).not.toThrow();
+        expect(() => wm().focusManager.warpPointerToNodeWindow(nodeUnderTest())).not.toThrow();
       });
     });
 
     it("does not throw when the backend returns no seat", () => {
       withStageContext({ get_backend: () => ({ get_default_seat: () => null }) }, () => {
-        expect(() => wm().warpPointerToNodeWindow(nodeUnderTest())).not.toThrow();
+        expect(() => wm().focusManager.warpPointerToNodeWindow(nodeUnderTest())).not.toThrow();
         expect(mockSeat.warp_pointer).not.toHaveBeenCalled();
       });
     });
@@ -198,7 +198,7 @@ describe("WindowManager - Focus-Follows-Pointer Behavior", () => {
         throw new Error("Object Clutter.Seat has been already deallocated");
       });
 
-      expect(() => wm().warpPointerToNodeWindow(nodeUnderTest())).not.toThrow();
+      expect(() => wm().focusManager.warpPointerToNodeWindow(nodeUnderTest())).not.toThrow();
     });
   });
 

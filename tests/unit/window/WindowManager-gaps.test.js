@@ -44,7 +44,7 @@ describe("WindowManager - Gap Calculations", () => {
       const { monitor } = getWorkspaceAndMonitor(ctx);
       const { nodeWindow } = createWindowNode(ctx.tree, monitor, { mode: "TILE" });
 
-      const gap = wm().calculateGaps(nodeWindow);
+      const gap = wm().decorationManager.calculateGaps(nodeWindow);
 
       expect(gap).toBe(12); // 4 * 3 = 12
     });
@@ -59,7 +59,7 @@ describe("WindowManager - Gap Calculations", () => {
       const { monitor } = getWorkspaceAndMonitor(ctx);
       const { nodeWindow } = createWindowNode(ctx.tree, monitor, { mode: "TILE" });
 
-      const gap = wm().calculateGaps(nodeWindow);
+      const gap = wm().decorationManager.calculateGaps(nodeWindow);
 
       expect(gap).toBe(0); // 0 * 5 = 0
     });
@@ -74,7 +74,7 @@ describe("WindowManager - Gap Calculations", () => {
       const { monitor } = getWorkspaceAndMonitor(ctx);
       const { nodeWindow } = createWindowNode(ctx.tree, monitor, { mode: "TILE" });
 
-      const gap = wm().calculateGaps(nodeWindow);
+      const gap = wm().decorationManager.calculateGaps(nodeWindow);
 
       expect(gap).toBe(0); // 8 * 0 = 0
     });
@@ -96,7 +96,7 @@ describe("WindowManager - Gap Calculations", () => {
       const { monitor } = getWorkspaceAndMonitor(ctx);
       const { nodeWindow } = createWindowNode(ctx.tree, monitor, { mode: "TILE" });
 
-      const gap = wm().calculateGaps(nodeWindow);
+      const gap = wm().decorationManager.calculateGaps(nodeWindow);
 
       expect(gap).toBe(0); // Single window, hideGapWhenSingle = true
     });
@@ -127,7 +127,7 @@ describe("WindowManager - Gap Calculations", () => {
         windowOverrides: { id: 2 },
       });
 
-      const gap = wm().calculateGaps(nodeWindow1);
+      const gap = wm().decorationManager.calculateGaps(nodeWindow1);
 
       expect(gap).toBe(8); // Multiple windows, should return gap (4 * 2 = 8)
     });
@@ -147,7 +147,7 @@ describe("WindowManager - Gap Calculations", () => {
       const { monitor } = getWorkspaceAndMonitor(ctx);
       const { nodeWindow } = createWindowNode(ctx.tree, monitor, { mode: "TILE" });
 
-      const gap = wm().calculateGaps(nodeWindow);
+      const gap = wm().decorationManager.calculateGaps(nodeWindow);
 
       expect(gap).toBe(12); // hideGapWhenSingle = false, should return gap (6 * 2 = 12)
     });
@@ -178,7 +178,7 @@ describe("WindowManager - Gap Calculations", () => {
         windowOverrides: { id: 2, minimized: true },
       });
 
-      const gap = wm().calculateGaps(nodeWindow1);
+      const gap = wm().decorationManager.calculateGaps(nodeWindow1);
 
       // Only one non-minimized window, so gap should be 0
       expect(gap).toBe(0);
@@ -210,7 +210,7 @@ describe("WindowManager - Gap Calculations", () => {
         windowOverrides: { id: 2 },
       });
 
-      const gap = wm().calculateGaps(nodeWindow1);
+      const gap = wm().decorationManager.calculateGaps(nodeWindow1);
 
       // Only one tiled window, so gap should be 0
       expect(gap).toBe(0);
@@ -254,7 +254,7 @@ describe("WindowManager - Gap Calculations", () => {
         windowOverrides: { id: 4, minimized: false },
       });
 
-      const gap = wm().calculateGaps(nodeWindow1);
+      const gap = wm().decorationManager.calculateGaps(nodeWindow1);
 
       // Two tiled, non-minimized windows, so gap should be returned (5 * 3 = 15)
       expect(gap).toBe(15);
@@ -281,7 +281,7 @@ describe("WindowManager - Gap Calculations", () => {
       });
       createWindowNode(ctx.tree, monitor, { mode: "TILE", windowOverrides: { id: 2 } });
 
-      const gap = wm().calculateGaps(nodeWindow1);
+      const gap = wm().decorationManager.calculateGaps(nodeWindow1);
 
       // 4 * 2 * dpi(2) = 16. Before forge-2s37 this returned 8 (unscaled) — half the
       // visual size of the dpi-scaled tab bars/borders on the same 2x screen.
@@ -298,7 +298,7 @@ describe("WindowManager - Gap Calculations", () => {
       });
 
       const { workspace } = getWorkspaceAndMonitor(ctx);
-      const gap = wm().calculateGaps(workspace);
+      const gap = wm().decorationManager.calculateGaps(workspace);
 
       // Root nodes always return the gap (no hideGapWhenSingle logic)
       expect(gap).toBe(20); // 10 * 2 = 20
@@ -312,7 +312,7 @@ describe("WindowManager - Gap Calculations", () => {
       });
 
       const { monitor } = getWorkspaceAndMonitor(ctx);
-      const gap = wm().calculateGaps(monitor);
+      const gap = wm().decorationManager.calculateGaps(monitor);
 
       // Monitor nodes always return the gap (no hideGapWhenSingle logic)
       expect(gap).toBe(12); // 3 * 4 = 12
@@ -338,7 +338,7 @@ describe("WindowManager - Gap Calculations", () => {
         windowOverrides: { id: 1 },
       });
 
-      const gap = wm().calculateGaps(container);
+      const gap = wm().decorationManager.calculateGaps(container);
 
       // Container should return gap (hideGapWhenSingle is false by default in beforeEach)
       expect(gap).toBe(10); // 5 * 2 = 10
@@ -354,7 +354,7 @@ describe("WindowManager - Gap Calculations", () => {
       const { monitor } = getWorkspaceAndMonitor(ctx);
       const { nodeWindow } = createWindowNode(ctx.tree, monitor, { mode: "TILE" });
 
-      const gap = wm().calculateGaps(nodeWindow);
+      const gap = wm().decorationManager.calculateGaps(nodeWindow);
 
       expect(gap).toBe(998001); // 999 * 999 = 998001
     });
@@ -369,9 +369,9 @@ describe("WindowManager - Gap Calculations", () => {
       const { monitor } = getWorkspaceAndMonitor(ctx);
       const { nodeWindow } = createWindowNode(ctx.tree, monitor, { mode: "TILE" });
 
-      const gap1 = wm().calculateGaps(nodeWindow);
-      const gap2 = wm().calculateGaps(nodeWindow);
-      const gap3 = wm().calculateGaps(nodeWindow);
+      const gap1 = wm().decorationManager.calculateGaps(nodeWindow);
+      const gap2 = wm().decorationManager.calculateGaps(nodeWindow);
+      const gap3 = wm().decorationManager.calculateGaps(nodeWindow);
 
       expect(gap1).toBe(21);
       expect(gap2).toBe(21);

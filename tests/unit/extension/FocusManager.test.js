@@ -288,7 +288,7 @@ describe("FocusManager", () => {
       const queueSpy = vi.spyOn(wm(), "queueEvent");
       wm()._freezeRender = true;
 
-      wm().updateStackedFocus(nodeWindow);
+      wm().focusManager.updateStackedFocus(nodeWindow);
 
       expect(raiseSpy).not.toHaveBeenCalled();
       expect(queueSpy).not.toHaveBeenCalled();
@@ -299,7 +299,7 @@ describe("FocusManager", () => {
       const raiseSpy = vi.spyOn(nodeWindow.nodeValue, "raise");
       wm()._freezeRender = true;
 
-      wm().updateTabbedFocus(nodeWindow);
+      wm().focusManager.updateTabbedFocus(nodeWindow);
 
       expect(raiseSpy).not.toHaveBeenCalled();
     });

@@ -20,7 +20,7 @@ describe("forge-5qp1: stacked overlap when tab decoration disabled", () => {
 
   beforeEach(() => {
     ctx = createTreeFixture({ fullExtWm: true });
-    ctx.extWm.calculateGaps = () => 0;
+    ctx.extWm.decorationManager.calculateGaps = () => 0;
   });
 
   afterEach(() => ctx.cleanup());

@@ -33,8 +33,12 @@ describe("Bug #461: reject external maximize/edge-snap on a tiled window", () =>
       },
     });
     // updateMetaPositionSize ends by updating borders/decorations — stub the UI bits.
-    vi.spyOn(ctx.windowManager, "updateBorderLayout").mockImplementation(() => {});
-    vi.spyOn(ctx.windowManager, "updateDecorationLayout").mockImplementation(() => {});
+    vi.spyOn(ctx.windowManager.decorationManager, "updateBorderLayout").mockImplementation(
+      () => {}
+    );
+    vi.spyOn(ctx.windowManager.decorationManager, "updateDecorationLayout").mockImplementation(
+      () => {}
+    );
   });
 
   afterEach(() => {

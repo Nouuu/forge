@@ -15,7 +15,7 @@ describe("Tree Layout Algorithms", () => {
 
   beforeEach(() => {
     ctx = createTreeFixture({ fullExtWm: true });
-    ctx.extWm.calculateGaps = vi.fn(() => 10); // 10px gap
+    ctx.extWm.decorationManager.calculateGaps = vi.fn(() => 10); // 10px gap
   });
 
   describe("computeSizes", () => {
@@ -491,7 +491,7 @@ describe("Tree Layout Algorithms", () => {
         settings: { "tab-position": "bottom" },
         fullExtWm: true,
       });
-      bottomCtx.extWm.calculateGaps = vi.fn(() => 10);
+      bottomCtx.extWm.decorationManager.calculateGaps = vi.fn(() => 10);
     });
 
     afterEach(() => {
@@ -699,7 +699,7 @@ describe("Tree Layout Algorithms", () => {
       node.rect = { x: 0, y: 0, width: 1000, height: 800 };
 
       const gap = 10;
-      ctx.extWm.calculateGaps.mockReturnValue(gap);
+      ctx.extWm.decorationManager.calculateGaps.mockReturnValue(gap);
 
       const result = ctx.tree.processGap(node);
 
@@ -717,7 +717,7 @@ describe("Tree Layout Algorithms", () => {
       node.rect = { x: 100, y: 50, width: 1000, height: 800 };
 
       const gap = 20;
-      ctx.extWm.calculateGaps.mockReturnValue(gap);
+      ctx.extWm.decorationManager.calculateGaps.mockReturnValue(gap);
 
       const result = ctx.tree.processGap(node);
 
@@ -732,7 +732,7 @@ describe("Tree Layout Algorithms", () => {
       node.rect = { x: 0, y: 0, width: 15, height: 15 };
 
       const gap = 10;
-      ctx.extWm.calculateGaps.mockReturnValue(gap);
+      ctx.extWm.decorationManager.calculateGaps.mockReturnValue(gap);
 
       const result = ctx.tree.processGap(node);
 
@@ -747,7 +747,7 @@ describe("Tree Layout Algorithms", () => {
       const node = new Node(NODE_TYPES.CON, new St.Bin());
       node.rect = { x: 10, y: 20, width: 1000, height: 800 };
 
-      ctx.extWm.calculateGaps.mockReturnValue(0);
+      ctx.extWm.decorationManager.calculateGaps.mockReturnValue(0);
 
       const result = ctx.tree.processGap(node);
 

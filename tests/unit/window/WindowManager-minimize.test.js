@@ -55,7 +55,7 @@ describe("WindowManager - minimize/unminimize (_onMinimizeChange)", () => {
     focusOn(windows[0].nodeValue);
 
     const resetSpy = vi.spyOn(ctx.tree, "resetSiblingPercent");
-    const hideSpy = vi.spyOn(wm(), "hideWindowBorders");
+    const hideSpy = vi.spyOn(wm().decorationManager, "hideWindowBorders");
     const renderSpy = vi.spyOn(wm(), "_renderWithFreezeState").mockImplementation(() => {});
 
     wm()._onMinimizeChange("minimize", { hideBorders: true, resetGrandparentIfEmpty: true });
@@ -84,7 +84,7 @@ describe("WindowManager - minimize/unminimize (_onMinimizeChange)", () => {
     focusOn(windows[0].nodeValue);
 
     const resetSpy = vi.spyOn(ctx.tree, "resetSiblingPercent");
-    const hideSpy = vi.spyOn(wm(), "hideWindowBorders");
+    const hideSpy = vi.spyOn(wm().decorationManager, "hideWindowBorders");
     const renderSpy = vi.spyOn(wm(), "_renderWithFreezeState").mockImplementation(() => {});
 
     wm()._onMinimizeChange("unminimize");

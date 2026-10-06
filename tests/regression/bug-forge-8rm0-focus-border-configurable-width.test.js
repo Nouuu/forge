@@ -70,7 +70,7 @@ describe("Bug forge-8rm0: focus-border inset follows the configured border-width
     });
     ctx.tree.createNode(monitor.nodeValue, NODE_TYPES.WINDOW, m2).mode = WINDOW_MODES.TILE;
 
-    ctx.windowManager.showWindowBorders();
+    ctx.windowManager.decorationManager.showWindowBorders();
 
     // rect = frame_rect (100,100). inset must be 8 -> position (92, 92), size 800+16.
     expect(mockBorder.set_position).toHaveBeenCalledWith(92, 92);

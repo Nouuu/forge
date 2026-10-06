@@ -45,10 +45,10 @@ describe("WindowManager - Command System", () => {
     // Mock renderTree to avoid UI operations
     wm().renderTree = vi.fn();
     wm().move = vi.fn();
-    wm().movePointerWith = vi.fn();
+    wm().focusManager.movePointerWith = vi.fn();
     wm().unfreezeRender = vi.fn();
-    wm().updateTabbedFocus = vi.fn();
-    wm().updateStackedFocus = vi.fn();
+    wm().focusManager.updateTabbedFocus = vi.fn();
+    wm().focusManager.updateStackedFocus = vi.fn();
   });
 
   // Convenience accessor
@@ -218,8 +218,8 @@ describe("WindowManager - Command System", () => {
 
       wm().command(action);
 
-      expect(wm().updateTabbedFocus).toHaveBeenCalled();
-      expect(wm().updateStackedFocus).toHaveBeenCalled();
+      expect(wm().focusManager.updateTabbedFocus).toHaveBeenCalled();
+      expect(wm().focusManager.updateStackedFocus).toHaveBeenCalled();
     });
 
     it("should render tree after swap", () => {

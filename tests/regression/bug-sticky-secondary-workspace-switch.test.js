@@ -162,7 +162,7 @@ describe("Bug sticky-secondary-workspace-switch: secondary layouts survive a wor
   it("shows the secondary tab decoration while workspace 1 is active", () => {
     const { con } = secondaryRow();
 
-    wm.updateDecorationLayout();
+    wm.decorationManager.updateDecorationLayout();
 
     expect(con.decoration.show).toHaveBeenCalled();
   });

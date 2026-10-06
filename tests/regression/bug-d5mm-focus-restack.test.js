@@ -46,8 +46,8 @@ describe("forge-d5mm: focus handler re-stacks the focused window", () => {
     const node = wm().tree.findNode(metaWindow);
     expect(node).toBeTruthy();
 
-    const stackedSpy = vi.spyOn(wm(), "updateStackedFocus");
-    const tabbedSpy = vi.spyOn(wm(), "updateTabbedFocus");
+    const stackedSpy = vi.spyOn(wm().focusManager, "updateStackedFocus");
+    const tabbedSpy = vi.spyOn(wm().focusManager, "updateTabbedFocus");
 
     fireFocusAndGetUpdate(metaWindow)();
 

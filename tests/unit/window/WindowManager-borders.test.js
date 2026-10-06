@@ -56,9 +56,9 @@ describe("WindowManager - Borders and Focus Indicators", () => {
       const nodeWindow2 = ctx.tree.createNode(monitor.nodeValue, NODE_TYPES.WINDOW, metaWindow2);
       nodeWindow2.mode = WINDOW_MODES.TILE;
 
-      const hideActorBorderSpy = vi.spyOn(wm(), "hideActorBorder");
+      const hideActorBorderSpy = vi.spyOn(wm().decorationManager, "hideActorBorder");
 
-      wm().hideWindowBorders();
+      wm().decorationManager.hideWindowBorders();
 
       // Should have called hideActorBorder for each window
       expect(hideActorBorderSpy).toHaveBeenCalled();
@@ -84,7 +84,7 @@ describe("WindowManager - Borders and Focus Indicators", () => {
       };
       nodeWindow.tab = mockTab;
 
-      wm().hideWindowBorders();
+      wm().decorationManager.hideWindowBorders();
 
       expect(mockTab.remove_style_class_name).toHaveBeenCalledWith("window-tabbed-tab-active");
     });
@@ -114,7 +114,7 @@ describe("WindowManager - Borders and Focus Indicators", () => {
       };
       nodeWindow.tab = mockTab;
 
-      wm().hideWindowBorders();
+      wm().decorationManager.hideWindowBorders();
 
       expect(mockTab.remove_style_class_name).toHaveBeenCalledWith("window-tabbed-tab-active");
     });
@@ -155,7 +155,7 @@ describe("WindowManager - Borders and Focus Indicators", () => {
       const nodeWindow2 = ctx.tree.createNode(monitor.nodeValue, NODE_TYPES.WINDOW, metaWindow2);
       nodeWindow2.mode = WINDOW_MODES.TILE;
 
-      wm().showWindowBorders();
+      wm().decorationManager.showWindowBorders();
 
       expect(mockBorder.set_style_class_name).toHaveBeenCalledWith("window-tiled-border");
     });
@@ -193,7 +193,7 @@ describe("WindowManager - Borders and Focus Indicators", () => {
       const nodeWindow2 = ctx.tree.createNode(monitor.nodeValue, NODE_TYPES.WINDOW, metaWindow2);
       nodeWindow2.mode = WINDOW_MODES.TILE;
 
-      wm().showWindowBorders();
+      wm().decorationManager.showWindowBorders();
 
       expect(mockBorder.set_style_class_name).toHaveBeenCalledWith("window-stacked-border");
     });
@@ -237,7 +237,7 @@ describe("WindowManager - Borders and Focus Indicators", () => {
       const nodeWindow2 = ctx.tree.createNode(monitor.nodeValue, NODE_TYPES.WINDOW, metaWindow2);
       nodeWindow2.mode = WINDOW_MODES.TILE;
 
-      wm().showWindowBorders();
+      wm().decorationManager.showWindowBorders();
 
       expect(mockBorder.set_style_class_name).toHaveBeenCalledWith("window-tabbed-border");
     });
@@ -265,7 +265,7 @@ describe("WindowManager - Borders and Focus Indicators", () => {
       };
       nodeWindow.tab = mockTab;
 
-      wm().showWindowBorders();
+      wm().decorationManager.showWindowBorders();
 
       expect(mockTab.add_style_class_name).toHaveBeenCalledWith("window-tabbed-tab-active");
     });
@@ -305,7 +305,7 @@ describe("WindowManager - Borders and Focus Indicators", () => {
       const nodeWindow = ctx.tree.createNode(monitor.nodeValue, NODE_TYPES.WINDOW, metaWindow);
       nodeWindow.mode = WINDOW_MODES.TILE;
 
-      wm().showWindowBorders();
+      wm().decorationManager.showWindowBorders();
 
       // Border class should NOT be set for single window with setting enabled
       expect(mockBorder.set_style_class_name).not.toHaveBeenCalledWith("window-tiled-border");
@@ -353,7 +353,7 @@ describe("WindowManager - Borders and Focus Indicators", () => {
       const nodeWindow2 = ctx.tree.createNode(monitor.nodeValue, NODE_TYPES.WINDOW, metaWindow2);
       nodeWindow2.mode = WINDOW_MODES.TILE;
 
-      wm().showWindowBorders();
+      wm().decorationManager.showWindowBorders();
 
       // Border class should be set when multiple windows exist
       expect(mockBorder.set_style_class_name).toHaveBeenCalledWith("window-tiled-border");
@@ -411,7 +411,7 @@ describe("WindowManager - Borders and Focus Indicators", () => {
       const nodeWindow2 = ctx.tree.createNode(container2.nodeValue, NODE_TYPES.WINDOW, metaWindow2);
       nodeWindow2.mode = WINDOW_MODES.TILE;
 
-      wm().showWindowBorders();
+      wm().decorationManager.showWindowBorders();
 
       // Border should show because there are 2 tiled windows on the monitor,
       // even though each is alone in its own container
@@ -460,7 +460,7 @@ describe("WindowManager - Borders and Focus Indicators", () => {
       const nodeWindow2 = ctx.tree.createNode(monitor.nodeValue, NODE_TYPES.WINDOW, metaWindow2);
       nodeWindow2.mode = WINDOW_MODES.TILE;
 
-      wm().showWindowBorders();
+      wm().decorationManager.showWindowBorders();
 
       // Should not set border class when disabled
       expect(mockBorder.set_style_class_name).not.toHaveBeenCalledWith("window-tiled-border");
@@ -506,7 +506,7 @@ describe("WindowManager - Borders and Focus Indicators", () => {
       const nodeWindow2 = ctx.tree.createNode(monitor.nodeValue, NODE_TYPES.WINDOW, metaWindow2);
       nodeWindow2.mode = WINDOW_MODES.TILE;
 
-      wm().showWindowBorders();
+      wm().decorationManager.showWindowBorders();
 
       // Should not set border class when tiling is disabled
       expect(mockBorder.set_style_class_name).not.toHaveBeenCalledWith("window-tiled-border");
@@ -547,7 +547,7 @@ describe("WindowManager - Borders and Focus Indicators", () => {
       const nodeWindow = ctx.tree.createNode(monitor.nodeValue, NODE_TYPES.WINDOW, metaWindow);
       nodeWindow.mode = WINDOW_MODES.FLOAT;
 
-      wm().showWindowBorders();
+      wm().decorationManager.showWindowBorders();
 
       // The floating focus hint must be suppressed while tiling is disabled.
       expect(mockBorder.set_style_class_name).not.toHaveBeenCalledWith("window-floated-border");
@@ -592,7 +592,7 @@ describe("WindowManager - Borders and Focus Indicators", () => {
       const nodeWindow = ctx.tree.createNode(monitor.nodeValue, NODE_TYPES.WINDOW, metaWindow);
       nodeWindow.mode = WINDOW_MODES.TILE;
 
-      wm().showWindowBorders();
+      wm().decorationManager.showWindowBorders();
 
       // Should show border with multiple monitors even for single window
       expect(mockBorder.set_style_class_name).toHaveBeenCalledWith("window-tiled-border");
@@ -649,7 +649,7 @@ describe("WindowManager - Borders and Focus Indicators", () => {
       const nodeWindow2 = ctx.tree.createNode(monitor.nodeValue, NODE_TYPES.WINDOW, metaWindow2);
       nodeWindow2.mode = WINDOW_MODES.TILE;
 
-      wm().showWindowBorders();
+      wm().decorationManager.showWindowBorders();
 
       // forge-hcbz: inset is now dpi-scaled (3 * 2 at this scale) to match the CSS
       // border-width St scales to 6 physical px.
@@ -704,7 +704,7 @@ describe("WindowManager - Borders and Focus Indicators", () => {
       const nodeWindow2 = ctx.tree.createNode(monitor.nodeValue, NODE_TYPES.WINDOW, metaWindow2);
       nodeWindow2.mode = WINDOW_MODES.TILE;
 
-      wm().showWindowBorders();
+      wm().decorationManager.showWindowBorders();
 
       // inset must be dpi-scaled to 6 (3 * 2). Before forge-hcbz it was a raw 3, so
       // the border grew only 3px while its drawn width was 6 — overlapping content.

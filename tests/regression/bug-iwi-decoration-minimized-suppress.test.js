@@ -57,7 +57,7 @@ describe("Bug forge-iwi: minimized maximized window must not suppress decoration
   it("shows tab decorations when the maximized window is minimized", () => {
     addOther({ maximize: true, minimized: true });
 
-    ctx.windowManager.updateDecorationLayout();
+    ctx.windowManager.decorationManager.updateDecorationLayout();
 
     expect(con.decoration.show).toHaveBeenCalled();
   });
@@ -65,7 +65,7 @@ describe("Bug forge-iwi: minimized maximized window must not suppress decoration
   it("shows tab decorations when the fullscreen window is minimized", () => {
     addOther({ fullscreen: true, minimized: true });
 
-    ctx.windowManager.updateDecorationLayout();
+    ctx.windowManager.decorationManager.updateDecorationLayout();
 
     expect(con.decoration.show).toHaveBeenCalled();
   });
@@ -73,7 +73,7 @@ describe("Bug forge-iwi: minimized maximized window must not suppress decoration
   it("still suppresses decorations for a visible (non-minimized) maximized window", () => {
     addOther({ maximize: true, minimized: false });
 
-    ctx.windowManager.updateDecorationLayout();
+    ctx.windowManager.decorationManager.updateDecorationLayout();
 
     expect(con.decoration.show).not.toHaveBeenCalled();
   });

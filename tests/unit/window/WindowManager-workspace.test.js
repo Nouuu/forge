@@ -366,7 +366,7 @@ describe("WindowManager - Workspace Management", () => {
         configurable: true,
       });
 
-      const updateDecoSpy = vi.spyOn(wm(), "updateDecorationLayout");
+      const updateDecoSpy = vi.spyOn(wm().decorationManager, "updateDecorationLayout");
 
       wm().trackCurrentWindows();
 

@@ -56,7 +56,7 @@ describe("DecorationManager.updateDecorationLayout", () => {
   it("shows tab decorations for a CON with visible tiled children when showtab is enabled", () => {
     buildTabbedCon();
 
-    ctx.windowManager.updateDecorationLayout();
+    ctx.windowManager.decorationManager.updateDecorationLayout();
 
     // Decorations are always hidden up-front, then re-shown for eligible CONs.
     expect(con.decoration.hide).toHaveBeenCalled();
@@ -66,7 +66,7 @@ describe("DecorationManager.updateDecorationLayout", () => {
   it("hides decorations but never re-shows them when showtab-decoration-enabled is off", () => {
     buildTabbedCon({ "showtab-decoration-enabled": false });
 
-    ctx.windowManager.updateDecorationLayout();
+    ctx.windowManager.decorationManager.updateDecorationLayout();
 
     // The up-front hide-all pass still runs, but the show gate is closed.
     expect(con.decoration.hide).toHaveBeenCalled();
@@ -80,7 +80,7 @@ describe("DecorationManager.updateDecorationLayout", () => {
       cn.nodeValue.minimized = true;
     });
 
-    ctx.windowManager.updateDecorationLayout();
+    ctx.windowManager.decorationManager.updateDecorationLayout();
 
     // Hidden by the up-front pass; the early return prevents any re-show.
     expect(con.decoration.hide).toHaveBeenCalled();
@@ -91,7 +91,7 @@ describe("DecorationManager.updateDecorationLayout", () => {
     buildTabbedCon();
     addMonitorWindow({ maximize: true, minimized: false });
 
-    ctx.windowManager.updateDecorationLayout();
+    ctx.windowManager.decorationManager.updateDecorationLayout();
 
     expect(con.decoration.show).not.toHaveBeenCalled();
   });
@@ -100,7 +100,7 @@ describe("DecorationManager.updateDecorationLayout", () => {
     buildTabbedCon();
     addMonitorWindow({ maximize: true, minimized: true });
 
-    ctx.windowManager.updateDecorationLayout();
+    ctx.windowManager.decorationManager.updateDecorationLayout();
 
     // A minimized maximized window covers nothing, so it must not keep the
     // tabbed decoration hidden.
@@ -111,7 +111,7 @@ describe("DecorationManager.updateDecorationLayout", () => {
     buildTabbedCon();
     addMonitorWindow({ fullscreen: true, minimized: true });
 
-    ctx.windowManager.updateDecorationLayout();
+    ctx.windowManager.decorationManager.updateDecorationLayout();
 
     expect(con.decoration.show).toHaveBeenCalled();
   });
@@ -173,7 +173,7 @@ describe("DecorationManager border lifecycle", () => {
       metaWindow.appears_focused = true;
       metaWindow.minimized = false;
 
-      wm().showWindowBorders();
+      wm().decorationManager.showWindowBorders();
 
       expect(border.show).toHaveBeenCalled();
     });
@@ -183,7 +183,7 @@ describe("DecorationManager border lifecycle", () => {
       metaWindow.appears_focused = true;
       metaWindow.minimized = true;
 
-      wm().showWindowBorders();
+      wm().decorationManager.showWindowBorders();
 
       // The border is still sized/positioned, but must not be made visible.
       expect(border.set_size).toHaveBeenCalled();
@@ -195,7 +195,7 @@ describe("DecorationManager border lifecycle", () => {
       metaWindow.appears_focused = false;
       metaWindow.minimized = false;
 
-      wm().showWindowBorders();
+      wm().decorationManager.showWindowBorders();
 
       expect(border.show).not.toHaveBeenCalled();
     });
@@ -213,7 +213,7 @@ describe("DecorationManager border lifecycle", () => {
       metaWindow.get_compositor_private().border = border;
       global.display.get_focus_window.mockReturnValue(metaWindow);
 
-      wm().showWindowBorders();
+      wm().decorationManager.showWindowBorders();
 
       // maximized() short-circuits the focus-border block: no class, no show.
       expect(border.set_style_class_name).not.toHaveBeenCalled();
@@ -231,7 +231,7 @@ describe("DecorationManager border lifecycle", () => {
       metaWindow.get_compositor_private().border = border;
       global.display.get_focus_window.mockReturnValue(metaWindow);
 
-      wm().showWindowBorders();
+      wm().decorationManager.showWindowBorders();
 
       expect(border.set_style_class_name).not.toHaveBeenCalled();
       expect(border.show).not.toHaveBeenCalled();
@@ -311,7 +311,7 @@ describe("DecorationManager.hideWindowBorders", () => {
 
     vi.spyOn(ctx.tree, "nodeWindows", "get").mockReturnValue([dead, live]);
 
-    expect(() => ctx.windowManager.hideWindowBorders()).not.toThrow();
+    expect(() => ctx.windowManager.decorationManager.hideWindowBorders()).not.toThrow();
     // The window after the dead one must still have been processed.
     expect(cleared).toContain("window-tabbed-tab-active");
   });

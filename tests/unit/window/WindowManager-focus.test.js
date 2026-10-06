@@ -364,7 +364,7 @@ describe("WindowManager - Pointer & Focus Management", () => {
         },
       });
 
-      wm().warpPointerToNodeWindow(nodeWindow);
+      wm().focusManager.warpPointerToNodeWindow(nodeWindow);
 
       expect(mockSeat.warp_pointer).toHaveBeenCalledWith(
         480, // x: 0 + 960/2
@@ -384,7 +384,7 @@ describe("WindowManager - Pointer & Focus Management", () => {
       // Store pointer position
       nodeWindow.pointer = { x: 200, y: 300 };
 
-      wm().warpPointerToNodeWindow(nodeWindow);
+      wm().focusManager.warpPointerToNodeWindow(nodeWindow);
 
       expect(mockSeat.warp_pointer).toHaveBeenCalledWith(
         300, // x: 100 + 200
@@ -411,7 +411,7 @@ describe("WindowManager - Pointer & Focus Management", () => {
       // Pointer outside window
       global.get_pointer.mockReturnValue([1500, 540]);
 
-      wm().movePointerWith(nodeWindow);
+      wm().focusManager.movePointerWith(nodeWindow);
 
       expect(mockSeat.warp_pointer).not.toHaveBeenCalled();
     });
@@ -433,7 +433,7 @@ describe("WindowManager - Pointer & Focus Management", () => {
       // Pointer outside window
       global.get_pointer.mockReturnValue([1500, 540]);
 
-      wm().movePointerWith(nodeWindow);
+      wm().focusManager.movePointerWith(nodeWindow);
 
       expect(mockSeat.warp_pointer).toHaveBeenCalled();
     });
@@ -455,7 +455,7 @@ describe("WindowManager - Pointer & Focus Management", () => {
       // Pointer outside window
       global.get_pointer.mockReturnValue([1500, 540]);
 
-      wm().movePointerWith(nodeWindow, { force: true });
+      wm().focusManager.movePointerWith(nodeWindow, { force: true });
 
       expect(mockSeat.warp_pointer).toHaveBeenCalled();
     });
@@ -477,7 +477,7 @@ describe("WindowManager - Pointer & Focus Management", () => {
       // Pointer inside window
       global.get_pointer.mockReturnValue([480, 540]);
 
-      wm().movePointerWith(nodeWindow);
+      wm().focusManager.movePointerWith(nodeWindow);
 
       expect(mockSeat.warp_pointer).not.toHaveBeenCalled();
     });
@@ -491,7 +491,7 @@ describe("WindowManager - Pointer & Focus Management", () => {
         },
       });
 
-      wm().movePointerWith(nodeWindow);
+      wm().focusManager.movePointerWith(nodeWindow);
 
       expect(wm().lastFocusedWindow).toBe(nodeWindow);
     });

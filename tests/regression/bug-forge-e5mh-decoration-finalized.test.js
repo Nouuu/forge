@@ -49,7 +49,7 @@ describe("Bug forge-e5mh: updateDecorationLayout skips finalized windows", () =>
     deadNode.mode = WINDOW_MODES.TILE;
     finalizeWindow(dead);
 
-    expect(() => ctx.windowManager.updateDecorationLayout()).not.toThrow();
+    expect(() => ctx.windowManager.decorationManager.updateDecorationLayout()).not.toThrow();
     expect(con.decoration.show).toHaveBeenCalled();
   });
 });

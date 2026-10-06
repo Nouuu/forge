@@ -63,9 +63,11 @@ describe("CommandHandler", () => {
       renderTree: vi.fn(),
       unfreezeRender: vi.fn(),
       queueEvent: vi.fn(),
-      updateStackedFocus: vi.fn(),
-      updateTabbedFocus: vi.fn(),
-      movePointerWith: vi.fn(),
+      focusManager: {
+        updateStackedFocus: vi.fn(),
+        updateTabbedFocus: vi.fn(),
+        movePointerWith: vi.fn(),
+      },
       determineSplitLayout: vi.fn(() => LAYOUT_TYPES.HSPLIT),
       applyDefaultLayoutToContainer: vi.fn(),
       floatAllWindows: vi.fn(),
@@ -306,7 +308,9 @@ describe("CommandHandler", () => {
     it("should call movePointerWith with force option", () => {
       commandHandler.execute({ name: "MovePointerToFocus" });
 
-      expect(mockWm.movePointerWith).toHaveBeenCalledWith(mockNodeWindow, { force: true });
+      expect(mockWm.focusManager.movePointerWith).toHaveBeenCalledWith(mockNodeWindow, {
+        force: true,
+      });
     });
 
     it("should not call movePointerWith if no focus window", () => {
@@ -314,7 +318,7 @@ describe("CommandHandler", () => {
 
       commandHandler.execute({ name: "MovePointerToFocus" });
 
-      expect(mockWm.movePointerWith).not.toHaveBeenCalled();
+      expect(mockWm.focusManager.movePointerWith).not.toHaveBeenCalled();
     });
   });
 
@@ -342,7 +346,7 @@ describe("CommandHandler", () => {
     it("should move pointer after swap", () => {
       commandHandler.execute({ name: "WindowSwapLastActive" });
 
-      expect(mockWm.movePointerWith).toHaveBeenCalledWith(mockNodeWindow);
+      expect(mockWm.focusManager.movePointerWith).toHaveBeenCalledWith(mockNodeWindow);
     });
 
     it("should render tree after swap", () => {
@@ -557,8 +561,8 @@ describe("CommandHandler", () => {
     it("FocusNext cycles focus forward and updates stacked/tabbed focus", () => {
       commandHandler.execute({ name: "FocusNext" });
       expect(mockTree.focusSibling).toHaveBeenCalledWith(mockNodeWindow, 1);
-      expect(mockWm.updateStackedFocus).toHaveBeenCalled();
-      expect(mockWm.updateTabbedFocus).toHaveBeenCalled();
+      expect(mockWm.focusManager.updateStackedFocus).toHaveBeenCalled();
+      expect(mockWm.focusManager.updateTabbedFocus).toHaveBeenCalled();
     });
 
     it("FocusPrev cycles focus backward", () => {
@@ -570,7 +574,7 @@ describe("CommandHandler", () => {
       commandHandler.execute({ name: "SwapNext" });
       expect(mockTree.swapSibling).toHaveBeenCalledWith(mockNodeWindow, 1);
       expect(mockWm.renderTree).toHaveBeenCalledWith("swap-sibling", true);
-      expect(mockWm.movePointerWith).toHaveBeenCalledWith(mockNodeWindow);
+      expect(mockWm.focusManager.movePointerWith).toHaveBeenCalledWith(mockNodeWindow);
     });
 
     it("SwapPrev swaps backward", () => {

@@ -41,7 +41,7 @@ describe("forge-n0s7: source-id and flag hygiene", () => {
     });
     const wm = ctx.windowManager;
     wm.shouldFocusOnHover = true;
-    wm.pointerLoopInit();
+    wm.focusManager.pointerLoopInit();
     expect(wm._pointerFocusTimeoutId).toBe(42);
 
     // User turns the feature off; the next tick ends the loop.

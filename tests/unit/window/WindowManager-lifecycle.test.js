@@ -59,7 +59,7 @@ describe("WindowManager - Window Lifecycle", () => {
       const { monitor } = getWorkspaceAndMonitor(ctx);
       const nodeWindow = ctx.tree.createNode(monitor.nodeValue, NODE_TYPES.WINDOW, metaWindow);
 
-      const movePointerSpy = vi.spyOn(wm(), "movePointerWith");
+      const movePointerSpy = vi.spyOn(wm().focusManager, "movePointerWith");
       const moveCenterSpy = vi.spyOn(wm(), "moveCenter");
 
       wm().postProcessWindow(nodeWindow);
@@ -100,7 +100,7 @@ describe("WindowManager - Window Lifecycle", () => {
       const { monitor } = getWorkspaceAndMonitor(ctx);
       const nodeWindow = ctx.tree.createNode(monitor.nodeValue, NODE_TYPES.WINDOW, metaWindow);
 
-      const movePointerSpy = vi.spyOn(wm(), "movePointerWith");
+      const movePointerSpy = vi.spyOn(wm().focusManager, "movePointerWith");
 
       wm().postProcessWindow(nodeWindow);
 
@@ -341,7 +341,7 @@ describe("WindowManager - Window Lifecycle", () => {
 
     it("post-processes a tracked regular window without warping the pointer", () => {
       const metaWindow = createMockWindow({ title: "Regular Window" });
-      const movePointerSpy = vi.spyOn(wm(), "movePointerWith");
+      const movePointerSpy = vi.spyOn(wm().focusManager, "movePointerWith");
 
       // Track window
       wm().trackWindow(null, metaWindow);

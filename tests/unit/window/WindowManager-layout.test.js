@@ -87,7 +87,7 @@ describe("WindowManager - Layout and Mode Behaviors", () => {
       });
 
       expect(wm().lastFocusedWindow).toBeNull();
-      wm().movePointerWith(nodeWindow);
+      wm().focusManager.movePointerWith(nodeWindow);
 
       expect(wm().lastFocusedWindow).toBe(nodeWindow);
     });
