@@ -1448,7 +1448,7 @@
     // creation. Wrapped so a seat that isn't ready returns a sentinel instead of throwing.
     ensureVirtualDevices() {
       try {
-        const seat = Clutter.get_default_backend().get_default_seat();
+        const seat = global.backend.get_default_seat();
         if (!globalThis._forgeTestVKbd) {
           globalThis._forgeTestVKbd = seat.create_virtual_device(
             Clutter.InputDeviceType.KEYBOARD_DEVICE
