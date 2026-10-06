@@ -78,6 +78,9 @@ resolved locally — treat them as stable labels, not as queryable tickets.
 - When fixing a defect, keep the existing traceability convention: reference the issue
   id in the commit subject, in a comment at the fix site, and in the header of the
   pinned `tests/regression/bug-<id>-<slug>.test.js`.
+- A bare number in this repo means a forge-ext issue (`bug-040-...`, "Bug #40"). For
+  this fork's issues use `nouuu<N>` in the test name (`bug-nouuu2-...`) and cite
+  `Nouuu/forge#N` everywhere else, never `#N` alone.
 
 > Re-adopting beads is a deliberate choice, not a default: it would need `bd` installed
 > and a fresh local database. Only worth it if this fork takes on enough in-flight work
