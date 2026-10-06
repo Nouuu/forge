@@ -380,6 +380,29 @@ describe("Keybindings", () => {
     });
   });
 
+  // S-18 pin: the expected booleans are copied from the literal switch this replaces
+  // (Super 64/320, Alt 8/264, Ctrl 4/260, Shift 1/257, None always). 256 is the
+  // pointer-grabbed bit, 2 is Caps Lock.
+  describe("allowDragDropTile modifier table", () => {
+    const states = (mask, other) => [0, mask, mask | 256, 256, 2, mask | 2, other, other | 256];
+    const rows = [
+      ["Super", states(64, 8), [false, true, true, false, false, false, false, false]],
+      ["Alt", states(8, 64), [false, true, true, false, false, false, false, false]],
+      ["Ctrl", states(4, 64), [false, true, true, false, false, false, false, false]],
+      ["Shift", states(1, 64), [false, true, true, false, false, false, false, false]],
+      ["None", states(0, 64), [true, true, true, true, true, true, true, true]],
+    ];
+
+    it.each(rows)("%s", (modifier, pointerStates, expected) => {
+      mockExt.kbdSettings.get_string.mockReturnValue(modifier);
+      const got = pointerStates.map((state) => {
+        mockExt.extWm.getPointer.mockReturnValue([0, 0, state]);
+        return keybindings.allowDragDropTile();
+      });
+      expect(got).toEqual(expected);
+    });
+  });
+
   describe("allowDragDropTile()", () => {
     describe("Super modifier", () => {
       beforeEach(() => {
