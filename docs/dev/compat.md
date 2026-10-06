@@ -32,6 +32,7 @@ Shims on other cutoffs:
 | Shim | Before the cutoff | From the cutoff |
 | --- | --- | --- |
 | `boxOrientation(vertical)`, St.BoxLayout direction | 45-47: `{ vertical }` | 48+ (`IS_MUTTER_48_PLUS`): `{ orientation }` |
+| `isWaylandCompositor()` | 45-49: `Meta.is_wayland_compositor()` | 50+ (`IS_MUTTER_50_PLUS`): `true`, the X11 backend and the predicate are gone |
 
 `compat.js` also holds two **capability probes**, which branch on whether a method
 exists rather than on a version — for APIs with no documented cutoff to dispatch on:
@@ -45,6 +46,8 @@ exists rather than on a version — for APIs with no documented cutoff to dispat
 
 `meta_window_*` across the tags Forge supports:
 
+- `meta_is_wayland_compositor`: **removed at 50** with the X11 backend; every 50+ session is
+  Wayland. A guard that probes the function reads false there (Nouuu/forge#2).
 - `maximize` / `unmaximize`: **48** `(window, flags)` → **49+** `(window)` no-arg
   (flags now set separately via `set_maximize_flags` / `set_unmaximize_flags`).
 - `get_maximized` (returns `MetaMaximizeFlags`): **removed at 49**; replaced by

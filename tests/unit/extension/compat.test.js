@@ -212,3 +212,24 @@ describe("boxOrientation", () => {
     expect(Compat.boxOrientation(false)).toEqual({ orientation: Orientation.HORIZONTAL });
   });
 });
+
+// Mutter 50 dropped the X11 backend and meta_is_wayland_compositor with it.
+describe("isWaylandCompositor", () => {
+  it("follows Meta.is_wayland_compositor() on GNOME 49", async () => {
+    const Compat = await loadCompat("49.0");
+    const Meta = (await import("gi://Meta")).default;
+    expect(Compat.IS_MUTTER_50_PLUS).toBe(false);
+    Meta.__setWayland(true);
+    expect(Compat.isWaylandCompositor()).toBe(true);
+    Meta.__setWayland(false);
+    expect(Compat.isWaylandCompositor()).toBe(false);
+  });
+
+  it.each(["50.0", "51.0"])("is true on GNOME %s without asking Meta", async (version) => {
+    const Compat = await loadCompat(version);
+    const Meta = (await import("gi://Meta")).default;
+    Meta.__setWayland(false);
+    expect(Compat.IS_MUTTER_50_PLUS).toBe(true);
+    expect(Compat.isWaylandCompositor()).toBe(true);
+  });
+});
