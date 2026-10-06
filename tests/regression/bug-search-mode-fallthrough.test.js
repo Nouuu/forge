@@ -17,7 +17,8 @@ import {
  *
  * Root Cause: Missing `break` statement after MODE case in switch statement.
  *
- * File: lib/extension/tree.js, _search() method
+ * File: lib/extension/tree.js, _search() method. S-08 replaced the switch with one
+ * predicate per getter, so the tests now go through getNodeByMode/getNodeByLayout.
  */
 describe("Bug: _search() MODE case fallthrough to LAYOUT", () => {
   let ctx;
@@ -44,7 +45,7 @@ describe("Bug: _search() MODE case fallthrough to LAYOUT", () => {
       monitor.layout = LAYOUT_TYPES.HSPLIT;
 
       // Search by MODE for TILE windows
-      const modeResults = ctx.tree._search(WINDOW_MODES.TILE, "MODE");
+      const modeResults = ctx.tree.getNodeByMode(WINDOW_MODES.TILE);
 
       // Should find the TILE mode window
       expect(modeResults).toContain(windowNode);
@@ -55,7 +56,7 @@ describe("Bug: _search() MODE case fallthrough to LAYOUT", () => {
       const layoutValue = LAYOUT_TYPES.HSPLIT;
 
       // This should NOT find the monitor node (which has layout=HSPLIT but no mode=HSPLIT)
-      const incorrectResults = ctx.tree._search(layoutValue, "MODE");
+      const incorrectResults = ctx.tree.getNodeByMode(layoutValue);
 
       // The monitor node should NOT be in results because we're searching by MODE,
       // not by LAYOUT
@@ -79,7 +80,7 @@ describe("Bug: _search() MODE case fallthrough to LAYOUT", () => {
       node2.mode = WINDOW_MODES.FLOAT;
 
       // Search by MODE for FLOAT
-      const floatResults = ctx.tree._search(WINDOW_MODES.FLOAT, "MODE");
+      const floatResults = ctx.tree.getNodeByMode(WINDOW_MODES.FLOAT);
 
       // Should only find node2 (FLOAT mode)
       expect(floatResults.length).toBe(1);
@@ -101,7 +102,7 @@ describe("Bug: _search() MODE case fallthrough to LAYOUT", () => {
       windowNode.mode = WINDOW_MODES.TILE;
 
       // Search by LAYOUT for VSPLIT
-      const layoutResults = ctx.tree._search(LAYOUT_TYPES.VSPLIT, "LAYOUT");
+      const layoutResults = ctx.tree.getNodeByLayout(LAYOUT_TYPES.VSPLIT);
 
       // Should find the monitor (which has VSPLIT layout)
       expect(layoutResults).toContain(monitor);

@@ -285,4 +285,49 @@ describe("Tree", () => {
       expect(ctx.tree.findNode(bin3)).toBe(container3);
     });
   });
+  // S-08 pin: the getNodeBy* searches are breadth-first in sibling order, and
+  // getWindowsInLayoutOrder is depth-first post-order. The subtree below orders its
+  // windows differently under the two walks (BFS w1 w2 w0, DFS w0 w1 w2), and w0/w2 share
+  // a value so getNodeByValue shows which one a search reaches first.
+  describe("search order", () => {
+    const build = () => {
+      const shared = createMockWindow();
+      const con = () => new Node(NODE_TYPES.CON, new St.Bin());
+      const win = (meta = createMockWindow()) => new Node(NODE_TYPES.WINDOW, meta);
+      const a = con();
+      const b = con();
+      const c = con();
+      const e = con();
+      const w0 = win(shared);
+      const w1 = win();
+      const w2 = win(shared);
+      a.appendChild(b);
+      a.appendChild(c);
+      b.appendChild(e);
+      b.appendChild(w1);
+      e.appendChild(w0);
+      c.appendChild(w2);
+      return { a, b, c, e, w0, w1, w2, shared };
+    };
+
+    it("finds windows breadth-first in sibling order", () => {
+      const { a, w0, w1, w2 } = build();
+      expect(a.getNodeByType(NODE_TYPES.WINDOW)).toEqual([w1, w2, w0]);
+    });
+
+    it("returns the first breadth-first hit when two nodes share a value", () => {
+      const { a, w2, shared } = build();
+      expect(a.getNodeByValue(shared)).toBe(w2);
+    });
+
+    it("keeps getWindowsInLayoutOrder depth-first post-order", () => {
+      const { a, w0, w1, w2 } = build();
+      expect(a.getWindowsInLayoutOrder()).toEqual([w0, w1, w2]);
+    });
+
+    it("lists containers breadth-first too", () => {
+      const { a, b, c, e } = build();
+      expect(a.getNodeByType(NODE_TYPES.CON)).toEqual([a, b, c, e]);
+    });
+  });
 });
