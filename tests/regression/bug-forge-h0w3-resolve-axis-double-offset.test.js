@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { resolveX, resolveY, resolveRect, findWindowWith } from "../../lib/extension/utils.js";
+import { resolveAxis, resolveRect, findWindowWith } from "../../lib/extension/utils.js";
 
 /**
  * Bug forge-h0w3 (audit-2026-07b): when rectRequest.x/.y is absent — or is a
@@ -36,41 +36,41 @@ describe("Bug forge-h0w3: an unspecified axis must mean 'leave the window where 
 
   it("returns the current x when the request omits x (secondary monitor)", () => {
     const win = windowOn({ x: 2000, y: 100, workArea: secondary });
-    expect(resolveX({}, win)).toBe(2000);
+    expect(resolveAxis({}, win, "x")).toBe(2000);
   });
 
   it("returns the current y when the request omits y (below a top panel)", () => {
     const win = windowOn({ x: 100, y: 300, workArea: primary });
-    expect(resolveY({}, win)).toBe(300);
+    expect(resolveAxis({}, win, "y")).toBe(300);
   });
 
   it("does not drift when called repeatedly", () => {
     const win = windowOn({ x: 100, y: 300, workArea: primary });
-    expect(resolveY({}, win)).toBe(resolveY({}, win));
+    expect(resolveAxis({}, win, "y")).toBe(resolveAxis({}, win, "y"));
   });
 
   it("returns the current position for an unrecognised string", () => {
     const win = windowOn({ x: 2000, y: 300, workArea: secondary });
-    expect(resolveX({ x: "middle" }, win)).toBe(2000);
-    expect(resolveY({ y: "middle" }, win)).toBe(300);
+    expect(resolveAxis({ x: "middle" }, win, "x")).toBe(2000);
+    expect(resolveAxis({ y: "middle" }, win, "y")).toBe(300);
   });
 
-  it("matches resolveWidth/resolveHeight's no-arg contract via resolveRect", () => {
+  it("matches resolveSize's no-arg contract via resolveRect", () => {
     const win = windowOn({ x: 2000, y: 300, workArea: secondary });
     expect(resolveRect({}, win)).toEqual({ x: 2000, y: 300, width: 800, height: 600 });
   });
 
   it("still honours explicit numbers relative to the work area", () => {
     const win = windowOn({ x: 2000, y: 300, workArea: secondary });
-    expect(resolveX({ x: 40 }, win)).toBe(1960);
-    expect(resolveY({ y: 40 }, win)).toBe(40);
+    expect(resolveAxis({ x: 40 }, win, "x")).toBe(1960);
+    expect(resolveAxis({ y: 40 }, win, "y")).toBe(40);
   });
 
   it("still honours the named positions", () => {
     const win = windowOn({ x: 2000, y: 300, workArea: secondary });
-    expect(resolveX({ x: "left", width: 800 }, win)).toBe(1920);
-    expect(resolveX({ x: "right", width: 800 }, win)).toBe(1920 + 1920 - 800);
-    expect(resolveX({ x: "center", width: 800 }, win)).toBe(1920 + 1920 * 0.5 - 400);
+    expect(resolveAxis({ x: "left", width: 800 }, win, "x")).toBe(1920);
+    expect(resolveAxis({ x: "right", width: 800 }, win, "x")).toBe(1920 + 1920 - 800);
+    expect(resolveAxis({ x: "center", width: 800 }, win, "x")).toBe(1920 + 1920 * 0.5 - 400);
   });
 });
 

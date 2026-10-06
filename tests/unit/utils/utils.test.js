@@ -2,8 +2,8 @@ import { describe, it, expect } from "vitest";
 import { createEnum } from "../../../lib/extension/enum.js";
 import {
   rectContainsPoint,
-  resolveWidth,
-  resolveHeight,
+  resolveSize,
+  resolveRect,
   orientationFromGrab,
   positionFromGrabOp,
   grabMode,
@@ -91,7 +91,59 @@ describe("Utility Functions", () => {
     });
   });
 
-  describe("resolveWidth", () => {
+  // One row per axis x {keyword, number, absent}, on a work area that does not start at
+  // the origin, so a missing origin offset shows. Pinned before S-05 merges the four
+  // per-axis resolvers.
+  describe("resolveRect per axis", () => {
+    const win = (monitor = 0) => ({
+      get_frame_rect: () => ({ x: 300, y: 200, width: 800, height: 600 }),
+      get_monitor: () => monitor,
+      get_work_area_current_monitor: () => ({ x: 100, y: 27, width: 1600, height: 900 }),
+    });
+
+    it.each([
+      [{}, 300],
+      [{ x: 40 }, 140],
+      [{ x: "left" }, 100],
+      [{ x: "right" }, 900],
+      [{ x: "center", width: 0.5 }, 500],
+      [{ x: "middle" }, 300],
+    ])("x for %j is %d", (request, x) => {
+      expect(resolveRect(request, win()).x).toBe(x);
+    });
+
+    it.each([
+      [{}, 200],
+      [{ y: 40 }, 67],
+      [{ y: "top" }, 27],
+      [{ y: "bottom" }, 327],
+      [{ y: "center", height: 0.5 }, 252],
+      [{ y: "middle" }, 200],
+    ])("y for %j is %d", (request, y) => {
+      expect(resolveRect(request, win()).y).toBe(y);
+    });
+
+    it.each([
+      [{}, 800, 600],
+      [{ width: 500, height: 400 }, 500, 400],
+      [{ width: 0.5, height: 0.5 }, 800, 450],
+      [{ width: 1, height: 1 }, 1600, 900],
+    ])("size for %j is %d x %d", (request, width, height) => {
+      const rect = resolveRect(request, win());
+      expect([rect.width, rect.height]).toEqual([width, height]);
+    });
+
+    it("keeps the frame rect when the window has no work area", () => {
+      expect(resolveRect({ x: "center", y: 40, width: 0.5 }, win(-1))).toEqual({
+        x: 300,
+        y: 200,
+        width: 800,
+        height: 600,
+      });
+    });
+  });
+
+  describe("resolveSize width", () => {
     const mockWindow = {
       get_frame_rect: () => ({ x: 0, y: 0, width: 800, height: 600 }),
       get_monitor: () => 0,
@@ -99,27 +151,27 @@ describe("Utility Functions", () => {
     };
 
     it("should resolve absolute pixel values", () => {
-      const result = resolveWidth({ width: 500 }, mockWindow);
+      const result = resolveSize({ width: 500 }, mockWindow, "width");
       expect(result).toBe(500);
     });
 
     it("should resolve fractional values as percentage", () => {
-      const result = resolveWidth({ width: 0.5 }, mockWindow);
+      const result = resolveSize({ width: 0.5 }, mockWindow, "width");
       expect(result).toBe(960); // 1920 * 0.5
     });
 
     it("should resolve value of 1 as percentage", () => {
-      const result = resolveWidth({ width: 1 }, mockWindow);
+      const result = resolveSize({ width: 1 }, mockWindow, "width");
       expect(result).toBe(1920); // 1920 * 1
     });
 
     it("should return current width for undefined", () => {
-      const result = resolveWidth({}, mockWindow);
+      const result = resolveSize({}, mockWindow, "width");
       expect(result).toBe(800); // Current window width
     });
   });
 
-  describe("resolveHeight", () => {
+  describe("resolveSize height", () => {
     const mockWindow = {
       get_frame_rect: () => ({ x: 0, y: 0, width: 800, height: 600 }),
       get_monitor: () => 0,
@@ -127,17 +179,17 @@ describe("Utility Functions", () => {
     };
 
     it("should resolve absolute pixel values", () => {
-      const result = resolveHeight({ height: 400 }, mockWindow);
+      const result = resolveSize({ height: 400 }, mockWindow, "height");
       expect(result).toBe(400);
     });
 
     it("should resolve fractional values as percentage", () => {
-      const result = resolveHeight({ height: 0.5 }, mockWindow);
+      const result = resolveSize({ height: 0.5 }, mockWindow, "height");
       expect(result).toBe(540); // 1080 * 0.5
     });
 
     it("should return current height for undefined", () => {
-      const result = resolveHeight({}, mockWindow);
+      const result = resolveSize({}, mockWindow, "height");
       expect(result).toBe(600); // Current window height
     });
   });

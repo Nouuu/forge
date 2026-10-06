@@ -48,14 +48,14 @@ describe("Bug forge-tpgh: monitor-less window does not abort via work-area looku
   });
 
   describe("resolve* fall back to the frame rect on a monitor-less window", () => {
-    it("resolveX/Y return the current frame coords without calling the C function", () => {
+    it("resolveAxis returns the current frame coords without calling the C function", () => {
       const win = createMockWindow({
         monitor: -1,
         rect: { x: 700, y: 350, width: 400, height: 300 },
       });
       failIfWorkAreaCalled(win);
-      expect(Utils.resolveX({ x: "center" }, win)).toBe(700);
-      expect(Utils.resolveY({ y: "center" }, win)).toBe(350);
+      expect(Utils.resolveAxis({ x: "center" }, win, "x")).toBe(700);
+      expect(Utils.resolveAxis({ y: "center" }, win, "y")).toBe(350);
       expect(win.get_work_area_current_monitor).not.toHaveBeenCalled();
     });
   });
