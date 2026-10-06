@@ -5,16 +5,17 @@ import { dirname, join } from "node:path";
 
 import {
   SETTINGS_KEYS,
-  KEYBINDING_KEYS,
   KEYBINDING_STRING_KEYS,
+  bindingKeysOf,
 } from "../../lib/shared/config-sync.js";
 
 /**
  * Regression fence for forge-nuny / forge-eny3.
  *
  * The portable-config whitelists in config-sync.js (SETTINGS_KEYS,
- * KEYBINDING_KEYS, KEYBINDING_STRING_KEYS) must stay in lock-step with the
- * gschema. Drift means silent data loss on export/import (a live key missing
+ * KEYBINDING_STRING_KEYS) must stay in lock-step with the gschema, and the
+ * keybinding set S-01 derives (bindingKeysOf: every 'as' key, sorted) must
+ * equal the gschema's 'as' keys. Drift means silent data loss on export/import (a live key missing
  * from the whitelist is never written) or a dead decoy key that documents a
  * knob nothing reads. This test parses the gschema straight off disk and
  * asserts the whitelists are exactly the portable surface of each schema.
@@ -121,20 +122,18 @@ describe("config-sync whitelist completeness (forge-nuny / forge-eny3)", () => {
     }
   });
 
-  it("KEYBINDING_KEYS covers every 'as' keybinding, and only those", () => {
+  it("bindingKeysOf derives exactly the gschema's 'as' keys, sorted", () => {
     const asKeys = kbdKeys
       .filter((k) => k.type === "as")
       .map((k) => k.name)
       .sort();
-    const whitelisted = [...KEYBINDING_KEYS].sort();
+    const types = new Map(kbdKeys.map((k) => [k.name, k.type]));
+    const kbdSettings = {
+      list_keys: () => kbdKeys.map((k) => k.name),
+      get_default_value: (key) => ({ get_type_string: () => types.get(key) }),
+    };
 
-    const { onlyA, onlyB } = symmetricDifference(whitelisted, asKeys);
-    expect(
-      onlyA.length === 0 && onlyB.length === 0,
-      `KEYBINDING_KEYS drifted from the gschema 'as' keys.\n` +
-        `  In KEYBINDING_KEYS but not an 'as' gschema key: ${JSON.stringify(onlyA)}\n` +
-        `  'as' gschema keys missing from KEYBINDING_KEYS: ${JSON.stringify(onlyB)}`
-    ).toBe(true);
+    expect(bindingKeysOf(kbdSettings)).toEqual(asKeys);
   });
 
   it("KEYBINDING_STRING_KEYS covers every non-'as' keybinding, and only those", () => {

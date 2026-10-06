@@ -16,7 +16,7 @@ vi.mock("../../lib/extension/indicator.js", () => ({
 // The realistic throw site: config import writes GSettings and can fail on a
 // corrupt/unreadable ~/.config/forge.
 vi.mock("../../lib/shared/config-sync.js", async (importOriginal) => ({
-  // Keep the real exports (gnome-overrides.js reads KEYBINDING_KEYS from here).
+  // Keep the real exports (gnome-overrides.js reads bindingKeysOf from here).
   ...(await importOriginal()),
   ConfigSync: class ConfigSync {
     init() {

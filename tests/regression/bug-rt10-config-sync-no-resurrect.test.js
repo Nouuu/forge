@@ -35,6 +35,8 @@ describe("Bug forge-rt10: auto-export must not resurrect deleted portable files"
       },
       set_value: (key, variant) =>
         store.set(key, { type: variant.get_type_string(), value: variant.recursiveUnpack() }),
+      list_keys: () => [...store.keys()],
+      get_default_value: (key) => (store.has(key) ? obj.get_value(key) : null),
       get_boolean: (k) => store.get(k)?.value ?? false,
       set_boolean: (k, v) => store.set(k, { type: "b", value: v }),
       get_uint: (k) => store.get(k)?.value ?? 0,

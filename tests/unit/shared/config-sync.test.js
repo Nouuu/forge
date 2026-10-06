@@ -32,6 +32,9 @@ describe("ConfigSync", () => {
       set_value: (key, variant) => {
         store.set(key, { type: variant.get_type_string(), value: variant.recursiveUnpack() });
       },
+      // Schema view: the keys and types this mock has seen.
+      list_keys: () => [...store.keys()],
+      get_default_value: (key) => obj.get_value(key),
       get_boolean: (key) => store.get(key)?.value ?? false,
       set_boolean: (key, value) => {
         store.set(key, { type: "b", value });
@@ -173,6 +176,27 @@ describe("ConfigSync", () => {
 
   // S-04 pin: the exported JSON keeps each portable type (b, u, s, as), and importing it
   // back restores the same typed values.
+  // S-01 rule (constitution VI): the keybinding set is every `as` key of the schema,
+  // sorted, so a new binding is exported and imported without registration.
+  describe("derived keybinding set", () => {
+    it("equals the schema's `as` keys, sorted", () => {
+      const types = {
+        "window-focus-right": "as",
+        "mod-mask-mouse-tile": "s",
+        "window-focus-left": "as",
+        "some-toggle": "b",
+      };
+      const kbd = {
+        ...createTypedSettings(),
+        list_keys: () => Object.keys(types),
+        get_default_value: (key) => new GLib.Variant(types[key], null),
+      };
+      const sync = new ConfigSync({ configMgr, settings, kbdSettings: kbd });
+      expect(sync.bindingKeys).toEqual(["window-focus-left", "window-focus-right"]);
+      sync.destroy();
+    });
+  });
+
   describe("portable types in the exported JSON", () => {
     it("round-trips one key of every portable type", () => {
       settings.set_boolean("tiling-mode-enabled", true);

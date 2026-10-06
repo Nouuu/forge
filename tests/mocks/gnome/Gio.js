@@ -157,6 +157,15 @@ export class Settings extends withSignals() {
     this._settings.set(key, value instanceof Variant ? value.recursiveUnpack() : value);
   }
 
+  // Schema view: the keys that hold a value (a real schema lists every key it defines).
+  list_keys() {
+    return [...this._settings.keys()];
+  }
+
+  get_default_value(key) {
+    return this._settings.has(key) ? this.get_value(key) : null;
+  }
+
   /**
    * Two-way property binding. The real GSettings.bind writes the key into the
    * object property immediately and keeps both sides in sync; tests only need the

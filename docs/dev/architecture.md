@@ -112,8 +112,8 @@ Two layers, reconciled by `ConfigManager` + `ConfigSync`:
   - `windows.json` — per-window / per-class float & tile overrides
     (`ConfigManager`, `lib/shared/settings.js`).
   - `settings.json` / `keybindings.json` — portable mirror of GSettings, written
-    and re-imported by `ConfigSync` (`config-sync.js`; see its `SETTINGS_KEYS` and
-    `KEYBINDING_KEYS` maps) so a config can be version-controlled or moved between
-    machines.
+    and re-imported by `ConfigSync` (`config-sync.js`; see its `SETTINGS_KEYS` whitelist;
+    the keybinding set is every `as` key of the keybindings schema, `bindingKeysOf`) so a
+    config can be version-controlled or moved between machines.
 
 `ConfigSync.init()` runs during `enable()` and imports any present files.

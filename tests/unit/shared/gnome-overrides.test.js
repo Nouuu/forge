@@ -16,6 +16,8 @@ const settingsWith = (values) => ({
 // Minimal fake of the keybindings Gio.Settings: strv per key, [] when unset.
 const kbdWith = (values) => ({
   get_strv: (key) => values[key] || [],
+  list_keys: () => Object.keys(values),
+  get_default_value: () => ({ get_type_string: () => "as" }),
 });
 
 describe("shouldApplyOverride (forge-9fo, forge-abk)", () => {
