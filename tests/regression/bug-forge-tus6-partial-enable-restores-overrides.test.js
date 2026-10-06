@@ -39,7 +39,7 @@ import ForgeExtension from "../../extension.js";
 
 /** Originals we seed so a restore is observable (must differ from the override). */
 function seedOriginal(desc) {
-  return desc.type === "boolean" ? true : [`<Super>original-${desc.key}`];
+  return typeof desc.newValue === "boolean" ? true : [`<Super>original-${desc.key}`];
 }
 
 describe("forge-tus6: a failed enable() must not leave GNOME settings clobbered", () => {
@@ -67,7 +67,7 @@ describe("forge-tus6: a failed enable() must not leave GNOME settings clobbered"
         this.schema_id = schemaId;
         for (const desc of SETTINGS_OVERRIDES) {
           if (desc.schemaId !== schemaId) continue;
-          const setter = desc.type === "boolean" ? "set_boolean" : "set_strv";
+          const setter = typeof desc.newValue === "boolean" ? "set_boolean" : "set_strv";
           this[setter](desc.key, seedOriginal(desc));
         }
         created.set(schemaId, this);
@@ -111,7 +111,7 @@ describe("forge-tus6: a failed enable() must not leave GNOME settings clobbered"
     for (const desc of SETTINGS_OVERRIDES) {
       const gsettings = created.get(desc.schemaId);
       expect(gsettings, `no Gio.Settings built for ${desc.schemaId}`).toBeDefined();
-      const getter = desc.type === "boolean" ? "get_boolean" : "get_strv";
+      const getter = typeof desc.newValue === "boolean" ? "get_boolean" : "get_strv";
       expect(
         gsettings[getter](desc.key),
         `${desc.schemaId} '${desc.key}' was left overridden after a failed enable()`
