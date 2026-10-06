@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { MaximizeFlags, Window } from "../../mocks/gnome/Meta.js";
+import { Orientation } from "../../mocks/gnome/Clutter.js";
 
 // Compat dispatches on IS_MUTTER_49_PLUS which is computed from
 // PACKAGE_VERSION at module load. tests/setup.js mocks that resource
@@ -191,5 +192,23 @@ describe("compat (Mutter 48 branch)", () => {
       const w = { get_maximized: vi.fn(() => MaximizeFlags.HORIZONTAL) };
       expect(Compat.getMaximizeFlags(w)).toBe(MaximizeFlags.HORIZONTAL);
     });
+  });
+});
+
+// St.BoxLayout gained `orientation` on GNOME 48 and dropped `vertical` on 51, where an
+// unknown construct property throws. 45-47 only know `vertical`.
+describe("boxOrientation", () => {
+  it("returns { vertical } before GNOME 48", async () => {
+    const Compat = await loadCompat("47.0");
+    expect(Compat.IS_MUTTER_48_PLUS).toBe(false);
+    expect(Compat.boxOrientation(true)).toEqual({ vertical: true });
+    expect(Compat.boxOrientation(false)).toEqual({ vertical: false });
+  });
+
+  it.each(["48.0", "51.0"])("returns { orientation } on GNOME %s", async (version) => {
+    const Compat = await loadCompat(version);
+    expect(Compat.IS_MUTTER_48_PLUS).toBe(true);
+    expect(Compat.boxOrientation(true)).toEqual({ orientation: Orientation.VERTICAL });
+    expect(Compat.boxOrientation(false)).toEqual({ orientation: Orientation.HORIZONTAL });
   });
 });

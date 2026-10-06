@@ -27,6 +27,12 @@ and self-documents which API landed where.
 | `unmaximize(w)` | `unmaximize(BOTH)` | `set_unmaximize_flags(BOTH)` + `unmaximize()` |
 | `getMaximizeFlags` | `get_maximized()` | `get_maximize_flags()` |
 
+Shims on other cutoffs:
+
+| Shim | Before the cutoff | From the cutoff |
+| --- | --- | --- |
+| `boxOrientation(vertical)`, St.BoxLayout direction | 45-47: `{ vertical }` | 48+ (`IS_MUTTER_48_PLUS`): `{ orientation }` |
+
 `compat.js` also holds two **capability probes**, which branch on whether a method
 exists rather than on a version — for APIs with no documented cutoff to dispatch on:
 
@@ -51,6 +57,12 @@ exists rather than on a version — for APIs with no documented cutoff to dispat
   Wayland tile-inference bug.
 - `begin_grab_op` signature changed at 49, but Forge doesn't call it from GJS — no
   impact.
+
+St, same tags:
+
+- `St.BoxLayout`: `orientation` exists from **48**; `vertical` is deprecated at 48 and
+  **removed at 51**, where GJS throws on it as a construct property. On 45-47, assigning
+  `orientation` only sets a JS expando, so the box keeps its default direction.
 
 ## Adding a new shim
 

@@ -132,6 +132,8 @@ export class Bin extends Widget {
 export class BoxLayout extends Widget {
   constructor(params = {}) {
     super(params);
+    // Kept so a test can assert which construct properties production passed.
+    this._ctorParams = params;
     this.children = [];
     // Model Clutter orientation (0 = HORIZONTAL, 1 = VERTICAL). St.BoxLayout
     // defaults to HORIZONTAL; the legacy `vertical` boolean prop was removed on

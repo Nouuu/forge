@@ -69,6 +69,36 @@ describe("Cheatsheet", () => {
     vi.restoreAllMocks();
   });
 
+  // GNOME 51 removed St.BoxLayout:vertical, and GJS throws on an unknown construct
+  // property, so a single `vertical:` would break the cheatsheet there.
+  describe("GNOME 51 St.BoxLayout direction", () => {
+    afterEach(() => {
+      vi.doUnmock("resource:///org/gnome/shell/misc/config.js");
+    });
+
+    it("builds no St.BoxLayout with `vertical` and lays the columns out vertically", async () => {
+      vi.resetModules();
+      vi.doMock("resource:///org/gnome/shell/misc/config.js", () => ({ PACKAGE_VERSION: "51.0" }));
+      const Main51 = await import("resource:///org/gnome/shell/ui/main.js");
+      Main51.layoutManager = Main.layoutManager;
+      const { Cheatsheet: Cheatsheet51 } = await import("../../../lib/extension/cheatsheet.js");
+      const sheet = new Cheatsheet51(mockExt);
+      sheet.show();
+
+      const boxes = [];
+      const walk = (actor) => {
+        if (actor._ctorParams) boxes.push(actor);
+        (actor.get_children?.() ?? []).forEach(walk);
+      };
+      walk(sheet._overlay);
+
+      expect(boxes.length).toBeGreaterThanOrEqual(4);
+      for (const box of boxes) expect(box._ctorParams).not.toHaveProperty("vertical");
+      expect(sheet._overlay.orientation).toBe(Clutter.Orientation.VERTICAL);
+      sheet.destroy?.();
+    });
+  });
+
   describe("fast double-toggle (forge-v3y3)", () => {
     it("does not re-parent an overlay still parented during the hide ease", () => {
       cheatsheet.show();
