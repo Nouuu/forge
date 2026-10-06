@@ -740,8 +740,8 @@
     },
 
     // M3: quiescence probe so the Python settle can wait for async finalize to drain. Move /
-    // SnapLayoutMove finalize through wm.queueEvent, which enqueues onto wm.eventQueue (a Queue,
-    // tree.js:758, with a .length getter) and drains via a GLib.timeout (window.js:271); a render
+    // SnapLayoutMove finalize through wm.queueEvent, which pushes onto wm.eventQueue (an array)
+    // and drains via a GLib.timeout (window.js queueEvent); a render
     // is then a GLib.idle_add tracked by wm._renderTreeSrcId (window.js:1439). So:
     //   queue         = eventQueue.length (pending queued events; 0 if the structure is missing)
     //   pendingRender = !!_renderTreeSrcId (an idle render is scheduled but hasn't fired)
