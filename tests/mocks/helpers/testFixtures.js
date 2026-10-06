@@ -300,48 +300,6 @@ export function createTreeFixture(options = {}) {
   };
 }
 
-/**
- * Create a fixture for WorkspaceManager tests
- *
- * @param {Object} options - Configuration options
- * @param {Object} [options.globals] - Options for installGnomeGlobals
- * @returns {Object} Fixture context
- */
-export function createWorkspaceManagerFixture(options = {}) {
-  const { globals = {} } = options;
-
-  // Install GNOME globals
-  const globalCtx = installGnomeGlobals(globals);
-
-  // Create minimal Tree mock
-  const mockTree = {
-    addWorkspace: vi.fn(() => true),
-    removeWorkspace: vi.fn(() => true),
-    findNode: vi.fn(),
-  };
-
-  // Create minimal ExtWm mock
-  const mockExtWm = {
-    tree: mockTree,
-    ext: {
-      settings: createMockSettings(),
-    },
-    renderTree: vi.fn(),
-  };
-
-  return {
-    tree: mockTree,
-    extWm: mockExtWm,
-    display: globalCtx.display,
-    workspaceManager: globalCtx.workspaceManager,
-    workspaces: globalCtx.workspaces,
-
-    cleanup: () => {
-      globalCtx.cleanup();
-    },
-  };
-}
-
 export default {
   DEFAULT_SETTINGS,
   createMockSettings,
@@ -350,5 +308,4 @@ export default {
   createMockExtension,
   createWindowManagerFixture,
   createTreeFixture,
-  createWorkspaceManagerFixture,
 };
