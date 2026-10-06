@@ -44,8 +44,8 @@ describe("WorkspaceManager", () => {
           layout: null,
           actorBin: null,
           childNodes: [],
-          // addMonitor is mocked here, so a workspace node has no MONITOR
-          // children — match the real Node.getNodeByType shape with an empty set.
+          // addMonitors is stubbed here, so a workspace node has no MONITOR
+          // children: match the real Node.getNodeByType shape with an empty set.
           getNodeByType: () => [],
         };
         mockTree._nodes.set(nodeValue, node);
@@ -55,7 +55,6 @@ describe("WorkspaceManager", () => {
       removeChild: vi.fn((node) => {
         mockTree._nodes.delete(node.nodeValue);
       }),
-      addMonitor: vi.fn(),
     };
 
     // Create a mock WindowManager
@@ -67,6 +66,8 @@ describe("WorkspaceManager", () => {
 
     // Create WorkspaceManager instance
     workspaceManager = new WorkspaceManager(mockTree, mockExtWm);
+    // Monitor nodes have their own suite (WorkspaceManager-monitors.test.js).
+    vi.spyOn(workspaceManager, "addMonitors").mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -102,10 +103,10 @@ describe("WorkspaceManager", () => {
       expect(global.window_group.add_child).toHaveBeenCalled();
     });
 
-    it("should call tree.addMonitor for the workspace", () => {
+    it("should add the workspace's monitor nodes", () => {
       workspaceManager.addWorkspace(0);
 
-      expect(mockTree.addMonitor).toHaveBeenCalledWith(0);
+      expect(workspaceManager.addMonitors).toHaveBeenCalledWith(0);
     });
 
     it("should return false if workspace already exists", () => {
@@ -175,7 +176,7 @@ describe("WorkspaceManager", () => {
         workspaceManager.addWorkspace(MISSING);
 
         expect(workspaceManager._workspaceSignals.has(MISSING)).toBe(false);
-        expect(mockTree.addMonitor).not.toHaveBeenCalled();
+        expect(workspaceManager.addMonitors).not.toHaveBeenCalled();
       });
     });
   });

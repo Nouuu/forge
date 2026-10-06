@@ -255,7 +255,7 @@ export function createTreeFixture(options = {}) {
       settings: mockSettings,
     },
     determineSplitLayout: vi.fn(() => LAYOUT_TYPES[defaultLayout] || LAYOUT_TYPES.HSPLIT),
-    // Bug #311: rect-aware variant used by MonitorManager.addMonitor. Mirrors the
+    // Bug #311: rect-aware variant used by WorkspaceManager.addMonitors. Mirrors the
     // real helper (portrait -> VSPLIT), falling back to the default when no rect.
     determineSplitLayoutForRect: vi.fn((rect) =>
       rect && rect.width < rect.height

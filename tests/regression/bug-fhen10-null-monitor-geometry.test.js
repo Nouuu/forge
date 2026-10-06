@@ -32,12 +32,12 @@ describe("Bug forge-fhen.10: null get_monitor_geometry() is guarded", () => {
   // crash on null — determineSplitLayoutForRect falls back — so this pins the
   // behaviour rather than a fix, and the raw call was swapped for the shared guarded
   // accessor so every site in lib/ reads the same way.
-  it("addMonitor still builds monitor nodes when geometry is unavailable", () => {
+  it("addMonitors still builds monitor nodes when geometry is unavailable", () => {
     ctx = createWindowManagerFixture({
       globals: { display: { monitorGeometries: [null], numMonitors: 1 } },
     });
 
-    expect(() => ctx.tree.addMonitor(0)).not.toThrow();
+    expect(() => ctx.tree.workspaceManager.addMonitors(0)).not.toThrow();
 
     const monNode = ctx.tree.findNode("mo0ws0");
     expect(monNode).not.toBeNull();

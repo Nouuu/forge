@@ -1,18 +1,14 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { MonitorManager } from "../../../lib/extension/monitor.js";
+import { WorkspaceManager } from "../../../lib/extension/workspace.js";
 import { NODE_TYPES, LAYOUT_TYPES } from "../../../lib/extension/tree.js";
 import { installGnomeGlobals } from "../../mocks/helpers/index.js";
 
 /**
- * MonitorManager unit tests
- *
- * Tests for the MonitorManager class which handles monitor-related operations:
- * - addMonitor(): Create monitor nodes for a workspace
- * - getMonitorCount(): Get the number of monitors
- * - getMonitorNode(): Get monitor node by workspace/monitor index
+ * WorkspaceManager.addMonitors: the monitor nodes of one workspace (S-06 folded the
+ * former MonitorManager into WorkspaceManager).
  */
-describe("MonitorManager", () => {
-  let monitorManager;
+describe("WorkspaceManager.addMonitors", () => {
+  let workspaceManager;
   let mockTree;
   let mockExtWm;
   let ctx;
@@ -48,19 +44,18 @@ describe("MonitorManager", () => {
       ),
     };
 
-    // Create MonitorManager instance
-    monitorManager = new MonitorManager(mockTree, mockExtWm);
+    workspaceManager = new WorkspaceManager(mockTree, mockExtWm);
   });
 
   afterEach(() => {
     ctx.cleanup();
   });
 
-  describe("addMonitor()", () => {
+  describe("addMonitors()", () => {
     it("should create monitor node for single monitor", () => {
       global.display.get_n_monitors.mockReturnValue(1);
 
-      monitorManager.addMonitor(0);
+      workspaceManager.addMonitors(0);
 
       expect(mockTree.createNode).toHaveBeenCalledWith("ws0", NODE_TYPES.MONITOR, "mo0ws0");
     });
@@ -68,7 +63,7 @@ describe("MonitorManager", () => {
     it("should create monitor nodes for all monitors", () => {
       global.display.get_n_monitors.mockReturnValue(2);
 
-      monitorManager.addMonitor(0);
+      workspaceManager.addMonitors(0);
 
       expect(mockTree.createNode).toHaveBeenCalledTimes(2);
       expect(mockTree.createNode).toHaveBeenCalledWith("ws0", NODE_TYPES.MONITOR, "mo0ws0");
@@ -78,7 +73,7 @@ describe("MonitorManager", () => {
     it("should set layout on monitor nodes", () => {
       global.display.get_n_monitors.mockReturnValue(1);
 
-      monitorManager.addMonitor(0);
+      workspaceManager.addMonitors(0);
 
       const monitorNode = mockTree._nodes.get("mo0ws0");
       expect(monitorNode.layout).toBe(LAYOUT_TYPES.HSPLIT);
@@ -87,7 +82,7 @@ describe("MonitorManager", () => {
     it("should create actorBin for each monitor node", () => {
       global.display.get_n_monitors.mockReturnValue(1);
 
-      monitorManager.addMonitor(0);
+      workspaceManager.addMonitors(0);
 
       const monitorNode = mockTree._nodes.get("mo0ws0");
       expect(monitorNode.actorBin).toBeDefined();
@@ -96,7 +91,7 @@ describe("MonitorManager", () => {
     it("should add actorBin to window_group", () => {
       global.display.get_n_monitors.mockReturnValue(1);
 
-      monitorManager.addMonitor(0);
+      workspaceManager.addMonitors(0);
 
       expect(global.window_group.add_child).toHaveBeenCalled();
     });
@@ -109,10 +104,10 @@ describe("MonitorManager", () => {
       global.window_group._children.push(existingBin);
       global.window_group.contains.mockReturnValue(true);
 
-      monitorManager.addMonitor(0);
+      workspaceManager.addMonitors(0);
 
-      // contains() reports the bin already present, so the dedup guard at
-      // monitor.js:69 must skip add_child — otherwise duplicate actors / a
+      // contains() reports the bin already present, so the dedup guard in
+      // addMonitors must skip add_child; otherwise duplicate actors or a
       // Clutter "actor already has a parent" error.
       expect(global.window_group.add_child).not.toHaveBeenCalled();
     });
@@ -120,7 +115,7 @@ describe("MonitorManager", () => {
     it("should use correct naming convention: mo{monitorIndex}ws{workspaceIndex}", () => {
       global.display.get_n_monitors.mockReturnValue(3);
 
-      monitorManager.addMonitor(2);
+      workspaceManager.addMonitors(2);
 
       expect(mockTree.createNode).toHaveBeenCalledWith("ws2", NODE_TYPES.MONITOR, "mo0ws2");
       expect(mockTree.createNode).toHaveBeenCalledWith("ws2", NODE_TYPES.MONITOR, "mo1ws2");
@@ -130,7 +125,7 @@ describe("MonitorManager", () => {
     it("should determine split layout per monitor using each monitor's geometry", () => {
       global.display.get_n_monitors.mockReturnValue(2);
 
-      monitorManager.addMonitor(0);
+      workspaceManager.addMonitors(0);
 
       // Bug #311: the per-monitor (rect-aware) helper is used, once per monitor.
       expect(mockExtWm.determineSplitLayoutForRect).toHaveBeenCalledTimes(2);
@@ -143,7 +138,7 @@ describe("MonitorManager", () => {
     it("should handle single monitor setup", () => {
       global.display.get_n_monitors.mockReturnValue(1);
 
-      monitorManager.addMonitor(0);
+      workspaceManager.addMonitors(0);
 
       expect(mockTree._nodes.size).toBe(1);
       expect(mockTree._nodes.has("mo0ws0")).toBe(true);
@@ -152,7 +147,7 @@ describe("MonitorManager", () => {
     it("should handle dual monitor setup", () => {
       global.display.get_n_monitors.mockReturnValue(2);
 
-      monitorManager.addMonitor(0);
+      workspaceManager.addMonitors(0);
 
       expect(mockTree._nodes.size).toBe(2);
       expect(mockTree._nodes.has("mo0ws0")).toBe(true);
@@ -162,7 +157,7 @@ describe("MonitorManager", () => {
     it("should handle triple monitor setup", () => {
       global.display.get_n_monitors.mockReturnValue(3);
 
-      monitorManager.addMonitor(0);
+      workspaceManager.addMonitors(0);
 
       expect(mockTree._nodes.size).toBe(3);
       expect(mockTree._nodes.has("mo0ws0")).toBe(true);
@@ -173,9 +168,9 @@ describe("MonitorManager", () => {
     it("should create monitors for multiple workspaces", () => {
       global.display.get_n_monitors.mockReturnValue(2);
 
-      monitorManager.addMonitor(0);
-      monitorManager.addMonitor(1);
-      monitorManager.addMonitor(2);
+      workspaceManager.addMonitors(0);
+      workspaceManager.addMonitors(1);
+      workspaceManager.addMonitors(2);
 
       expect(mockTree._nodes.size).toBe(6);
       // Workspace 0

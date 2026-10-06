@@ -523,7 +523,7 @@
     // MONITOR or WORKSPACE node when the workspace is flat (no CON to absorb the toggle —
     // command.js:327). That layout persists in the tree and BLEEDS into the next seed in a
     // CONTINUE=1 run, breaking deterministic replay. Reset each such node back to its natural
-    // per-monitor split default (determineSplitLayoutForRect, used at monitor.js:66; null-safe,
+    // per-monitor split default (determineSplitLayoutForRect, used by WorkspaceManager.addMonitors; null-safe,
     // so it also handles a WORKSPACE node with no rect). CON nodes legitimately carry STACKED/
     // TABBED and ROOT keeps its ROOT layout, so both are left alone.
     fuzzResetNodeLayouts() {

@@ -14,7 +14,7 @@ import { createMockWindow, createWindowManagerFixture } from "../mocks/helpers/i
  * called WindowManager.determineSplitLayout(), which reads
  * global.display.get_current_monitor() rather than the geometry of monitor `mi`.
  *
- * These tests drive the REAL addMonitor() path (via Tree construction) so the
+ * These tests drive the REAL WorkspaceManager.addMonitors() path (via Tree construction) so the
  * orientation comes from the actual per-monitor geometry, not a hand-set value.
  */
 describe("Bug #311: Per-monitor default split orientation (multi-monitor)", () => {
@@ -60,7 +60,7 @@ describe("Bug #311: Per-monitor default split orientation (multi-monitor)", () =
 
     // Drive the real path for a new workspace index.
     ctx.tree.addWorkspace(1);
-    ctx.tree.addMonitor(1);
+    ctx.tree.workspaceManager.addMonitors(1);
 
     expect(ctx.tree.findNode("mo0ws1").layout).toBe(LAYOUT_TYPES.HSPLIT);
     expect(ctx.tree.findNode("mo1ws1").layout).toBe(LAYOUT_TYPES.VSPLIT);
