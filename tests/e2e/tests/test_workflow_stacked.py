@@ -26,8 +26,8 @@ _STACKED_DECORATION_PROBE = r"""
 (() => {
   // Clutter is not injected into the Shell.Eval scope (Main/global are), so import
   // it explicitly — sibling probes do the same. Needed to read the decoration's
-  // orientation: St.BoxLayout.vertical was removed on GNOME 50, so derive the
-  // vertical flag from orientation === Clutter.Orientation.VERTICAL instead.
+  // direction: St.BoxLayout has `orientation` only from GNOME 48 and `vertical` only
+  // up to 50, so read whichever this release has (Nouuu/forge#3).
   const Clutter = imports.gi.Clutter;
   const ext = Main.extensionManager.lookup('forge@jmmaranan.com').stateObj;
   const wm = ext && ext.extWm;
@@ -42,7 +42,11 @@ _STACKED_DECORATION_PROBE = r"""
     childCount: con.childNodes.length,
     hasDecoration: !!d,
     decoVisible: d ? d.visible : null,
-    decoVertical: d ? (d.orientation === Clutter.Orientation.VERTICAL) : null,
+    decoVertical: d
+      ? (typeof d.orientation === 'number'
+        ? d.orientation === Clutter.Orientation.VERTICAL
+        : !!d.vertical)
+      : null,
     decoChildCount: d && d.get_children ? d.get_children().length : null,
     decoHeight: d ? d.height : null,
   });
