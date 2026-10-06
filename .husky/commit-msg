@@ -1,0 +1,8 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Constitution VIII on the message itself. Drop the `git commit -v` diff and comment lines.
+if sed '/^# -* >8 -*$/,$d' "$1" | grep -v '^#' | LC_ALL=C grep -P '\xE2\x80[\x93\x94\xA6]|\xE2\x86\x92'; then
+  echo "Constitution VIII: replace the em/en dash, ellipsis character or arrow in the commit message." >&2
+  exit 1
+fi
