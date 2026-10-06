@@ -100,7 +100,11 @@ export class Variant {
     return this._type;
   }
 
+  // Like GJS: unpack() opens one level, so an array type yields an array of Variants;
+  // deepUnpack() and recursiveUnpack() give plain values for the types Forge uses.
   unpack() {
+    if (this._type.startsWith("a") && Array.isArray(this._value))
+      return this._value.map((v) => new Variant(this._type.slice(1), v));
     return this._value;
   }
 

@@ -177,29 +177,6 @@ describe("Logger", () => {
     });
   });
 
-  describe("log", () => {
-    it("should log when logging is enabled", () => {
-      Logger.log("generic message");
-      expect(logSpy).toHaveBeenCalledWith("[Forge] [LOG]", "generic message");
-    });
-
-    it("should not log when level is OFF", () => {
-      mockSettings.get_uint.mockReturnValue(Logger.LOG_LEVELS.OFF);
-      Logger.init(mockSettings);
-
-      Logger.log("generic message");
-      expect(logSpy).not.toHaveBeenCalled();
-    });
-
-    it("should log at any level above OFF", () => {
-      mockSettings.get_uint.mockReturnValue(Logger.LOG_LEVELS.FATAL);
-      Logger.init(mockSettings);
-
-      Logger.log("generic message");
-      expect(logSpy).toHaveBeenCalled();
-    });
-  });
-
   describe("log level filtering", () => {
     beforeEach(() => {
       logSpy.mockClear();
@@ -239,9 +216,8 @@ describe("Logger", () => {
       Logger.info("info");
       Logger.debug("debug");
       Logger.trace("trace");
-      Logger.log("log");
 
-      expect(logSpy).toHaveBeenCalledTimes(6);
+      expect(logSpy).toHaveBeenCalledTimes(5);
     });
 
     it("should not log anything when level is OFF", () => {
@@ -253,7 +229,6 @@ describe("Logger", () => {
       Logger.info("info");
       Logger.debug("debug");
       Logger.trace("trace");
-      Logger.log("log");
 
       expect(logSpy).not.toHaveBeenCalled();
     });

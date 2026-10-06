@@ -30,9 +30,11 @@ describe("Bug forge-rt10: auto-export must not resurrect deleted portable files"
     const signals = {};
     const obj = {
       get_value: (key) => {
-        const e = store.get(key);
-        return { get_type_string: () => e?.type ?? "s" };
+        const e = store.get(key) ?? { type: "s", value: "" };
+        return new GLib.Variant(e.type, e.value);
       },
+      set_value: (key, variant) =>
+        store.set(key, { type: variant.get_type_string(), value: variant.recursiveUnpack() }),
       get_boolean: (k) => store.get(k)?.value ?? false,
       set_boolean: (k, v) => store.set(k, { type: "b", value: v }),
       get_uint: (k) => store.get(k)?.value ?? 0,

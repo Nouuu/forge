@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
+import GLib from "gi://GLib";
 import { ConfigSync } from "../../lib/shared/config-sync.js";
 
 /**
@@ -27,7 +28,7 @@ describe("Bug forge-7m2f: export/import status reaches every caller", () => {
   function makeSync({ saveOk = true, settingsProps = { version: 1 }, keybindingsProps } = {}) {
     const store = new Map();
     const settings = {
-      get_value: () => ({ get_type_string: () => "s" }),
+      get_value: () => new GLib.Variant("s", ""),
       get_string: (k) => store.get(k) ?? "",
       set_string: (k, v) => store.set(k, v),
       get_boolean: (k) => store.get(k) ?? false,

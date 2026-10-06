@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import GLib from "gi://GLib";
 import { ConfigManager } from "../../lib/shared/settings.js";
 import { ConfigSync } from "../../lib/shared/config-sync.js";
 import { File } from "../mocks/gnome/Gio.js";
@@ -48,7 +49,7 @@ describe("Bug forge-1n2v/forge-q9e5: save/export/import report real success", ()
     function makeSync({ saveOk = true, importOk = true } = {}) {
       const store = new Map();
       const settings = {
-        get_value: () => ({ get_type_string: () => "s" }),
+        get_value: () => new GLib.Variant("s", ""),
         get_string: (k) => store.get(k) ?? "",
         set_string: (k, v) => store.set(k, v),
         get_boolean: () => false,

@@ -24,12 +24,13 @@ describe("ConfigSync", () => {
     const signals = {};
 
     const obj = {
+      // Like Gio.Settings: get_value is the key's GVariant, set_value takes one.
       get_value: (key) => {
-        const entry = store.get(key);
-        if (!entry) {
-          return { get_type_string: () => "s" };
-        }
-        return { get_type_string: () => entry.type };
+        const entry = store.get(key) ?? { type: "s", value: "" };
+        return new GLib.Variant(entry.type, entry.value);
+      },
+      set_value: (key, variant) => {
+        store.set(key, { type: variant.get_type_string(), value: variant.recursiveUnpack() });
       },
       get_boolean: (key) => store.get(key)?.value ?? false,
       set_boolean: (key, value) => {
@@ -168,6 +169,41 @@ describe("ConfigSync", () => {
 
   afterEach(() => {
     configSync.destroy();
+  });
+
+  // S-04 pin: the exported JSON keeps each portable type (b, u, s, as), and importing it
+  // back restores the same typed values.
+  describe("portable types in the exported JSON", () => {
+    it("round-trips one key of every portable type", () => {
+      settings.set_boolean("tiling-mode-enabled", true);
+      settings.set_uint("window-gap-size", 8);
+      settings.set_string("default-window-layout", "stacked");
+      kbdSettings.set_strv("window-focus-left", ["<Super>h", "<Super>Left"]);
+
+      configSync.exportSettings();
+      configSync.exportKeybindings();
+      const exported = {
+        tiling: configMgr.settingsProps.behavior["tiling-mode-enabled"],
+        gap: configMgr.settingsProps.appearance["window-gap-size"],
+        layout: configMgr.settingsProps.behavior["default-window-layout"],
+        left: configMgr.keybindingsProps.bindings["window-focus-left"],
+      };
+      expect(JSON.stringify(exported)).toBe(
+        '{"tiling":true,"gap":8,"layout":"stacked","left":["<Super>h","<Super>Left"]}'
+      );
+
+      settings.set_boolean("tiling-mode-enabled", false);
+      settings.set_uint("window-gap-size", 0);
+      settings.set_string("default-window-layout", "tiled");
+      kbdSettings.set_strv("window-focus-left", []);
+      configSync.importSettings();
+      configSync.importKeybindings();
+
+      expect(settings.get_boolean("tiling-mode-enabled")).toBe(true);
+      expect(settings.get_uint("window-gap-size")).toBe(8);
+      expect(settings.get_string("default-window-layout")).toBe("stacked");
+      expect(kbdSettings.get_strv("window-focus-left")).toEqual(["<Super>h", "<Super>Left"]);
+    });
   });
 
   describe("settings round-trip by type", () => {

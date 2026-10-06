@@ -20,6 +20,7 @@
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import { Extension, gettext as _ } from "resource:///org/gnome/shell/extensions/extension.js";
 import Gio from "gi://Gio";
+import GLib from "gi://GLib";
 
 // Shared state
 import { Logger } from "./lib/shared/logger.js";
@@ -154,17 +155,9 @@ export default class ForgeExtension extends Extension {
     }
     const gsettings = this._gnomeSettings.get(desc.schemaId);
     if (!gsettings) return;
-    const getter = desc.type === "boolean" ? "get_boolean" : "get_strv";
-    const setter = desc.type === "boolean" ? "set_boolean" : "set_strv";
-    const original = gsettings[getter](desc.key);
-    gsettings[setter](desc.key, desc.newValue);
-    this._savedSettings.push({
-      schemaId: desc.schemaId,
-      gsettings,
-      key: desc.key,
-      original,
-      setter,
-    });
+    const original = gsettings.get_value(desc.key);
+    gsettings.set_value(desc.key, new GLib.Variant(original.get_type_string(), desc.newValue));
+    this._savedSettings.push({ schemaId: desc.schemaId, gsettings, key: desc.key, original });
   }
 
   /**
@@ -179,7 +172,7 @@ export default class ForgeExtension extends Extension {
     );
     if (idx < 0) return;
     const saved = this._savedSettings[idx];
-    saved.gsettings[saved.setter](saved.key, saved.original);
+    saved.gsettings.set_value(saved.key, saved.original);
     this._savedSettings.splice(idx, 1);
   }
 
@@ -251,7 +244,7 @@ export default class ForgeExtension extends Extension {
     if (this._savedSettings) {
       try {
         for (const saved of this._savedSettings) {
-          saved.gsettings[saved.setter](saved.key, saved.original);
+          saved.gsettings.set_value(saved.key, saved.original);
         }
         Logger.info("Restored GNOME settings and keybindings");
       } catch (e) {
