@@ -91,14 +91,14 @@ Mutter 49) called directly, so it crashes on the other version.
   maximize/unmaximize APIs everywhere except `lib/extension/compat.js`, forcing
   all callers through the version-dispatch shims. Full drift map + recipe:
   [compat.md](compat.md).
-- **Guardrail (capability probe):** `Compat.getDefaultSeat()` covers the one
-  Clutter API Forge called outside compat. It is probed, not version-dispatched:
-  there is no documented cutoff, only two accessors (`global.backend`, Shell's, and
-  `Clutter.get_default_backend()`, Clutter's) that have each been the current one.
-  Its caller sits inside the focus handler, so a throw there broke focus on every
-  window change — and the setting that reaches it (`move-pointer-focus-enabled`)
-  appears nowhere in `tests/e2e`, so that path had never run against a real shell on
-  any supported GNOME version.
+- **Guardrail (version dispatch):** `Compat.getDefaultSeat()` covers the one
+  Clutter API Forge called outside compat. MetaBackend has no public `get_default_seat`
+  on any supported release, so an earlier `global.backend` probe never matched; the seat
+  comes from the ClutterBackend, through the stage's ClutterContext from 47 and
+  `Clutter.get_default_backend()` on 45-46 (removed on 51). Its caller sits inside the
+  focus handler, so a throw there breaks focus on every window change: the shim degrades
+  to null. `tests/e2e/tests/test_move_pointer_focus.py` runs it against a real shell on
+  every lane.
 - **Gap:** `get_active_workspace*` is called directly at ten sites, split between
   `global.workspace_manager` and `global.display.get_workspace_manager()`, some with
   optional chaining and some without. No drift is documented for either accessor, so

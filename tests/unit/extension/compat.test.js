@@ -233,3 +233,41 @@ describe("isWaylandCompositor", () => {
     expect(Compat.isWaylandCompositor()).toBe(true);
   });
 });
+
+// MetaBackend has no public get_default_seat on any supported release; the seat lives on
+// the ClutterBackend. GNOME 51 removed Clutter.get_default_backend(); the stage's
+// ClutterContext (47+) is the path GNOME Shell itself uses.
+describe("getDefaultSeat", () => {
+  const seatOf = (seat) => ({ get_default_seat: () => seat });
+  let Clutter, realDefaultBackend;
+
+  afterEach(() => {
+    if (Clutter) Clutter.get_default_backend = realDefaultBackend;
+    delete global.stage;
+  });
+
+  async function load(version, { stageSeat, clutterSeat }) {
+    const Compat = await loadCompat(version);
+    Clutter = (await import("gi://Clutter")).default;
+    realDefaultBackend = Clutter.get_default_backend;
+    Clutter.get_default_backend = clutterSeat === undefined ? undefined : () => seatOf(clutterSeat);
+    global.stage = { context: { get_backend: () => seatOf(stageSeat) } };
+    return Compat;
+  }
+
+  it("asks Clutter.get_default_backend() on GNOME 46", async () => {
+    const Compat = await load("46.0", { stageSeat: "stage", clutterSeat: "clutter" });
+    expect(Compat.getDefaultSeat()).toBe("clutter");
+  });
+
+  it.each(["47.0", "51.0"])("asks the stage's ClutterContext on GNOME %s", async (version) => {
+    const Compat = await load(version, { stageSeat: "stage", clutterSeat: undefined });
+    expect(Compat.getDefaultSeat()).toBe("stage");
+  });
+
+  it("returns null instead of throwing when the backend is unavailable", async () => {
+    const Compat = await load("51.0", { stageSeat: "stage", clutterSeat: undefined });
+    global.stage = {};
+    expect(Compat.getDefaultSeat()).toBeNull();
+  });
+});

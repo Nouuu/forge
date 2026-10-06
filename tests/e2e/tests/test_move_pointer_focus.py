@@ -2,19 +2,17 @@
 Move-pointer-with-focus tests for Forge.
 
 `move-pointer-focus-enabled` warps the pointer into the newly focused window.
-The warp goes through Clutter's seat lookup, which is the one Clutter API Forge
-calls that has no documented version cutoff — Shell exposes it as
-`global.backend.get_default_seat()`, Clutter as
-`Clutter.get_default_backend().get_default_seat()`, and each has been the current
-one at different points. `Compat.getDefaultSeat()` probes both and degrades to
-null rather than throwing.
+The warp goes through `Compat.getDefaultSeat()`. MetaBackend has no public
+`get_default_seat`, so the seat comes from the ClutterBackend: the stage's
+ClutterContext from GNOME 47, `Clutter.get_default_backend()` on 45-46 (removed on
+51). The shim degrades to null rather than throwing.
 
 Degrading silently is the trap: the caller sits inside Forge's focus handler, so
 before the guard a failure there broke focus on EVERY window change, and after it
 the feature would just stop working with nothing logged. Unit tests can only prove
 the guard; they cannot prove the accessor still exists. This file is what exercises
-it against a real shell — and it runs on the whole GNOME 45..50 matrix, which is
-where a drifting accessor would actually show up.
+it against a real shell, on every lane of the matrix, which is where a drifting
+accessor would actually show up.
 """
 
 from framework.wait import wait_for

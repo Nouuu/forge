@@ -7,6 +7,7 @@
 
 import { vi } from "vitest";
 import { Workspace, Rectangle } from "../gnome/Meta.js";
+import { get_default_backend } from "../gnome/Clutter.js";
 import { addSignalSupport } from "./signalMixin.js";
 
 /**
@@ -144,6 +145,8 @@ export function createMockStage(options = {}) {
     set_key_focus: vi.fn((actor) => {
       keyFocus = actor;
     }),
+    // ClutterContext (47+): get_backend() is the one default ClutterBackend.
+    context: { get_backend: () => get_default_backend() },
   };
 }
 

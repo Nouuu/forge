@@ -33,14 +33,14 @@ Shims on other cutoffs:
 | --- | --- | --- |
 | `boxOrientation(vertical)`, St.BoxLayout direction | 45-47: `{ vertical }` | 48+ (`IS_MUTTER_48_PLUS`): `{ orientation }` |
 | `isWaylandCompositor()` | 45-49: `Meta.is_wayland_compositor()` | 50+ (`IS_MUTTER_50_PLUS`): `true`, the X11 backend and the predicate are gone |
+| `getDefaultSeat()`, the ClutterSeat (null on failure) | 45-46: `Clutter.get_default_backend()` | 47+ (`IS_MUTTER_47_PLUS`): `global.stage.context.get_backend()`; 51 removed `Clutter.get_default_backend()`. MetaBackend has no public `get_default_seat` on any release |
 
-`compat.js` also holds two **capability probes**, which branch on whether a method
-exists rather than on a version — for APIs with no documented cutoff to dispatch on:
+`compat.js` also holds one **capability probe**, which branches on whether a method
+exists rather than on a version, for an API with no documented cutoff to dispatch on:
 
 | Probe | Prefers | Falls back to |
 | --- | --- | --- |
 | `isAlwaysOnAllWorkspaces` | `is_always_on_all_workspaces()` | `is_on_all_workspaces()` |
-| `getDefaultSeat` | `global.backend.get_default_seat()` | `Clutter.get_default_backend()`, else `null` |
 
 ## Drift map (reference)
 

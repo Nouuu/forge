@@ -126,11 +126,10 @@ describe("WindowManager - Focus-Follows-Pointer Behavior", () => {
     });
   });
 
-  // The seat lookup is the one Clutter API Forge calls that is NOT routed through
-  // compat.js, and the setting that reaches it (move-pointer-focus-enabled) appears
-  // nowhere in tests/e2e — so this path has never run against a real shell on any of
-  // the six GNOME versions CI covers. It sits inside the focus handler, so a throw
-  // here breaks focus on every window change, not just the pointer warp.
+  // The seat comes from Compat.getDefaultSeat() (test_move_pointer_focus.py covers it
+  // against a real shell). It sits inside the focus handler, so a throw here breaks
+  // focus on every window change, not just the pointer warp. The suite runs as GNOME 47,
+  // where the seat comes from the stage's ClutterContext.
   describe("warpPointerToNodeWindow seat lookup", () => {
     const nodeUnderTest = () => {
       const metaWindow = createMockWindow({
@@ -141,72 +140,57 @@ describe("WindowManager - Focus-Follows-Pointer Behavior", () => {
       return ctx.tree.createNode(monitor.nodeValue, NODE_TYPES.WINDOW, metaWindow);
     };
 
+    const withStageContext = (context, run) => {
+      const real = global.stage.context;
+      global.stage.context = context;
+      try {
+        run();
+      } finally {
+        global.stage.context = real;
+      }
+    };
+
     it("warps through the seat when the backend provides one", () => {
       wm().warpPointerToNodeWindow(nodeUnderTest());
 
       expect(mockSeat.warp_pointer).toHaveBeenCalled();
     });
 
-    it("does not throw when the backend accessor is unavailable", () => {
-      // Mutter/Clutter introspection has moved this accessor before; if it is gone
-      // on some supported version the focus path must degrade, not break.
+    it("does not need Clutter.get_default_backend(), which GNOME 51 removed", () => {
       const real = Clutter.get_default_backend;
       Clutter.get_default_backend = undefined;
-      try {
-        expect(() => wm().warpPointerToNodeWindow(nodeUnderTest())).not.toThrow();
-      } finally {
-        Clutter.get_default_backend = real;
-      }
-    });
-
-    it("prefers the Shell backend's seat when one is exposed", () => {
-      // global.backend is GNOME Shell's own accessor; Clutter.get_default_backend()
-      // is Clutter's. Both have been the current one at different points, so Forge
-      // asks Shell first and falls back — this pins that order.
-      const shellWarp = vi.fn();
-      global.backend = { get_default_seat: () => ({ warp_pointer: shellWarp }) };
-      try {
-        wm().warpPointerToNodeWindow(nodeUnderTest());
-
-        expect(shellWarp).toHaveBeenCalled();
-        expect(mockSeat.warp_pointer).not.toHaveBeenCalled();
-      } finally {
-        delete global.backend;
-      }
-    });
-
-    it("falls back to Clutter when the Shell backend exposes no seat", () => {
-      global.backend = { get_default_seat: () => null };
       try {
         wm().warpPointerToNodeWindow(nodeUnderTest());
 
         expect(mockSeat.warp_pointer).toHaveBeenCalled();
       } finally {
-        delete global.backend;
+        Clutter.get_default_backend = real;
       }
+    });
+
+    it("does not throw when the stage has no context", () => {
+      withStageContext(undefined, () => {
+        expect(() => wm().warpPointerToNodeWindow(nodeUnderTest())).not.toThrow();
+        expect(mockSeat.warp_pointer).not.toHaveBeenCalled();
+      });
     });
 
     it("does not throw when the backend accessor itself throws", () => {
-      const real = Clutter.get_default_backend;
-      Clutter.get_default_backend = () => {
-        throw new Error("Clutter backend unavailable");
+      const context = {
+        get_backend: () => {
+          throw new Error("Clutter backend unavailable");
+        },
       };
-      try {
+      withStageContext(context, () => {
         expect(() => wm().warpPointerToNodeWindow(nodeUnderTest())).not.toThrow();
-      } finally {
-        Clutter.get_default_backend = real;
-      }
+      });
     });
 
     it("does not throw when the backend returns no seat", () => {
-      const real = Clutter.get_default_backend;
-      Clutter.get_default_backend = () => ({ get_default_seat: () => null });
-      try {
+      withStageContext({ get_backend: () => ({ get_default_seat: () => null }) }, () => {
         expect(() => wm().warpPointerToNodeWindow(nodeUnderTest())).not.toThrow();
         expect(mockSeat.warp_pointer).not.toHaveBeenCalled();
-      } finally {
-        Clutter.get_default_backend = real;
-      }
+      });
     });
 
     it("does not throw when warp_pointer itself fails", () => {
