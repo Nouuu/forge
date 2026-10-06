@@ -79,7 +79,7 @@ describe("Bug: Workspace index renumbering on add/remove", () => {
 
       // Simulate GNOME removing workspace 1 (middle):
       // 1. Remove the workspace node
-      tree.removeWorkspace(1);
+      tree.workspaceManager.removeWorkspace(1);
 
       // 2. Renumber remaining workspaces
       tree.workspaceManager.renumberWorkspacesAfterRemoval(1);
@@ -121,7 +121,7 @@ describe("Bug: Workspace index renumbering on add/remove", () => {
       nodeC.percent = 0.4;
 
       // Remove middle workspace and renumber
-      tree.removeWorkspace(1);
+      tree.workspaceManager.removeWorkspace(1);
       tree.workspaceManager.renumberWorkspacesAfterRemoval(1);
 
       // Window proportions should be preserved
@@ -139,7 +139,7 @@ describe("Bug: Workspace index renumbering on add/remove", () => {
   describe("After removing first workspace", () => {
     it("should renumber all remaining workspace and monitor nodes", () => {
       // Remove ws0 (index 0)
-      tree.removeWorkspace(0);
+      tree.workspaceManager.removeWorkspace(0);
       tree.workspaceManager.renumberWorkspacesAfterRemoval(0);
 
       // Old ws1 -> ws0, old ws2 -> ws1
@@ -189,7 +189,7 @@ describe("Bug: Workspace index renumbering on add/remove", () => {
       signals.set(0, ws0);
       signals.set(2, ws2);
 
-      tree.removeWorkspace(1);
+      tree.workspaceManager.removeWorkspace(1);
       tree.workspaceManager.renumberWorkspacesAfterRemoval(1);
 
       // ws0 stays put; old ws2's signals move to ws1; nothing left at index 2.

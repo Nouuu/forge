@@ -59,7 +59,7 @@ describe("Bug #311: Per-monitor default split orientation (multi-monitor)", () =
     ctx.display.get_current_monitor.mockReturnValue(0);
 
     // Drive the real path for a new workspace index.
-    ctx.tree.addWorkspace(1);
+    ctx.tree.workspaceManager.addWorkspace(1);
     ctx.tree.workspaceManager.addMonitors(1);
 
     expect(ctx.tree.findNode("mo0ws1").layout).toBe(LAYOUT_TYPES.HSPLIT);

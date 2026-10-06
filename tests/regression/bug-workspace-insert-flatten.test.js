@@ -63,7 +63,7 @@ describe("Bug forge-6pe: cross-workspace migration preserves nested layout", () 
    */
   function simulateInsertShift(wins, newWsObj) {
     ctx.workspaces.push(newWsObj);
-    tree.addWorkspace(newWsObj.index());
+    tree.workspaceManager.addWorkspace(newWsObj.index());
     wins.forEach((w) => (w._workspace = newWsObj));
     wm._reconcileWindowHomes();
   }
@@ -118,7 +118,7 @@ describe("Bug forge-6pe: cross-workspace migration preserves nested layout", () 
     // Only winD moves to the new workspace; winE stays on ws2.
     const wsNew = new Workspace({ index: 3 });
     ctx.workspaces.push(wsNew);
-    tree.addWorkspace(3);
+    tree.workspaceManager.addWorkspace(3);
     winD._workspace = wsNew;
     wm._reconcileWindowHomes();
 

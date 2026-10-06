@@ -36,7 +36,7 @@ describe("Bug forge-98sa: removeWorkspace tears down monitor bins too", () => {
     // All scaffold bins of ws1 are parented in window_group before removal.
     [wsBin, ...monitorBins].forEach((bin) => expect(wg.contains(bin)).toBe(true));
 
-    ctx.tree.removeWorkspace(1);
+    ctx.tree.workspaceManager.removeWorkspace(1);
 
     // None of ws1's bins remain parented — neither the workspace bin nor the
     // monitor bins leak.
@@ -48,7 +48,7 @@ describe("Bug forge-98sa: removeWorkspace tears down monitor bins too", () => {
     const ws0 = ctx.tree.findNode("ws0");
     const ws0Bins = [ws0.actorBin, ...ws0.getNodeByType(NODE_TYPES.MONITOR).map((m) => m.actorBin)];
 
-    ctx.tree.removeWorkspace(1);
+    ctx.tree.workspaceManager.removeWorkspace(1);
 
     ws0Bins.forEach((bin) => expect(wg.contains(bin)).toBe(true));
   });

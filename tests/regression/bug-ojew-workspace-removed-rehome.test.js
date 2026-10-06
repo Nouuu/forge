@@ -77,7 +77,7 @@ describe("Bug forge-ojew: workspace-removed re-homes windows instead of strandin
 
     // Reproduce exactly what the 'workspace-removed' handler does for ws1.
     wm._rehomeWorkspaceWindowsBeforeRemoval(1);
-    tree.removeWorkspace(1);
+    tree.workspaceManager.removeWorkspace(1);
     tree.workspaceManager.renumberWorkspacesAfterRemoval(1);
 
     // Windows are NOT lost: both still tracked in the tree...
@@ -119,7 +119,7 @@ describe("Bug forge-ojew: workspace-removed re-homes windows instead of strandin
     winB._workspace = ctx.workspaces[1];
 
     wm._rehomeWorkspaceWindowsBeforeRemoval(0);
-    tree.removeWorkspace(0);
+    tree.workspaceManager.removeWorkspace(0);
     tree.workspaceManager.renumberWorkspacesAfterRemoval(0);
 
     // Windows are NOT stranded: still tracked, and under the survivor's monitor node.

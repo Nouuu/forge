@@ -149,7 +149,7 @@ describe("Bug sticky-secondary-workspace-switch: secondary layouts survive a wor
     ws1._index = 0;
 
     wm._rehomeWorkspaceWindowsBeforeRemoval(0);
-    tree.removeWorkspace(0);
+    tree.workspaceManager.removeWorkspace(0);
     tree.workspaceManager.renumberWorkspacesAfterRemoval(0);
 
     const home = tree.findNode("mo1ws0");

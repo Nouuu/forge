@@ -52,7 +52,7 @@ describe("Bug forge-21xq: removeWorkspace tears down descendant CON decorations"
     expect(decoration).toBeTruthy();
     expect(wg.contains(decoration)).toBe(true);
 
-    ctx.tree.removeWorkspace(1);
+    ctx.tree.workspaceManager.removeWorkspace(1);
 
     expect(wg.contains(decoration)).toBe(false);
     expect(con.decoration).toBeNull();
@@ -65,7 +65,7 @@ describe("Bug forge-21xq: removeWorkspace tears down descendant CON decorations"
     con.layout = LAYOUT_TYPES.TABBED;
     con._createDecoration();
 
-    ctx.tree.removeWorkspace(1);
+    ctx.tree.workspaceManager.removeWorkspace(1);
 
     expect(wg.contains(con.decoration)).toBe(true);
   });
@@ -76,7 +76,7 @@ describe("Bug forge-21xq: removeWorkspace tears down descendant CON decorations"
     const bins = [ws1.actorBin, ...ws1.getNodeByType(NODE_TYPES.MONITOR).map((m) => m.actorBin)];
     tabbedConOnWs1();
 
-    expect(ctx.tree.removeWorkspace(1)).toBe(true);
+    expect(ctx.tree.workspaceManager.removeWorkspace(1)).toBe(true);
 
     expect(ctx.tree.findNode("ws1")).toBeFalsy();
     bins.forEach((bin) => expect(wg.contains(bin)).toBe(false));
@@ -86,6 +86,6 @@ describe("Bug forge-21xq: removeWorkspace tears down descendant CON decorations"
     const monitor = ctx.tree.findNode("ws1").getNodeByType(NODE_TYPES.MONITOR)[0];
     ctx.tree.createNode(monitor.nodeValue, NODE_TYPES.CON, LAYOUT_TYPES.HSPLIT);
 
-    expect(() => ctx.tree.removeWorkspace(1)).not.toThrow();
+    expect(() => ctx.tree.workspaceManager.removeWorkspace(1)).not.toThrow();
   });
 });

@@ -172,7 +172,7 @@ describe("Tree", () => {
       }));
 
       const initialCount = ctx.tree.getNodeByType(NODE_TYPES.WORKSPACE).length;
-      const result = ctx.tree.addWorkspace(1);
+      const result = ctx.tree.workspaceManager.addWorkspace(1);
 
       expect(result).toBe(true);
       expect(ctx.tree.getNodeByType(NODE_TYPES.WORKSPACE).length).toBe(initialCount + 1);
@@ -182,7 +182,7 @@ describe("Tree", () => {
       const initialCount = ctx.tree.getNodeByType(NODE_TYPES.WORKSPACE).length;
 
       // Try to add workspace that already exists (index 0)
-      const result = ctx.tree.addWorkspace(0);
+      const result = ctx.tree.workspaceManager.addWorkspace(0);
 
       expect(result).toBe(false);
       expect(ctx.tree.getNodeByType(NODE_TYPES.WORKSPACE).length).toBe(initialCount);
@@ -191,7 +191,7 @@ describe("Tree", () => {
     it("should set workspace layout to HSPLIT", () => {
       ctx.workspaceManager.get_n_workspaces.mockReturnValue(2);
 
-      ctx.tree.addWorkspace(1);
+      ctx.tree.workspaceManager.addWorkspace(1);
       const workspace = ctx.tree.findNode("ws1");
 
       if (workspace) {
@@ -203,7 +203,7 @@ describe("Tree", () => {
       ctx.workspaceManager.get_n_workspaces.mockReturnValue(2);
       global.display.get_n_monitors.mockReturnValue(2);
 
-      ctx.tree.addWorkspace(1);
+      ctx.tree.workspaceManager.addWorkspace(1);
       const workspace = ctx.tree.findNode("ws1");
 
       if (workspace) {
@@ -219,7 +219,7 @@ describe("Tree", () => {
       const initialCount = workspaces.length;
 
       if (initialCount > 0) {
-        const result = ctx.tree.removeWorkspace(0);
+        const result = ctx.tree.workspaceManager.removeWorkspace(0);
 
         expect(result).toBe(true);
         expect(ctx.tree.getNodeByType(NODE_TYPES.WORKSPACE).length).toBe(initialCount - 1);
@@ -227,7 +227,7 @@ describe("Tree", () => {
     });
 
     it("should return false for non-existent workspace", () => {
-      const result = ctx.tree.removeWorkspace(999);
+      const result = ctx.tree.workspaceManager.removeWorkspace(999);
 
       expect(result).toBe(false);
     });
@@ -236,7 +236,7 @@ describe("Tree", () => {
       const workspaces = ctx.tree.getNodeByType(NODE_TYPES.WORKSPACE);
 
       if (workspaces.length > 0) {
-        ctx.tree.removeWorkspace(0);
+        ctx.tree.workspaceManager.removeWorkspace(0);
 
         const found = ctx.tree.findNode("ws0");
         expect(found).toBeNull();

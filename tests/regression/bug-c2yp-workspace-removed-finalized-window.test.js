@@ -63,7 +63,7 @@ describe("Bug forge-c2yp: workspace-removed survives a finalized window wrapper"
     // The rehome preamble must not throw despite the dead node...
     expect(() => wm._rehomeWorkspaceWindowsBeforeRemoval(1)).not.toThrow();
     // ...and the rest of the handler must still run to completion.
-    tree.removeWorkspace(1);
+    tree.workspaceManager.removeWorkspace(1);
     tree.workspaceManager.renumberWorkspacesAfterRemoval(1);
 
     // Scaffold is gone: ws1 removed, and the live window rehomed to ws0 (not stranded).
