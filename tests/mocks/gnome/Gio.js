@@ -95,6 +95,9 @@ export class File {
   }
 }
 
+// object -> Map(property -> end the binding), what Settings.unbind reaches.
+const bindings = new WeakMap();
+
 export class Settings extends withSignals() {
   constructor(schema_id) {
     super();
@@ -168,22 +171,31 @@ export class Settings extends withSignals() {
 
   /**
    * Two-way boolean property binding, like the real GSettings.bind: the key is pushed
-   * into the property now and on every change, a notify::<property> from the object
-   * writes the key back, and the binding ends when the object is destroyed.
+   * into the property now and on every change, and a notify::<property> from the object
+   * writes the key back. Like GLib, destroy() does not end it: only Settings.unbind does
+   * (or the object's finalize, which the mock does not model).
    */
   bind(key, object, property, _flags) {
     object[property] = this.get_boolean(key);
     const fromSettings = this.connect(`changed::${key}`, () => {
       object[property] = this.get_boolean(key);
     });
-    if (typeof object.connect !== "function") return;
-    const fromObject = object.connect(`notify::${property}`, () => {
-      if (object[property] !== this.get_boolean(key)) this.set_boolean(key, object[property]);
-    });
-    object.connect("destroy", () => {
+    const fromObject =
+      typeof object.connect === "function"
+        ? object.connect(`notify::${property}`, () => {
+            if (object[property] !== this.get_boolean(key)) this.set_boolean(key, object[property]);
+          })
+        : null;
+    if (!bindings.has(object)) bindings.set(object, new Map());
+    bindings.get(object).set(property, () => {
       this.disconnect(fromSettings);
-      object.disconnect(fromObject);
+      if (fromObject !== null) object.disconnect(fromObject);
     });
+  }
+
+  static unbind(object, property) {
+    bindings.get(object)?.get(property)?.();
+    bindings.get(object)?.delete(property);
   }
 }
 
