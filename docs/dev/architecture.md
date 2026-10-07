@@ -59,8 +59,7 @@ ROOT ─ WORKSPACE ─ MONITOR ─┬─ WINDOW
 | `focus.js` `FocusManager` | Focus tracking + active-window signal lifecycle (extracted from window.js). |
 | `decoration.js` `DecorationManager` | Stacked/tabbed container decorations and their actor lifecycle (extracted from window.js). |
 | `keybindings.js` `Keybindings` | Registers shell keybindings → `CommandHandler`; drag modifier mask. |
-| `workspace.js` `WorkspaceManager` | Workspace nodes + per-workspace signal lifecycle + renumbering. |
-| `monitor.js` `MonitorManager` | Monitor-per-workspace nodes; split orientation per monitor geometry. |
+| `workspace.js` `WorkspaceManager` | Workspace nodes and their monitor-per-workspace nodes (split orientation per monitor geometry) + per-workspace signal lifecycle + renumbering. |
 | `cheatsheet.js` `Cheatsheet` | In-shell keybinding overlay (`Super+Shift+/`). |
 | `indicator.js` | Quick-settings panel toggle. |
 | `lib/shared/settings.js` `ConfigManager` | GSettings + JSON config (`windows.json` overrides). |
