@@ -30,6 +30,7 @@ const INTERNAL_MAIN_KEYS = [
   "config-last-import",
   "config-last-export",
   "config-file-sync-enabled",
+  "gnome-overrides-originals",
 ];
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");

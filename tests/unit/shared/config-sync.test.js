@@ -362,6 +362,17 @@ describe("ConfigSync", () => {
       expect(exportSpy).not.toHaveBeenCalled();
     });
 
+    it("does not export when Forge saves its GNOME override originals (Nouuu/forge#7)", () => {
+      configSync.exportAll();
+      const exportSpy = vi.spyOn(configSync, "_autoExport");
+
+      const fire = captureDebounce();
+      settings._emit("changed", "gnome-overrides-originals");
+      fire();
+
+      expect(exportSpy).not.toHaveBeenCalled();
+    });
+
     it("still exports when the files are unchanged since our last write", () => {
       configSync.exportAll();
       const exportSpy = vi.spyOn(configSync, "_autoExport");

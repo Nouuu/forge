@@ -115,6 +115,14 @@ export class Variant {
   recursiveUnpack() {
     return this._value;
   }
+
+  equal(other) {
+    return (
+      other instanceof Variant &&
+      this._type === other._type &&
+      JSON.stringify(this._value) === JSON.stringify(other._value)
+    );
+  }
 }
 
 export default {

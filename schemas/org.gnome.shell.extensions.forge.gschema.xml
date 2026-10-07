@@ -247,6 +247,11 @@
             <summary>Timestamp of last config file export (Unix epoch in seconds)</summary>
         </key>
 
+        <key type="a{sv}" name="gnome-overrides-originals">
+            <default>{}</default>
+            <summary>GNOME values Forge overrides while enabled, kept until restored</summary>
+        </key>
+
         <key type="b" name="config-file-sync-enabled">
             <default>false</default>
             <summary>Whether to automatically sync changes to config files</summary>

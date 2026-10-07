@@ -44,6 +44,8 @@ import { ExtensionThemeManager } from "./lib/extension/extension-theme-manager.j
 // SETTINGS_OVERRIDES + shouldApplyOverride live in lib/shared/gnome-overrides.js
 // (GTK-free) so the gating policy is unit-testable.
 
+const OVERRIDE_ORIGINALS = "gnome-overrides-originals";
+
 export default class ForgeExtension extends Extension {
   enable() {
     this.settings = this.getSettings();
@@ -155,9 +157,32 @@ export default class ForgeExtension extends Extension {
     }
     const gsettings = this._gnomeSettings.get(desc.schemaId);
     if (!gsettings) return;
-    const original = gsettings.get_value(desc.key);
-    gsettings.set_value(desc.key, new GLib.Variant(original.get_type_string(), desc.newValue));
+    const current = gsettings.get_value(desc.key);
+    const forced = new GLib.Variant(current.get_type_string(), desc.newValue);
+    // Nouuu/forge#7: a forced value here was left by a session that ended without disable().
+    const original = current.equal(forced)
+      ? this._savedOriginals()[`${desc.schemaId} ${desc.key}`] ??
+        gsettings.get_default_value(desc.key)
+      : current;
+    this._saveOriginal(desc, original);
+    gsettings.set_value(desc.key, forced);
     this._savedSettings.push({ schemaId: desc.schemaId, gsettings, key: desc.key, original });
+  }
+
+  /**
+   * Originals of the applied overrides, kept in dconf because logout skips disable().
+   * @returns {Record<string, GLib.Variant>}
+   */
+  _savedOriginals() {
+    return this.settings?.get_value(OVERRIDE_ORIGINALS).deepUnpack() ?? {};
+  }
+
+  /** Keep `original` for `desc` across sessions, or drop it once restored (null). */
+  _saveOriginal(desc, original) {
+    const saved = this._savedOriginals();
+    if (original) saved[`${desc.schemaId} ${desc.key}`] = original;
+    else delete saved[`${desc.schemaId} ${desc.key}`];
+    this.settings?.set_value(OVERRIDE_ORIGINALS, new GLib.Variant("a{sv}", saved));
   }
 
   /**
@@ -173,6 +198,7 @@ export default class ForgeExtension extends Extension {
     if (idx < 0) return;
     const saved = this._savedSettings[idx];
     saved.gsettings.set_value(saved.key, saved.original);
+    this._saveOriginal(saved, null);
     this._savedSettings.splice(idx, 1);
   }
 
@@ -245,6 +271,7 @@ export default class ForgeExtension extends Extension {
       try {
         for (const saved of this._savedSettings) {
           saved.gsettings.set_value(saved.key, saved.original);
+          this._saveOriginal(saved, null);
         }
         Logger.info("Restored GNOME settings and keybindings");
       } catch (e) {
