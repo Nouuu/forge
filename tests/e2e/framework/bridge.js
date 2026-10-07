@@ -807,6 +807,63 @@
     // return a point inside the chosen drop ZONE of TGT (all drop math routes through getPointer
     // via getDragPointer), (4) call moveWindowToPointer directly (bypasses the held-modifier
     // allowDragDropTile gate — we want the reparent logic, not the gate), (5) restore + end grab.
+    // F-08 live resize: a window-system resize grab on the left of two tiled windows,
+    // driven step by step. Begin focuses the leftmost window, starts a RESIZING_E grab and
+    // counts tree renders; each step grows the left frame the way Mutter does during the
+    // grab; end closes the grab and restores everything.
+    liveResizeBegin() {
+      const wm = forgeExt() && forgeExt().extWm;
+      if (!wm) return JSON.stringify({ ok: false, reason: "no-wm" });
+      const wins = global.workspace_manager.get_active_workspace().list_windows();
+      if (wins.length < 2) return JSON.stringify({ ok: false, reason: "need-2-windows" });
+      const byX = [...wins].sort((a, b) => a.get_frame_rect().x - b.get_frame_rect().x);
+      const display = global.display;
+      const left = byX[0];
+      const state = { wm, left, right: byX[1], renders: 0 };
+      state.origFocus = display.get_focus_window;
+      display.get_focus_window = () => left;
+      state.origRender = wm.tree.render;
+      wm.tree.render = function (...args) {
+        state.renders += 1;
+        return state.origRender.apply(this, args);
+      };
+      wm._handleGrabOpBegin(display, left, Meta.GrabOp.RESIZING_E);
+      this._liveResize = state;
+      return this.liveResizeFrames();
+    },
+
+    liveResizeStep(dx) {
+      const state = this._liveResize;
+      if (!state) return JSON.stringify({ ok: false, reason: "no-grab" });
+      const r = state.left.get_frame_rect();
+      state.left.move_resize_frame(true, r.x, r.y, r.width + dx, r.height);
+      return this.liveResizeFrames();
+    },
+
+    liveResizeFrames() {
+      const state = this._liveResize;
+      if (!state) return JSON.stringify({ ok: false, reason: "no-grab" });
+      const plain = (r) => ({ x: r.x, y: r.y, width: r.width, height: r.height });
+      return JSON.stringify({
+        ok: true,
+        left: plain(state.left.get_frame_rect()),
+        right: plain(state.right.get_frame_rect()),
+        workArea: plain(state.left.get_work_area_current_monitor()),
+        renders: state.renders,
+      });
+    },
+
+    liveResizeEnd() {
+      const state = this._liveResize;
+      if (!state) return JSON.stringify({ ok: false, reason: "no-grab" });
+      state.wm._handleGrabOpEnd(global.display, state.left, Meta.GrabOp.RESIZING_E);
+      state.wm.tree.render = state.origRender;
+      global.display.get_focus_window = state.origFocus;
+      const frames = this.liveResizeFrames();
+      this._liveResize = null;
+      return frames;
+    },
+
     fuzzDrag(opts) {
       const o = opts || {};
       const wm = forgeExt() && forgeExt().extWm;

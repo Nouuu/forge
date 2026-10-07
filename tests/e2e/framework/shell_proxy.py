@@ -845,6 +845,26 @@ class ShellProxy:
         opts = json.dumps({"op": op, "focus": focus_window})
         return self.eval("globalThis._forgeTestBridge.fuzzWindowState(%s)" % opts)
 
+    def live_resize_begin(self) -> dict:
+        """Start a RESIZING_E grab on the left of two tiled windows (F-08). See bridge."""
+        self._ensure_bridge()
+        return self.eval("globalThis._forgeTestBridge.liveResizeBegin()")
+
+    def live_resize_step(self, dx: int) -> dict:
+        """Grow the grabbed window by `dx` px the way Mutter does during the grab."""
+        self._ensure_bridge()
+        return self.eval("globalThis._forgeTestBridge.liveResizeStep(%d)" % int(dx))
+
+    def live_resize_frames(self) -> dict:
+        """Both frames, the work area and the tree render count since the grab began."""
+        self._ensure_bridge()
+        return self.eval("globalThis._forgeTestBridge.liveResizeFrames()")
+
+    def live_resize_end(self) -> dict:
+        """End the grab and restore the bridge's hooks; returns the frames after it."""
+        self._ensure_bridge()
+        return self.eval("globalThis._forgeTestBridge.liveResizeEnd()")
+
     def fuzz_drag(self, src: str = None, tgt: str = None, zone: str = "center") -> dict:
         """Simulate a drag-drop tile: drag the SRC window onto ZONE of the TGT window,
         exercising Forge's drop/reparent logic (the only path keybindings can't reach).

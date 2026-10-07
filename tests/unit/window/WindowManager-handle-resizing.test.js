@@ -1,10 +1,12 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import GLib from "gi://GLib";
 import { WINDOW_MODES } from "../../../lib/extension/window.js";
 import { NODE_TYPES, LAYOUT_TYPES } from "../../../lib/extension/tree.js";
 import {
   createMockWindow,
   createWindowManagerFixture,
   getWorkspaceAndMonitor,
+  finalizeWindow,
 } from "../../mocks/helpers/index.js";
 import { Rectangle, GrabOp, MotionDirection } from "../../mocks/gnome/Meta.js";
 import { Bin } from "../../mocks/gnome/St.js";
@@ -581,5 +583,286 @@ describe("WindowManager - Handle Resizing Behavior", () => {
       const total = nodeWindow1.percent + nodeWindow2.percent;
       expect(total).toBeCloseTo(1, 5);
     });
+  });
+});
+
+/**
+ * F-08 (fork-sync US1, from forge-ext/forge b504512): during a window-system resize grab
+ * the neighbours follow the dragged edge live, instead of snapping once on release.
+ * Forge's own keyboard resize keeps its 120 ms debounce.
+ */
+describe("Live resize: neighbours follow a resize grab (F-08)", () => {
+  let ctx;
+  const wm = () => ctx.windowManager;
+
+  beforeEach(() => {
+    ctx = createWindowManagerFixture();
+    global.Meta = { GrabOp, MotionDirection };
+    // Each render has finished before the next motion event, as between real pointer
+    // motions. (The plain mock runs the callback but returns an id, so renderTree would
+    // believe a render is still pending and skip every later one.)
+    vi.spyOn(GLib, "idle_add").mockImplementation((_priority, fn) => {
+      fn();
+      return 0;
+    });
+  });
+
+  afterEach(() => {
+    ctx.cleanup();
+    vi.restoreAllMocks();
+  });
+
+  // `n` windows tiled in one container on the monitor, laid out once; the first has focus.
+  function tiled(n = 2, layout = LAYOUT_TYPES.HSPLIT) {
+    const { monitor } = getWorkspaceAndMonitor(ctx);
+    monitor.layout = layout;
+    const metas = [...Array(n)].map(() =>
+      createMockWindow({
+        workspace: ctx.workspaces[0],
+        rect: new Rectangle({ x: 0, y: 0, width: 400, height: 400 }),
+      })
+    );
+    const nodes = metas.map((m) => {
+      const node = ctx.tree.createNode(monitor.nodeValue, NODE_TYPES.WINDOW, m);
+      node.mode = WINDOW_MODES.TILE;
+      return node;
+    });
+    wm().renderTree("setup");
+    ctx.display.get_focus_window.mockReturnValue(metas[0]);
+    return { monitor, metas, nodes };
+  }
+
+  // What Mutter does on each motion of the grab: resize the frame, then emit size-changed.
+  function drag(meta, { dx = 0, dy = 0 }) {
+    const r = meta.get_frame_rect();
+    meta._rect = new Rectangle({ x: r.x, y: r.y, width: r.width + dx, height: r.height + dy });
+    wm().updateMetaPositionSize(meta, "size-changed");
+  }
+
+  const frame = (meta) => {
+    const { x, y, width, height } = meta.get_frame_rect();
+    return { x, y, width, height };
+  };
+
+  // One full grab of the first window's E edge by 300 px, in a fresh fixture. With
+  // `live: false` the render is neutralised during the grab, which is today's behaviour.
+  function grabScenario({ live, cancel = false }) {
+    ctx.cleanup();
+    ctx = createWindowManagerFixture();
+    const { metas, nodes } = tiled(2);
+    const [left] = metas;
+    const start = frame(left);
+    const moveFrame = vi.spyOn(left, "move_frame");
+    wm()._handleGrabOpBegin(ctx.display, left, GrabOp.RESIZING_E);
+    const stub = live ? null : vi.spyOn(wm(), "renderTree").mockImplementation(() => {});
+    drag(left, { dx: 300 });
+    if (cancel) {
+      left._rect = new Rectangle(start);
+      wm().updateMetaPositionSize(left, "size-changed");
+    }
+    stub?.mockRestore();
+    const moveFrameCalls = moveFrame.mock.calls.length;
+    wm()._handleGrabOpEnd(ctx.display, left, GrabOp.RESIZING_E);
+    return {
+      frames: metas.map(frame),
+      percents: nodes.map((n) => n.percent),
+      moveFrameCalls,
+    };
+  }
+
+  it("(a) a pointer resize grab narrows the neighbour before the grab ends", () => {
+    const { metas } = tiled(2);
+    const [left, right] = metas;
+    const before = frame(right);
+    const render = vi.spyOn(wm(), "renderTree");
+    const leftMoves = vi.spyOn(left, "move_resize_frame");
+    const rightMoves = vi.spyOn(right, "move_resize_frame");
+
+    wm()._handleGrabOpBegin(ctx.display, left, GrabOp.RESIZING_E);
+    drag(left, { dx: 300 });
+
+    expect(render).toHaveBeenCalledWith("size-changed");
+    expect(rightMoves).toHaveBeenCalled();
+    expect(frame(right).width).toBeLessThan(before.width);
+    expect(leftMoves).not.toHaveBeenCalled();
+  });
+
+  it("(a) the grabbed window is repositioned only by the resize itself, live or not", () => {
+    expect(grabScenario({ live: true }).moveFrameCalls).toBe(
+      grabScenario({ live: false }).moveFrameCalls
+    );
+  });
+
+  it("(b) GNOME's keyboard resize (Alt+F8) renders live too", () => {
+    const { metas } = tiled(2);
+    const [left, right] = metas;
+    const before = frame(right);
+
+    wm()._handleGrabOpBegin(ctx.display, left, GrabOp.KEYBOARD_RESIZING_E);
+    drag(left, { dx: 300 });
+
+    expect(frame(right).width).toBeLessThan(before.width);
+  });
+
+  it("(c) Forge's keyboard resize still renders only when its debounce fires", () => {
+    const { metas } = tiled(2);
+    const [left] = metas;
+    let debounce = null;
+    vi.spyOn(GLib, "timeout_add").mockImplementation((_p, _ms, fn) => {
+      debounce = fn;
+      return 77;
+    });
+
+    wm().resize(GrabOp.KEYBOARD_RESIZING_E, 50);
+    const render = vi.spyOn(wm(), "renderTree");
+    wm().updateMetaPositionSize(left, "size-changed");
+    expect(render).not.toHaveBeenCalled();
+
+    debounce();
+    expect(render).toHaveBeenCalled();
+  });
+
+  it("(d) the live path adds no timer", () => {
+    const { metas } = tiled(2);
+    wm()._handleGrabOpBegin(ctx.display, metas[0], GrabOp.RESIZING_E);
+    const timers = vi.spyOn(GLib, "timeout_add");
+
+    drag(metas[0], { dx: 300 });
+
+    expect(timers).not.toHaveBeenCalled();
+  });
+
+  it("(e) the end state matches today's, live or not", () => {
+    expect(grabScenario({ live: true })).toEqual(grabScenario({ live: false }));
+  });
+
+  it("(f) a neighbour finalized mid-grab is skipped, nothing throws", () => {
+    const { metas } = tiled(2);
+    const [left, right] = metas;
+    wm()._handleGrabOpBegin(ctx.display, left, GrabOp.RESIZING_E);
+    const rightMoves = vi.spyOn(right, "move_resize_frame");
+    finalizeWindow(right);
+
+    expect(() => drag(left, { dx: 300 })).not.toThrow();
+    expect(rightMoves).not.toHaveBeenCalled();
+  });
+
+  it("(g) disabling mid-grab removes the pending live render", () => {
+    const { metas } = tiled(2);
+    wm()._signalsBound = true; // as after enable(), so disable() reaches its cleanup
+    wm()._handleGrabOpBegin(ctx.display, metas[0], GrabOp.RESIZING_E);
+    GLib.idle_add.mockImplementation(() => 99); // the live render is still queued
+    const remove = vi.spyOn(GLib.Source, "remove");
+    drag(metas[0], { dx: 100 });
+    expect(wm()._renderTreeSrcId).toBe(99);
+
+    wm().disable();
+
+    expect(remove).toHaveBeenCalledWith(99);
+    expect(wm()._renderTreeSrcId).toBe(0);
+  });
+
+  it("(h) a tab's grab narrows the plain window beside its tabbed container", () => {
+    const { monitor } = getWorkspaceAndMonitor(ctx);
+    monitor.layout = LAYOUT_TYPES.HSPLIT;
+    const container = ctx.tree.createNode(monitor.nodeValue, NODE_TYPES.CON, new Bin());
+    container.layout = LAYOUT_TYPES.TABBED;
+    const tabs = [0, 1].map(() => {
+      const meta = createMockWindow({ workspace: ctx.workspaces[0] });
+      ctx.tree.createNode(container.nodeValue, NODE_TYPES.WINDOW, meta).mode = WINDOW_MODES.TILE;
+      return meta;
+    });
+    const plain = createMockWindow({ workspace: ctx.workspaces[0] });
+    ctx.tree.createNode(monitor.nodeValue, NODE_TYPES.WINDOW, plain).mode = WINDOW_MODES.TILE;
+    wm().renderTree("setup");
+    ctx.display.get_focus_window.mockReturnValue(tabs[0]);
+    const before = frame(plain);
+
+    wm()._handleGrabOpBegin(ctx.display, tabs[0], GrabOp.RESIZING_E);
+    drag(tabs[0], { dx: 300 });
+
+    expect(frame(plain).width).toBeLessThan(before.width);
+  });
+
+  it("(i) a S-edge grab shortens the window below", () => {
+    const { metas } = tiled(2, LAYOUT_TYPES.VSPLIT);
+    const [top, bottom] = metas;
+    const before = frame(bottom);
+
+    wm()._handleGrabOpBegin(ctx.display, top, GrabOp.RESIZING_S);
+    drag(top, { dy: 200 });
+
+    expect(frame(bottom).height).toBeLessThan(before.height);
+  });
+
+  it("(j) only the paired neighbour moves in a row of three", () => {
+    const { metas } = tiled(3);
+    const [a, b, c] = metas;
+    const before = frame(b);
+    const cMoves = vi.spyOn(c, "move_resize_frame");
+
+    wm()._handleGrabOpBegin(ctx.display, a, GrabOp.RESIZING_E);
+    drag(a, { dx: 200 });
+
+    expect(frame(b).width).toBeLessThan(before.width);
+    expect(cMoves).not.toHaveBeenCalled();
+  });
+
+  it("(k) a grab dragged back to its start ends as it does today", () => {
+    expect(grabScenario({ live: true, cancel: true })).toEqual(
+      grabScenario({ live: false, cancel: true })
+    );
+  });
+
+  it("(l) a floating window on the workspace is left alone", () => {
+    const { metas } = tiled(2);
+    const float = createMockWindow({ workspace: ctx.workspaces[0] });
+    const { monitor } = getWorkspaceAndMonitor(ctx);
+    ctx.tree.createNode(monitor.nodeValue, NODE_TYPES.WINDOW, float).mode = WINDOW_MODES.FLOAT;
+    wm().renderTree("float placed");
+    const floatMoves = vi.spyOn(float, "move_resize_frame");
+
+    wm()._handleGrabOpBegin(ctx.display, metas[0], GrabOp.RESIZING_E);
+    drag(metas[0], { dx: 300 });
+
+    expect(floatMoves).not.toHaveBeenCalled();
+  });
+
+  it("(m) the dragged window closing mid-grab breaks nothing", () => {
+    const { metas } = tiled(2);
+    const [left, right] = metas;
+    wm()._handleGrabOpBegin(ctx.display, left, GrabOp.RESIZING_E);
+    finalizeWindow(left);
+
+    // Mutter moves the focus off a window before it is freed.
+    ctx.display.get_focus_window.mockReturnValue(right);
+
+    expect(() => {
+      wm().updateMetaPositionSize(right, "size-changed");
+      wm()._handleGrabOpEnd(ctx.display, left, GrabOp.RESIZING_E);
+    }).not.toThrow();
+  });
+
+  it("(n) the grab adds no tree-integrity error", () => {
+    const { metas } = tiled(2);
+    const before = ctx.tree.verifyIntegrity().length;
+
+    wm()._handleGrabOpBegin(ctx.display, metas[0], GrabOp.RESIZING_E);
+    drag(metas[0], { dx: 300 });
+    wm()._handleGrabOpEnd(ctx.display, metas[0], GrabOp.RESIZING_E);
+
+    expect(ctx.tree.verifyIntegrity().length).toBeLessThanOrEqual(before);
+  });
+
+  it("(o) only the grabbed window's own size change renders", () => {
+    const { metas } = tiled(2);
+    const [left, right] = metas;
+    wm()._handleGrabOpBegin(ctx.display, left, GrabOp.RESIZING_E);
+    const render = vi.spyOn(wm(), "renderTree");
+
+    wm().updateMetaPositionSize(right, "size-changed");
+    wm().updateMetaPositionSize(left, "position-changed");
+
+    expect(render).not.toHaveBeenCalled();
   });
 });
