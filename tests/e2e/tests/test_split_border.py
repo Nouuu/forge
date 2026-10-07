@@ -22,7 +22,7 @@ PROBE_JS = r"""
   const ext = Main.extensionManager.lookup('forge@jmmaranan.com').stateObj;
   const wm = ext && ext.extWm;
   if (!wm) return JSON.stringify({err: 'no-wm'});
-  try { wm.updateBorderLayout(); } catch (e) { return JSON.stringify({err: 'ublayout:' + e}); }
+  try { wm.decorationManager.updateBorderLayout(); } catch (e) { return JSON.stringify({err: 'ublayout:' + e}); }
   const mw = wm.focusMetaWindow;
   if (!mw) return JSON.stringify({err: 'no-focus'});
   const actor = mw.get_compositor_private();
