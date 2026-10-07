@@ -48,6 +48,12 @@ make e2e-test-all
 # Run only the fast multi-step "workflow" lane (see Test Lanes below)
 make e2e-test-fast
 
+# The two CI gates beside the version matrix: the whole suite on two monitors
+# (Wayland lanes only, default GNOME 48 is X11, so pass FEDORA_VERSION=43 or 44),
+# and the one keybinding-dispatch test (GNOME 49)
+make e2e-test-multimonitor FEDORA_VERSION=44
+make e2e-test-keybinding
+
 # Record a screencast of the run (Wayland-only; forces the latest lane,
 # F44/GNOME50). Writes e2e-results/recording.webm (VP8/WebM) with the current
 # test name + firing action burned into each frame. Opt-in: the recording stack

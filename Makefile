@@ -28,7 +28,7 @@ HAS_MSGFMT := $(shell command -v msgfmt &>/dev/null && echo yes || echo no)
 	dev prod build metadata compilemsgs update-pot update-po dist purge restart test test-x test-open \
 	format lint unit-test unit-test-watch unit-test-coverage \
 	docker-test-build unit-test-docker unit-test-docker-watch unit-test-docker-coverage \
-	e2e-test e2e-test-fast e2e-fuzz e2e-test-all e2e-test-multimonitor e2e-test-record e2e-debug e2e-clean e2e-build e2e-versions \
+	e2e-test e2e-test-fast e2e-fuzz e2e-test-all e2e-test-multimonitor e2e-test-keybinding e2e-test-record e2e-debug e2e-clean e2e-build e2e-versions \
 	horizontal-line journal help
 
 all: build
@@ -331,6 +331,7 @@ RECORD_ENV = $(if $(RECORD),-e FORGE_E2E_RECORD=1,)
 # line); for a multi-word expression like "not workflow" use pytest directly inside
 # the container (`pytest -m "not workflow"`), as documented in tests/e2e/README.md.
 MARKER_ENV = $(if $(PYTEST_MARKER),-e PYTEST_MARKER=$(PYTEST_MARKER),)
+DISPATCH_ENV = $(if $(DISPATCH_MODE),-e DISPATCH_MODE=$(DISPATCH_MODE),)
 
 # Live-fuzzer knobs (forge-cnrc), forwarded into the test-running docker exec only
 # when set, so non-fuzz lanes are byte-identical. See `make e2e-fuzz` and
@@ -373,7 +374,7 @@ e2e-test: e2e-build
 	docker exec $(if $(MULTIMONITOR),-e FORGE_E2E_VIRTUAL_MONITORS=2,) $(RECORD_ENV) $$POD /usr/local/bin/start-user-session.sh $(DISPLAY_NUM) && \
 	docker exec $$POD chown -R gnomeshell:gnomeshell /app/e2e-results && \
 	echo "Running E2E tests..." && \
-	docker exec --user gnomeshell -e DISPLAY=:$(DISPLAY_NUM) $(RECORD_ENV) $(MARKER_ENV) $(FUZZ_ENV) $$POD set-env.sh /app/scripts/run-tests.sh
+	docker exec --user gnomeshell -e DISPLAY=:$(DISPLAY_NUM) $(RECORD_ENV) $(MARKER_ENV) $(DISPATCH_ENV) $(FUZZ_ENV) $$POD set-env.sh /app/scripts/run-tests.sh $(E2E_ARGS)
 
 # Run only the multi-step workflow lane (forge-911) — the fast inner-loop pass.
 # The full suite still runs both lanes (workflows ordered first); this is for local
@@ -396,6 +397,10 @@ e2e-fuzz:
 # every other test is unaffected by the extra monitor.
 e2e-test-multimonitor:
 	@$(MAKE) e2e-test MULTIMONITOR=1
+
+# The CI keybinding gate (e2e-keybinding-gate): one test driven by real key presses.
+e2e-test-keybinding:
+	@$(MAKE) e2e-test FEDORA_VERSION=43 DISPATCH_MODE=keybinding E2E_ARGS="-k test_focus_left_right"
 
 # Run E2E tests with screencast recording (forge-qgg). Wayland-only, so this
 # forces the latest GNOME lane (F44/GNOME50; the default F42 lane is X11).
@@ -505,6 +510,8 @@ help:
 	@echo "E2E Tests:"
 	@echo "  e2e-test         Run E2E tests (default GNOME 48)"
 	@echo "  e2e-test-all     Run E2E tests for all GNOME versions"
+	@echo "  e2e-test-multimonitor  Run E2E tests on two monitors (CI gate)"
+	@echo "  e2e-test-keybinding    Run the keybinding-dispatch test (CI gate)"
 	@echo "  e2e-debug        Interactive debugging in E2E container"
 	@echo "  e2e-clean        Remove E2E test artifacts and images"
 	@echo "  e2e-versions     List supported GNOME versions"

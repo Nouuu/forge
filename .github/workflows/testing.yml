@@ -67,6 +67,9 @@ jobs:
       - name: Lint extension sources
         run: npm run lint:src
 
+      - name: Lint e2e framework
+        run: npm run lint:e2e
+
       # Blocking: type-check the extension sources with tsc (checkJs + strictNullChecks
       # over lib + extension.js + prefs.js). Catches the null-safety-on-typed-GNOME-returns
       # and missing-member classes before merge (forge-fhen.2, strictNullChecks fhen.11).
@@ -76,10 +79,8 @@ jobs:
       - name: Type check
         run: npm run typecheck
 
-      - name: Run unit tests
-        run: npm test --verbose
-
-      - name: Generate coverage report
+      # One run: the coverage run is the unit suite, and it enforces the thresholds.
+      - name: Run unit tests with coverage
         run: npm run test:coverage --verbose
 
       - name: Upload results to Codecov
