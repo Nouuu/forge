@@ -435,6 +435,13 @@ describe("ConfigSync", () => {
       configSync.exportKeybindings();
       expect(configMgr.keybindingsProps).not.toBeNull();
       expect(configMgr.keybindingsProps["mod-mask-mouse-tile"]).toBe("Super");
+      // keybindings.json layout: header keys, the string keys, then bindings.
+      expect(Object.keys(configMgr.keybindingsProps)).toEqual([
+        "$schema",
+        "version",
+        "mod-mask-mouse-tile",
+        "bindings",
+      ]);
       expect(configMgr.keybindingsProps.bindings["focus-border-toggle"]).toEqual(["<Super>b"]);
 
       // Reset keybinding settings to different values
