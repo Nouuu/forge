@@ -6,8 +6,11 @@ start-user-session.sh. The test self-skips on single-monitor lanes so it is safe
 in the default suite.
 """
 
+import time
+
 import pytest
-from framework.wait import wait_for
+from framework.constants import Timing
+from framework.wait import WaitTimeoutError, wait_for
 
 # Second virtual monitor starts at x=1920 (monitors are 1920 wide, side by side).
 MONITOR_1_X = 1920
@@ -167,6 +170,110 @@ class TestMonitorHotPlug:
             # Two full cycles later the actor count is back where it started: the
             # rebuild released exactly what it recreated (forge-h6jc).
             assert shell_proxy.get_window_group_child_count() == actors_at_two
+        finally:
+            shell_proxy.set_virtual_monitor_count(2)
+
+    # Every normal window: its stable id, monitor and workspace as Mutter has them.
+    WINDOWS_JS = r"""(() => JSON.stringify(global.get_window_actors()
+      .map((a) => a.meta_window)
+      .filter((w) => w && w.get_window_type() === imports.gi.Meta.WindowType.NORMAL)
+      .map((w) => ({ id: w.get_stable_sequence(), monitor: w.get_monitor(),
+                     ws: w.get_workspace() ? w.get_workspace().index() : -1 }))))()"""
+
+    def _focus(self, shell_proxy, wid):
+        return shell_proxy.eval(
+            "(() => { const w = global.get_window_actors().map((a) => a.meta_window)"
+            f".find((m) => m && m.get_stable_sequence() === {wid});"
+            " w.activate(global.get_current_time());"
+            " return global.display.focus_window === w ? 'focused' : 'not focused'; })()"
+        )
+
+    def _window(self, shell_proxy, wid):
+        return next((w for w in shell_proxy.eval(self.WINDOWS_JS) if w["id"] == wid), None)
+
+    # The reporter's desk: the external (secondary) monitor at the origin, the laptop
+    # (primary) below it, so unplugging the external slides the laptop up to (0, 0).
+    LIVE_LAYOUT = [(0, 1080), (0, 0)]
+    PRIMARY_JS = "(() => JSON.stringify(global.display.get_primary_monitor()))()"
+    SCREENS_JS = r"""(() => JSON.stringify([...Array(global.display.get_n_monitors()).keys()]
+      .map((i) => { const r = global.display.get_monitor_geometry(i);
+                    return [i, r.x, r.y, r.width, r.height]; })))()"""
+
+    @pytest.mark.xfail(
+        strict=True, reason="Nouuu/forge#10: a hidden-workspace window jumps screens"
+    )
+    def test_replug_leaves_a_primary_window_on_its_workspace(
+        self, shell_proxy, two_windows, restore_settings
+    ):
+        """Live report 2026-10-07: after a replug, a window on workspace 2 of the laptop
+        screen jumped to the external screen, next to the focused browser."""
+        if shell_proxy.get_monitor_count() < 2:
+            pytest.skip("requires 2 virtual monitors (FORGE_E2E_VIRTUAL_MONITORS=2)")
+        restore_settings.set("new-window-placement", "focus")
+
+        try:
+            shell_proxy.set_virtual_monitor_count(2, self.LIVE_LAYOUT)
+            wait_for(
+                shell_proxy.get_forge_monitor_nodes,
+                predicate=lambda nodes: {"mo0ws0", "mo1ws0"} <= set(nodes),
+                message="setup: Forge did not rebuild both monitors after the layout change",
+            )
+            time.sleep(Timing.LAYOUT_CHANGE)
+            primary = int(shell_proxy.eval(self.PRIMARY_JS))
+            secondary = 1 - primary
+
+            # A (the browser) on the secondary monitor, B (Slack) on workspace 2 of the
+            # primary. The layout change may have left both windows anywhere.
+            a, b = (
+                w["id"]
+                for w in wait_for(
+                    lambda: shell_proxy.eval(self.WINDOWS_JS),
+                    predicate=lambda ws: len(ws) == 2,
+                    message="setup: two windows",
+                )
+            )
+            moves = []
+            for wid, monitor in ((a, secondary), (b, primary)):
+                moves.append(self._focus(shell_proxy, wid))
+                moves.append(shell_proxy.move_focused_window_to_monitor(monitor))
+            screens = shell_proxy.eval(self.SCREENS_JS)
+            wait_for(
+                lambda: (self._window(shell_proxy, a), self._window(shell_proxy, b)),
+                predicate=lambda p: p[0]["monitor"] == secondary and p[1]["monitor"] == primary,
+                message=f"setup: A on the secondary monitor, B on the primary ({primary}); "
+                f"moves {moves}, screens {screens}",
+            )
+            shell_proxy.eval(
+                "(() => { const w = global.get_window_actors().map((a) => a.meta_window)"
+                f".find((m) => m && m.get_stable_sequence() === {b});"
+                " w.change_workspace_by_index(1, false); return 'ok'; })()"
+            )
+            wait_for(
+                lambda: self._window(shell_proxy, b),
+                predicate=lambda w: w is not None and w["ws"] == 1 and w["monitor"] == primary,
+                message="setup: B on workspace 2 of the primary monitor",
+            )
+            # The focus stays on the secondary monitor, as in the live session.
+            self._focus(shell_proxy, a)
+
+            shell_proxy.set_virtual_monitor_count(1)
+            wait_for(shell_proxy.get_monitor_count, predicate=lambda n: n == 1)
+            shell_proxy.set_virtual_monitor_count(2, self.LIVE_LAYOUT)
+            wait_for(shell_proxy.get_monitor_count, predicate=lambda n: n == 2)
+            primary = int(shell_proxy.eval(self.PRIMARY_JS))
+
+            # B must not move for the whole settle of the replug (the live run
+            # rebuilt the tree twice, about 6 s apart).
+            moved = None
+            try:
+                moved = wait_for(
+                    lambda: self._window(shell_proxy, b),
+                    predicate=lambda w: w is None or w["monitor"] != primary or w["ws"] != 1,
+                    timeout=8,
+                )
+            except WaitTimeoutError:
+                pass
+            assert moved is None, f"B left workspace 2 of the primary monitor: {moved}"
         finally:
             shell_proxy.set_virtual_monitor_count(2)
 

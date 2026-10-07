@@ -1130,8 +1130,9 @@ class ShellProxy:
             None,
         )
 
-    def set_virtual_monitor_count(self, count: int) -> None:
-        """Enable exactly `count` of the session's virtual monitors, left to right.
+    def set_virtual_monitor_count(self, count: int, origins: list | None = None) -> None:
+        """Enable exactly `count` of the session's virtual monitors, left to right, or at
+        `origins` ((x, y) per monitor, the first one primary) when given.
 
         Goes through org.gnome.Mutter.DisplayConfig.ApplyMonitorsConfig, which is what
         a display-settings change does — and Mutter then emits the same
@@ -1152,8 +1153,9 @@ class ShellProxy:
         if count > len(names):
             raise ValueError(f"session has {len(names)} virtual monitors, asked for {count}")
 
+        origins = origins or [(i * 1920, 0) for i in range(count)]
         logical = ", ".join(
-            f"({i * 1920}, 0, 1.0, 0, {'true' if i == 0 else 'false'}, "
+            f"({origins[i][0]}, {origins[i][1]}, 1.0, 0, {'true' if i == 0 else 'false'}, "
             f"[('{names[i]}', '{self._VIRTUAL_MONITOR_MODE}', {{}})])"
             for i in range(count)
         )
