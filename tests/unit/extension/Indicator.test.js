@@ -158,38 +158,45 @@ describe("FeatureMenuToggle", () => {
   // forge-4zl2: the switch snapshotted its value at construction and only wrote on
   // 'toggled', so changing the same key elsewhere (keybinding or prefs) left it
   // stale — and toggling it afterwards silently rewrote the value it already held.
-  it("keeps a switch in sync when its key changes elsewhere", () => {
+  it("keeps a switch in sync when its key changes elsewhere, without emitting toggled", () => {
     const toggle = new FeatureMenuToggle(extension);
-    expect(toggle._singleSwitch.state).toBe(false);
+    const sw = toggle._singleSwitch;
+    const toggled = vi.fn();
+    sw.connect("toggled", toggled);
+    expect(sw._switch.state).toBe(false);
 
     extension.settings.set_boolean("window-gap-hidden-on-single", true);
     extension.settings.emit("changed::window-gap-hidden-on-single", extension.settings);
 
-    expect(toggle._singleSwitch.state).toBe(true);
+    expect(sw._switch.state).toBe(true);
+    expect(toggled).not.toHaveBeenCalled();
   });
 
   // Same leak class as forge-5y6j: a switch that outlives its disconnect keeps
   // firing into a destroyed widget on every change of the key it tracked.
-  it("disconnects a switch's settings handler when the switch is destroyed", () => {
+  it("leaves no settings handler connected once the switch is destroyed", () => {
+    const signal = "changed::window-gap-hidden-on-single";
+    const before = extension.settings.getHandlerCount(signal);
     const toggle = new FeatureMenuToggle(extension);
     const sw = toggle._singleSwitch;
-    expect(sw._settingsChangedId).not.toBeNull();
+    expect(extension.settings.getHandlerCount(signal)).toBeGreaterThan(before);
 
     sw.emit("destroy", sw);
 
-    expect(sw._settingsChangedId).toBeNull();
+    expect(extension.settings.getHandlerCount(signal)).toBe(before);
     // The switch must no longer track the key it was bound to.
     extension.settings.set_boolean("window-gap-hidden-on-single", true);
-    extension.settings.emit("changed::window-gap-hidden-on-single", extension.settings);
-    expect(sw.state).toBe(false);
+    extension.settings.emit(signal, extension.settings);
+    expect(sw._switch.state).toBe(false);
   });
 
-  it("writes the setting when a switch is toggled", () => {
+  it("writes the setting once when the user toggles a switch", () => {
     const toggle = new FeatureMenuToggle(extension);
+    const write = vi.spyOn(extension.settings, "set_boolean");
 
-    toggle._singleSwitch.state = true;
-    toggle._singleSwitch.emit("toggled", toggle._singleSwitch);
+    toggle._singleSwitch.toggle();
 
+    expect(write).toHaveBeenCalledTimes(1);
     expect(extension.settings.get_boolean("window-gap-hidden-on-single")).toBe(true);
   });
 });

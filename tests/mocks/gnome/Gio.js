@@ -167,15 +167,22 @@ export class Settings extends withSignals() {
   }
 
   /**
-   * Two-way property binding. The real GSettings.bind writes the key into the
-   * object property immediately and keeps both sides in sync; tests only need the
-   * initial push plus the settings -> object direction, which is what the quick
-   * settings toggle relies on.
+   * Two-way boolean property binding, like the real GSettings.bind: the key is pushed
+   * into the property now and on every change, a notify::<property> from the object
+   * writes the key back, and the binding ends when the object is destroyed.
    */
   bind(key, object, property, _flags) {
     object[property] = this.get_boolean(key);
-    this.connect(`changed::${key}`, () => {
+    const fromSettings = this.connect(`changed::${key}`, () => {
       object[property] = this.get_boolean(key);
+    });
+    if (typeof object.connect !== "function") return;
+    const fromObject = object.connect(`notify::${property}`, () => {
+      if (object[property] !== this.get_boolean(key)) this.set_boolean(key, object[property]);
+    });
+    object.connect("destroy", () => {
+      this.disconnect(fromSettings);
+      object.disconnect(fromObject);
     });
   }
 }

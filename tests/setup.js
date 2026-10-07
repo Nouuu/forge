@@ -151,28 +151,51 @@ vi.mock("resource:///org/gnome/shell/ui/quickSettings.js", () => ({
   },
 }));
 
-vi.mock("resource:///org/gnome/shell/ui/popupMenu.js", () => ({
-  PopupSwitchMenuItem: class PopupSwitchMenuItem extends GnomeMocks.GObject.Object {
-    constructor(title, active) {
+vi.mock("resource:///org/gnome/shell/ui/popupMenu.js", () => {
+  // The real Switch actor: `state` is a GObject property, so a change emits notify::state.
+  class Switch extends GnomeMocks.GObject.Object {
+    constructor(state) {
       super();
-      this.label = title;
-      // The real item owns a Switch actor whose `state` is a GObject property;
-      // `item.state` is kept as a view over it for the older tests.
-      this._switch = { state: active };
+      this._state = state;
     }
     get state() {
-      return this._switch.state;
+      return this._state;
     }
     set state(value) {
-      this._switch.state = value;
+      if (value === this._state) return;
+      this._state = value;
+      this.emit("notify::state", this);
     }
-    // The real widget updates the switch WITHOUT re-emitting 'toggled'.
-    setToggleState(state) {
-      this._switch.state = state;
-    }
-  },
-  PopupSeparatorMenuItem: class PopupSeparatorMenuItem extends GnomeMocks.GObject.Object {},
-}));
+  }
+  return {
+    PopupSwitchMenuItem: class PopupSwitchMenuItem extends GnomeMocks.GObject.Object {
+      constructor(title, active) {
+        super();
+        this.label = title;
+        this._switch = new Switch(active);
+        // Destroying the item destroys its child switch.
+        this.connect("destroy", () => this._switch.emit("destroy", this._switch));
+      }
+      // `item.state` is a view over the switch for the older tests.
+      get state() {
+        return this._switch.state;
+      }
+      set state(value) {
+        this._switch.state = value;
+      }
+      // Like the real item: flip the switch, then emit 'toggled'.
+      toggle() {
+        this._switch.state = !this._switch.state;
+        this.emit("toggled", this, this._switch.state);
+      }
+      // The real widget updates the switch WITHOUT re-emitting 'toggled'.
+      setToggleState(state) {
+        this._switch.state = state;
+      }
+    },
+    PopupSeparatorMenuItem: class PopupSeparatorMenuItem extends GnomeMocks.GObject.Object {},
+  };
+});
 
 // Also set global.Main to use the same overview object reference
 global.Main = {

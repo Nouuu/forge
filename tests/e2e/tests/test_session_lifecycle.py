@@ -57,6 +57,13 @@ def _rects(shell_proxy) -> list:
     )
 
 
+_FOCUS_HINT_SWITCH_STATE = (
+    "(function(){ const i = Main.panel.statusArea.quickSettings._indicators.get_children()"
+    ".find(c => c.constructor?.name === 'FeatureIndicator'); "
+    "return i?.quickSettingsItems?.[0]?._focusHintSwitch?._switch?.state ?? null; })()"
+)
+
+
 class TestLockScreen:
     def test_layout_and_indicator_survive_a_lock_unlock_cycle(self, shell_proxy, two_windows):
         """Lock keeps the tree; unlock brings back exactly one indicator."""
@@ -124,4 +131,22 @@ class TestExtensionCycle:
             lambda: max(w["rect"]["width"] for w in shell_proxy.get_windows()),
             predicate=lambda wmax: wmax > 1700,
             message="surviving window did not re-tile to fill after the cycle",
+        )
+
+
+class TestQuickSettings:
+    def test_quick_settings_switch_follows_an_external_key_change(
+        self, shell_proxy, restore_settings
+    ):
+        """S-14 / forge-4zl2: the menu switch is bound to its key, so a change made
+        elsewhere (keybinding, prefs) shows in the open menu without a rebuild."""
+        current = bool(restore_settings.get("focus-border-toggle"))
+        assert shell_proxy.eval(_FOCUS_HINT_SWITCH_STATE) == current
+
+        restore_settings.set("focus-border-toggle", not current)
+
+        wait_for(
+            lambda: shell_proxy.eval(_FOCUS_HINT_SWITCH_STATE),
+            predicate=lambda state: state == (not current),
+            message="quick settings switch did not follow the key",
         )
