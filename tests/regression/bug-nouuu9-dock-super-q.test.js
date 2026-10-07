@@ -49,6 +49,7 @@ vi.mock("../../lib/extension/cheatsheet.js", () => ({
 }));
 
 import ForgeExtension from "../../extension.js";
+import { Logger } from "../../lib/shared/logger.js";
 
 /**
  * Nouuu/forge#9: on Ubuntu, Super+Q locked the screen after some logins and showed the
@@ -145,5 +146,24 @@ describe("Nouuu/forge#9: Super+Q goes to Forge, not to the Ubuntu dock", () => {
     kbdSettings.emit("changed", "prefs-lock-screen");
 
     expect(dock.get_strv("shortcut")).toEqual(["<Super>q"]);
+  });
+
+  it("writes nothing and says so once where the dock's schema is absent", () => {
+    Gio.SettingsSchemaSource = {
+      get_default: () => ({
+        lookup: (id) => (id === DOCK ? null : { has_key: () => true }),
+      }),
+    };
+    const debug = vi.spyOn(Logger, "debug");
+    const warn = vi.spyOn(Logger, "warn");
+    kbdSettings.set_strv("prefs-lock-screen", ["<Super>q"]);
+
+    enableForge();
+    kbdSettings.emit("changed", "prefs-lock-screen");
+
+    expect(created.has(DOCK)).toBe(false);
+    const said = (spy) => spy.mock.calls.filter((c) => String(c[0]).includes(DOCK)).length;
+    expect(said(warn)).toBe(0);
+    expect(said(debug)).toBe(1);
   });
 });

@@ -45,6 +45,8 @@ import { ExtensionThemeManager } from "./lib/extension/extension-theme-manager.j
 // (GTK-free) so the gating policy is unit-testable.
 
 const OVERRIDE_ORIGINALS = "gnome-overrides-originals";
+// Overrides whose schema or key is absent here, each logged once per shell session.
+const missingOverrides = new Set();
 
 export default class ForgeExtension extends Extension {
   enable() {
@@ -140,16 +142,20 @@ export default class ForgeExtension extends Extension {
    * write the override value. Probes the schema/key first — constructing
    * Gio.Settings for an absent schema, or reading/writing an absent key, raises
    * a C-level g_error that TERMINATES gnome-shell and is NOT a catchable JS
-   * exception (forge-rj4x), so the probe is a crash guard, not optional. On a
-   * normal GNOME 45-50 desktop every schema/key is present, so this is a no-op
-   * guard. Re-captures `original` fresh on every call, so a runtime re-apply
+   * exception (forge-rj4x), so the probe is a crash guard, not optional. The
+   * core GNOME schemas are always present; the Ubuntu dock's is absent elsewhere,
+   * and that is said once, at debug. Re-captures `original` fresh on every call, so a runtime re-apply
    * (forge-abk) records the user's latest GNOME value.
    */
   _applyOverride(desc) {
     if (!this._gnomeSettings || !this._savedSettings) return; // already disabled
     const schema = Gio.SettingsSchemaSource.get_default()?.lookup(desc.schemaId, true);
     if (!schema || !schema.has_key(desc.key)) {
-      Logger.warn(`Skipping GNOME override: ${desc.schemaId} '${desc.key}' is unavailable`);
+      const id = `${desc.schemaId} ${desc.key}`;
+      if (!missingOverrides.has(id)) {
+        missingOverrides.add(id);
+        Logger.debug(`Skipping GNOME override: ${id} is unavailable`);
+      }
       return;
     }
     if (!this._gnomeSettings.has(desc.schemaId)) {
@@ -209,10 +215,11 @@ export default class ForgeExtension extends Extension {
 
   /**
    * forge-abk: when a gating Forge setting changes at runtime, apply or restore
-   * each override it gates. _applyOverride/_restoreOverride write GNOME (mutter)
-   * gsettings, never Forge settings, so this cannot re-enter via the change
-   * signal. Across a toggle-off → (user changes GNOME) → toggle-on cycle the
-   * user's latest GNOME value wins (re-captured on re-apply).
+   * each override it gates. Its only write to Forge settings is the
+   * gnome-overrides-originals store, which no gate listens to, so this cannot
+   * re-enter via the change signal. When the gate goes off, the user changes GNOME,
+   * then the gate comes back on, the user's latest GNOME value wins (re-captured on
+   * re-apply).
    */
   _reconcileOverridesFor(changedKey) {
     const settings = this.settings;

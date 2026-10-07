@@ -165,6 +165,9 @@ export class Settings extends withSignals() {
     return [...this._settings.keys()];
   }
 
+  // The current value stands in for the schema default, which keeps the type checks
+  // (bindingKeysOf, the cheatsheet) working. A test of a schema-default branch must
+  // stub it, as bug-nouuu7 does, or it passes without testing anything.
   get_default_value(key) {
     return this._settings.has(key) ? this.get_value(key) : null;
   }

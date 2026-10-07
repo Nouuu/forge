@@ -31,7 +31,7 @@ const {
       disconnect: (id) => {},
       _signals: {},
     },
-    // Main.layoutManager is the emitter of "monitors-changed" — MetaDisplay does
+    // Main.layoutManager is the emitter of "monitors-changed": MetaDisplay does
     // NOT emit it (forge-0rb6). Unlike mockOverview this one keeps the handlers so
     // a test can fire the signal and assert the disconnect actually happened.
     mockLayoutManager: {
