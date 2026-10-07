@@ -252,16 +252,34 @@ describe("Keybindings", () => {
       });
     });
 
+    // S-20: lock in-process through the shell's own shield, not by spawning loginctl.
     describe("prefs-lock-screen", () => {
-      it("spawns loginctl", () => {
-        keybindings._bindings["prefs-lock-screen"]();
-
-        expect(GLib.spawn_command_line_async).toHaveBeenCalledWith("loginctl lock-session");
+      beforeEach(() => {
+        Main.screenShield.lock.mockReset();
       });
 
-      it("swallows a spawn failure instead of throwing", () => {
-        GLib.spawn_command_line_async.mockImplementation(() => {
-          throw new Error("loginctl: command not found");
+      it("locks through the screen shield, without animation", () => {
+        keybindings._bindings["prefs-lock-screen"]();
+
+        expect(Main.screenShield.lock).toHaveBeenCalledOnce();
+        expect(Main.screenShield.lock).toHaveBeenCalledWith(false);
+        expect(GLib.spawn_command_line_async).not.toHaveBeenCalled();
+      });
+
+      it("does nothing and does not throw without a screen shield", () => {
+        const shield = Main.screenShield;
+        Main.screenShield = null;
+        try {
+          expect(() => keybindings._bindings["prefs-lock-screen"]()).not.toThrow();
+          expect(shield.lock).not.toHaveBeenCalled();
+        } finally {
+          Main.screenShield = shield;
+        }
+      });
+
+      it("swallows a lock failure instead of throwing", () => {
+        Main.screenShield.lock.mockImplementation(() => {
+          throw new Error("lock failed");
         });
 
         expect(() => keybindings._bindings["prefs-lock-screen"]()).not.toThrow();
