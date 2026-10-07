@@ -82,6 +82,7 @@ describe("shouldApplyOverride: binding-conflict gate (bug super-l-lock-cleared-w
       maximize: "<Super>Up",
       unmaximize: "<Super>Down",
       screensaver: "<Super>l",
+      shortcut: "<Super>q",
     });
   });
 

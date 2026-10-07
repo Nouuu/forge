@@ -85,7 +85,7 @@ describe("forge-tus6: a failed enable() must not leave GNOME settings clobbered"
     const forgeSettings = new MockSettings("org.gnome.shell.extensions.forge");
     // Ungate every gated override so all of them actually apply: the edge-tiling
     // booleans, and the shipped focus bindings so every `conflictsWith` override
-    // (Super+L, the four Super+arrows) has a conflict to free.
+    // (Super+L, the dock's Super+Q, the four Super+arrows) has a conflict to free.
     forgeSettings.set_boolean("disable-edge-tiling", true);
     forgeSettings.set_boolean("tiling-mode-enabled", true);
     const kbdSettings = new MockSettings("org.gnome.shell.extensions.forge.keybindings");
@@ -93,6 +93,7 @@ describe("forge-tus6: a failed enable() must not leave GNOME settings clobbered"
     kbdSettings.set_strv("window-focus-down", ["<Super>j", "<Super>Down"]);
     kbdSettings.set_strv("window-focus-up", ["<Super>k", "<Super>Up"]);
     kbdSettings.set_strv("window-focus-right", ["<Super>l", "<Super>Right"]);
+    kbdSettings.set_strv("prefs-lock-screen", ["<Super>q"]);
     ext.getSettings = vi.fn((schemaId) =>
       schemaId === "org.gnome.shell.extensions.forge.keybindings" ? kbdSettings : forgeSettings
     );
