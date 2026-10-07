@@ -271,8 +271,9 @@ jobs:
           # A skipped test exits 0, so the run step alone would pass GREEN while
           # exercising nothing — e.g. if the session came up single-screen and every
           # test_multi_monitor case self-skipped on get_monitor_count() < 2. Parse
-          # junit.xml and fail unless those cases ran with zero skips (xfails elsewhere
-          # are reported as skipped and must not trip this). Keeps the gate non-vacuous.
+          # junit.xml and fail unless those cases ran with zero skips. An expected failure
+          # is written as <skipped type="pytest.xfail"> but did run, so it is not a skip.
+          # Keeps the gate non-vacuous.
           python3 - "$PWD/e2e-results/junit.xml" <<'EOF'
           import sys, xml.etree.ElementTree as ET
           path = sys.argv[1]
@@ -286,7 +287,8 @@ jobs:
           errors = sum(int(s.get("errors", 0)) for s in suites)
           mm = [c for s in suites for c in s.iter("testcase")
                 if "test_multi_monitor" in (c.get("classname") or "")]
-          skipped = [c for c in mm if c.find("skipped") is not None]
+          skipped = [c for c in mm if c.find("skipped") is not None
+                     and c.find("skipped").get("type") != "pytest.xfail"]
           print(f"multi-monitor cases={len(mm)} skipped={len(skipped)} "
                 f"failures={failures} errors={errors}")
           if not mm:
