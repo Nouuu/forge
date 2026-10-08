@@ -827,7 +827,14 @@
         state.renders += 1;
         return state.origRender.apply(this, args);
       };
-      wm._handleGrabOpBegin(display, left, Meta.GrabOp.RESIZING_E);
+      try {
+        wm._handleGrabOpBegin(display, left, Meta.GrabOp.RESIZING_E);
+      } catch (e) {
+        // Nouuu/forge#13: no _liveResize yet, so liveResizeEnd() could not undo these.
+        display.get_focus_window = state.origFocus;
+        wm.tree.render = state.origRender;
+        throw e;
+      }
       this._liveResize = state;
       return this.liveResizeFrames();
     },
