@@ -252,10 +252,12 @@ fi
 # activation of org.freedesktop.portal.Desktop never claims the bus name in
 # headless containers (no DISPLAY/WAYLAND_DISPLAY/XDG_SESSION_TYPE in dbus's
 # exec env), so we start it ourselves with the right environment.
+# Bus probes run as gnomeshell: the session bus closes connections from any
+# other uid, root included.
 if [ -x /usr/libexec/xdg-desktop-portal ]; then
-    if ! gdbus call --address="unix:path=$BUS_SOCKET" \
+    if ! su - gnomeshell -c "$DBUS_ENV gdbus call --session \
             --dest org.freedesktop.DBus --object-path /org/freedesktop/DBus \
-            --method org.freedesktop.DBus.NameHasOwner org.freedesktop.portal.Desktop 2>/dev/null \
+            --method org.freedesktop.DBus.NameHasOwner org.freedesktop.portal.Desktop" 2>/dev/null \
             | grep -q true; then
         echo "Pre-launching xdg-desktop-portal..."
         PORTAL_ENV=(
@@ -326,9 +328,9 @@ if command -v gnome-text-editor &>/dev/null; then
     # become remote activations instead of racing fresh register().
     EDITOR_NAME_OWNED=0
     for i in {1..60}; do
-        if gdbus call --address="unix:path=$BUS_SOCKET" \
+        if su - gnomeshell -c "$DBUS_ENV gdbus call --session \
                 --dest org.freedesktop.DBus --object-path /org/freedesktop/DBus \
-                --method org.freedesktop.DBus.NameHasOwner org.gnome.TextEditor 2>/dev/null \
+                --method org.freedesktop.DBus.NameHasOwner org.gnome.TextEditor" 2>/dev/null \
                 | grep -q true; then
             EDITOR_NAME_OWNED=1
             break
@@ -340,12 +342,12 @@ if command -v gnome-text-editor &>/dev/null; then
     # ~10s after that, and a test --new-window during that window can race
     # silently. Probe a real method — org.gtk.Actions.List on the
     # /org/gnome/TextEditor object — to confirm the GApplication is actually
-    # serving requests.
+    # serving requests. busctl --auto-start=no, not gdbus: a call that lands while
+    # the name is unowned must not D-Bus-activate a displayless editor.
     EDITOR_ACTIONS_READY=0
     for i in {1..60}; do
-        if gdbus call --address="unix:path=$BUS_SOCKET" \
-                --dest org.gnome.TextEditor --object-path /org/gnome/TextEditor \
-                --method org.gtk.Actions.List 2>/dev/null | grep -q '^('; then
+        if su - gnomeshell -c "$DBUS_ENV busctl --user --auto-start=no call \
+                org.gnome.TextEditor /org/gnome/TextEditor org.gtk.Actions List" &>/dev/null; then
             echo "gnome-text-editor primary ready"
             EDITOR_ACTIONS_READY=1
             break
