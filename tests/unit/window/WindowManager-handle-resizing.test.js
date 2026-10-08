@@ -928,6 +928,56 @@ describe("Live resize: neighbours follow a resize grab (F-08)", () => {
     expect(keyboard.percents).toEqual(pointer.percents);
   });
 
+  it("(v) a neighbour at its minimum size stops there while the edge goes on", () => {
+    const { metas } = tiled(2);
+    const [left, right] = metas;
+    right._size_hints = { min_width: 800, min_height: 0 };
+    const leftRequests = vi.spyOn(left, "move_resize_frame");
+
+    wm()._handleGrabOpBegin(ctx.display, left, GrabOp.RESIZING_E);
+    drag(left, { dx: 600 });
+
+    expect(frame(right).width).toBeGreaterThanOrEqual(800);
+    expect(leftRequests).not.toHaveBeenCalled();
+  });
+
+  it("(w) a live render leaves the windows of another monitor alone", () => {
+    ctx.cleanup();
+    ctx = createWindowManagerFixture({ globals: { display: { monitorCount: 2 } } });
+    const { metas } = tiled(2);
+    const { monitor: second } = getWorkspaceAndMonitor(ctx, 0, 1);
+    const other = createMockWindow({
+      workspace: ctx.workspaces[0],
+      monitor: 1,
+      rect: new Rectangle({ x: 1920, y: 0, width: 400, height: 400 }),
+    });
+    ctx.tree.createNode(second.nodeValue, NODE_TYPES.WINDOW, other).mode = WINDOW_MODES.TILE;
+    wm().renderTree("setup");
+    const otherRequests = vi.spyOn(other, "move_resize_frame");
+
+    wm()._handleGrabOpBegin(ctx.display, metas[0], GrabOp.RESIZING_E);
+    drag(metas[0], { dx: 300 });
+
+    expect(otherRequests).not.toHaveBeenCalled();
+  });
+
+  it("(x) Forge's keyboard resize is marked before its move, so X11's size-changed renders nothing", () => {
+    const { metas } = tiled(2);
+    const [left] = metas;
+    vi.spyOn(GLib, "timeout_add").mockImplementation(() => 77);
+    const render = vi.spyOn(wm(), "renderTree");
+    const request = left.move_resize_frame.bind(left);
+    // X11 emits size-changed inside the request, before move() returns.
+    vi.spyOn(left, "move_resize_frame").mockImplementation((...args) => {
+      request(...args);
+      wm().updateMetaPositionSize(left, "size-changed");
+    });
+
+    wm().resize(GrabOp.KEYBOARD_RESIZING_E, 50);
+
+    expect(render).not.toHaveBeenCalledWith("size-changed");
+  });
+
   it("(o) only the grabbed window's own size change renders", () => {
     const { metas } = tiled(2);
     const [left, right] = metas;
