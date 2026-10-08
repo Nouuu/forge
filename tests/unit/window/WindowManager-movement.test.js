@@ -51,12 +51,12 @@ describe("WindowManager - Movement & Positioning", () => {
       node.mode = WINDOW_MODES.TILE;
       node.grabMode = "RESIZING";
 
-      const moveFrameSpy = vi.spyOn(metaWindow, "move_frame");
+      const moveResizeSpy = vi.spyOn(metaWindow, "move_resize_frame");
       const rect = { x: 100, y: 100, width: 800, height: 600 };
 
       wm().move(metaWindow, rect);
 
-      expect(moveFrameSpy).not.toHaveBeenCalled();
+      expect(moveResizeSpy).not.toHaveBeenCalled();
     });
 
     it("should unmaximize window before moving", () => {
@@ -80,14 +80,16 @@ describe("WindowManager - Movement & Positioning", () => {
       expect(removeTransitionsSpy).toHaveBeenCalled();
     });
 
-    it("should call move_frame with correct coordinates", () => {
+    it("should send the position only together with the size", () => {
       const metaWindow = createMockWindow();
       const moveFrameSpy = vi.spyOn(metaWindow, "move_frame");
+      const moveResizeSpy = vi.spyOn(metaWindow, "move_resize_frame");
       const rect = { x: 100, y: 200, width: 800, height: 600 };
 
       wm().move(metaWindow, rect);
 
-      expect(moveFrameSpy).toHaveBeenCalledWith(true, 100, 200);
+      expect(moveFrameSpy).not.toHaveBeenCalled();
+      expect(moveResizeSpy).toHaveBeenCalledOnce();
     });
 
     it("should call move_resize_frame with complete rect", () => {
@@ -103,13 +105,13 @@ describe("WindowManager - Movement & Positioning", () => {
     it("should handle window without compositor actor", () => {
       const metaWindow = createMockWindow();
       metaWindow.get_compositor_private = vi.fn(() => null);
-      const moveFrameSpy = vi.spyOn(metaWindow, "move_frame");
+      const moveResizeSpy = vi.spyOn(metaWindow, "move_resize_frame");
       const rect = { x: 100, y: 100, width: 800, height: 600 };
 
       wm().move(metaWindow, rect);
 
-      // Should still try to unmaximize but not call move_frame
-      expect(moveFrameSpy).not.toHaveBeenCalled();
+      // Should still try to unmaximize but not place the window
+      expect(moveResizeSpy).not.toHaveBeenCalled();
     });
 
     it("should handle various rect sizes", () => {

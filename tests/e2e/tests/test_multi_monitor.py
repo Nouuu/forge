@@ -14,6 +14,7 @@ from framework.wait import WaitTimeoutError, wait_for
 
 # Second virtual monitor starts at x=1920 (monitors are 1920 wide, side by side).
 MONITOR_1_X = 1920
+REPLUG_DELAY = 2
 
 
 class TestMultiMonitorTiling:
@@ -199,9 +200,6 @@ class TestMonitorHotPlug:
       .map((i) => { const r = global.display.get_monitor_geometry(i);
                     return [i, r.x, r.y, r.width, r.height]; })))()"""
 
-    @pytest.mark.xfail(
-        strict=True, reason="Nouuu/forge#10: a hidden-workspace window jumps screens"
-    )
     def test_replug_leaves_a_primary_window_on_its_workspace(
         self, shell_proxy, two_windows, restore_settings
     ):
@@ -258,6 +256,8 @@ class TestMonitorHotPlug:
 
             shell_proxy.set_virtual_monitor_count(1)
             wait_for(shell_proxy.get_monitor_count, predicate=lambda n: n == 1)
+            # The cable stays out for a moment, as in the live report.
+            time.sleep(REPLUG_DELAY)
             shell_proxy.set_virtual_monitor_count(2, self.LIVE_LAYOUT)
             wait_for(shell_proxy.get_monitor_count, predicate=lambda n: n == 2)
             primary = int(shell_proxy.eval(self.PRIMARY_JS))
