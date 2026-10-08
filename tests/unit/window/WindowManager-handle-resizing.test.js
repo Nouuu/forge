@@ -854,6 +854,20 @@ describe("Live resize: neighbours follow a resize grab (F-08)", () => {
     expect(ctx.tree.verifyIntegrity().length).toBeLessThanOrEqual(before);
   });
 
+  it("(p) resizing a floating window renders nothing until the grab ends", () => {
+    tiled(2);
+    const { monitor } = getWorkspaceAndMonitor(ctx);
+    const float = createMockWindow({ workspace: ctx.workspaces[0] });
+    ctx.tree.createNode(monitor.nodeValue, NODE_TYPES.WINDOW, float).mode = WINDOW_MODES.FLOAT;
+    ctx.display.get_focus_window.mockReturnValue(float);
+    const render = vi.spyOn(wm(), "renderTree");
+
+    wm()._handleGrabOpBegin(ctx.display, float, GrabOp.RESIZING_E);
+    drag(float, { dx: 300 });
+
+    expect(render).not.toHaveBeenCalled();
+  });
+
   // GNOME's keyboard resize begins with no edge (keybindings.c handle_begin_resize, with
   // the unconstrained flag); Mutter picks it at the first arrow key without a new
   // grab-op-begin (meta-window-drag.c process_keyboard_resize_grab_op_change).
