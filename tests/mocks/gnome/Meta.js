@@ -72,12 +72,14 @@ export class Window extends withSignals() {
     return this._size_hints;
   }
 
+  // GJS hands out a copy of the boxed rect; returning _rect itself let a caller that
+  // edits the result (resize(), removeGapOnRect) move the window without a request.
   get_frame_rect() {
-    return this._rect;
+    return Object.assign(new Rectangle(), this._rect);
   }
 
   get_buffer_rect() {
-    return this._rect;
+    return Object.assign(new Rectangle(), this._rect);
   }
 
   get_work_area_current_monitor() {
