@@ -1150,6 +1150,16 @@ class ShellProxy:
             None,
         )
 
+    def keyboard_resize_begin(self) -> dict:
+        """Start GNOME's keyboard resize (Alt+F8) on the left of two windows."""
+        self._ensure_bridge()
+        return self.eval("globalThis._forgeTestBridge.keyboardResizeBegin()")
+
+    def keyboard_resize_frames(self) -> dict:
+        """Frames of the keyboard-resized pair, and whether Forge still sees the grab."""
+        self._ensure_bridge()
+        return self.eval("globalThis._forgeTestBridge.keyboardResizeFrames()")
+
     def set_virtual_monitor_count(self, count: int, origins: list | None = None) -> None:
         """Enable exactly `count` of the session's virtual monitors, left to right, or at
         `origins` ((x, y) per monitor, the first one primary) when given.

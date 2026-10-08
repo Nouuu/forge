@@ -864,6 +864,50 @@
       return frames;
     },
 
+    // GNOME's keyboard resize (Alt+F8) as Mutter runs it: a real grab on the left of two
+    // windows that begins with no edge; the first arrow key picks one (fork-sync F-08).
+    keyboardResizeBegin() {
+      const wins = global.workspace_manager
+        .get_active_workspace()
+        .list_windows()
+        .filter((w) => w.get_window_type() === Meta.WindowType.NORMAL);
+      if (wins.length < 2) return JSON.stringify({ ok: false, reason: "need-2-windows" });
+      const [left, right] = [...wins].sort((a, b) => a.get_frame_rect().x - b.get_frame_rect().x);
+      left.activate(global.get_current_time());
+      const op = Meta.GrabOp.KEYBOARD_RESIZING_UNKNOWN;
+      const time = global.get_current_time();
+      const context = global.stage.context;
+      const backend = context ? context.get_backend() : Clutter.get_default_backend();
+      let began;
+      if (backend.get_pointer_sprite) {
+        // 49+: begin_grab_op(op, sprite, time, pos_hint), as js/ui/windowMenu.js does.
+        began = left.begin_grab_op(op, backend.get_pointer_sprite(global.stage), time, null);
+      } else {
+        const pointer = backend.get_default_seat().get_pointer();
+        try {
+          began = left.begin_grab_op(op, pointer, null, time, null);
+        } catch (e) {
+          began = left.begin_grab_op(op, pointer, null, time); // 45: no pos_hint
+        }
+      }
+      this._keyboardResize = { left, right };
+      return JSON.stringify({ ...JSON.parse(this.keyboardResizeFrames()), began });
+    },
+
+    keyboardResizeFrames() {
+      const state = this._keyboardResize;
+      if (!state) return JSON.stringify({ ok: false, reason: "no-grab" });
+      const wm = forgeExt() && forgeExt().extWm;
+      const plain = (r) => ({ x: r.x, y: r.y, width: r.width, height: r.height });
+      return JSON.stringify({
+        ok: true,
+        left: plain(state.left.get_frame_rect()),
+        right: plain(state.right.get_frame_rect()),
+        workArea: plain(state.left.get_work_area_current_monitor()),
+        grabbing: !!(wm && wm.grabOp),
+      });
+    },
+
     fuzzDrag(opts) {
       const o = opts || {};
       const wm = forgeExt() && forgeExt().extWm;

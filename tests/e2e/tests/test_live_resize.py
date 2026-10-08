@@ -71,3 +71,33 @@ def test_neighbour_follows_the_resize_grab(shell_proxy, two_windows):
     assert (wa["x"] + wa["width"]) - (end["right"]["x"] + end["right"]["width"]) <= GAP_TOLERANCE, (
         end
     )
+
+
+def test_neighbour_follows_gnome_keyboard_resize(shell_proxy, two_windows):
+    """Alt+F8 then Right arrows at a person's pace: the right window follows every step
+    before Return, and the layout keeps the new size after it."""
+    begin = shell_proxy.keyboard_resize_begin()
+    assert begin["ok"] and begin["began"], begin
+    width = begin["left"]["width"]
+    try:
+        # The first arrow only picks the edge. Each later one grows the frame by 10 px from
+        # the size the client last committed (meta-window-drag.c), so wait for each commit.
+        shell_proxy.simulate_key_combo("Right")
+        for step in range(5):
+            shell_proxy.simulate_key_combo("Right")
+            frames = wait_for(
+                shell_proxy.keyboard_resize_frames,
+                predicate=lambda f, w=width: f["grabbing"] and _followed(f, w + 5),
+                timeout=2,
+                message=f"step {step + 1}: the right window did not follow the keyboard resize",
+            )
+            width = frames["left"]["width"]
+    finally:
+        shell_proxy.simulate_key_combo("Return")
+
+    end = wait_for(
+        shell_proxy.keyboard_resize_frames,
+        predicate=lambda f: not f["grabbing"],
+        message="the keyboard resize did not end",
+    )
+    assert abs(end["left"]["width"] - width) <= 1 and _followed(end, width), end

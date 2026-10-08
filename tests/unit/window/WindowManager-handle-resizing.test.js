@@ -646,14 +646,14 @@ describe("Live resize: neighbours follow a resize grab (F-08)", () => {
 
   // One full grab of the first window's E edge by 300 px, in a fresh fixture. With
   // `live: false` the render is neutralised during the grab, which is today's behaviour.
-  function grabScenario({ live, cancel = false }) {
+  function grabScenario({ live, cancel = false, op = GrabOp.RESIZING_E }) {
     ctx.cleanup();
     ctx = createWindowManagerFixture();
     const { metas, nodes } = tiled(2);
     const [left] = metas;
     const start = frame(left);
     const moveFrame = vi.spyOn(left, "move_frame");
-    wm()._handleGrabOpBegin(ctx.display, left, GrabOp.RESIZING_E);
+    wm()._handleGrabOpBegin(ctx.display, left, op);
     const stub = live ? null : vi.spyOn(wm(), "renderTree").mockImplementation(() => {});
     drag(left, { dx: 300 });
     if (cancel) {
@@ -662,7 +662,7 @@ describe("Live resize: neighbours follow a resize grab (F-08)", () => {
     }
     stub?.mockRestore();
     const moveFrameCalls = moveFrame.mock.calls.length;
-    wm()._handleGrabOpEnd(ctx.display, left, GrabOp.RESIZING_E);
+    wm()._handleGrabOpEnd(ctx.display, left, op);
     return {
       frames: metas.map(frame),
       percents: nodes.map((n) => n.percent),
@@ -693,7 +693,7 @@ describe("Live resize: neighbours follow a resize grab (F-08)", () => {
     );
   });
 
-  it("(b) GNOME's keyboard resize (Alt+F8) renders live too", () => {
+  it("(b) a keyboard resize grab whose edge is known renders live too", () => {
     const { metas } = tiled(2);
     const [left, right] = metas;
     const before = frame(right);
@@ -852,6 +852,66 @@ describe("Live resize: neighbours follow a resize grab (F-08)", () => {
     wm()._handleGrabOpEnd(ctx.display, metas[0], GrabOp.RESIZING_E);
 
     expect(ctx.tree.verifyIntegrity().length).toBeLessThanOrEqual(before);
+  });
+
+  // GNOME's keyboard resize begins with no edge (keybindings.c handle_begin_resize, with
+  // the unconstrained flag); Mutter picks it at the first arrow key without a new
+  // grab-op-begin (meta-window-drag.c process_keyboard_resize_grab_op_change).
+  const ALT_F8 = GrabOp.KEYBOARD_RESIZING_UNKNOWN | 1024;
+
+  it("(q) GNOME's keyboard resize (Alt+F8) follows the right edge its first arrow picks", () => {
+    const { metas } = tiled(2);
+    const [left, right] = metas;
+    const before = frame(right);
+
+    wm()._handleGrabOpBegin(ctx.display, left, ALT_F8);
+    drag(left, { dx: 300 });
+
+    expect(frame(right).width).toBeLessThan(before.width);
+  });
+
+  it("(r) an Alt+F8 grab that moves the left edge narrows the window on the left", () => {
+    const { metas } = tiled(2);
+    const [left, right] = metas;
+    ctx.display.get_focus_window.mockReturnValue(right);
+    const before = frame(left);
+
+    wm()._handleGrabOpBegin(ctx.display, right, ALT_F8);
+    const r = right.get_frame_rect();
+    right._rect = new Rectangle({ x: r.x - 300, y: r.y, width: r.width + 300, height: r.height });
+    wm().updateMetaPositionSize(right, "size-changed");
+
+    expect(frame(left).width).toBeLessThan(before.width);
+  });
+
+  it("(u) an Alt+F8 grab that moves the top edge shortens the window above", () => {
+    const { metas } = tiled(2, LAYOUT_TYPES.VSPLIT);
+    const [top, bottom] = metas;
+    ctx.display.get_focus_window.mockReturnValue(bottom);
+    const before = frame(top);
+
+    wm()._handleGrabOpBegin(ctx.display, bottom, ALT_F8);
+    const r = bottom.get_frame_rect();
+    bottom._rect = new Rectangle({ x: r.x, y: r.y - 200, width: r.width, height: r.height + 200 });
+    wm().updateMetaPositionSize(bottom, "size-changed");
+
+    expect(frame(top).height).toBeLessThan(before.height);
+  });
+
+  it("(s) an Alt+F8 grab ends like the same pointer grab", () => {
+    const keyboard = grabScenario({ live: true, op: ALT_F8 });
+    const pointer = grabScenario({ live: true });
+
+    expect(keyboard.frames).toEqual(pointer.frames);
+    expect(keyboard.percents).toEqual(pointer.percents);
+  });
+
+  it("(t) an Alt+F8 grab taken back to its start ends like the pointer one", () => {
+    const keyboard = grabScenario({ live: true, cancel: true, op: ALT_F8 });
+    const pointer = grabScenario({ live: true, cancel: true });
+
+    expect(keyboard.frames).toEqual(pointer.frames);
+    expect(keyboard.percents).toEqual(pointer.percents);
   });
 
   it("(o) only the grabbed window's own size change renders", () => {
