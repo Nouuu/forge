@@ -2,7 +2,11 @@
 . "$(dirname -- "$0")/_/husky.sh"
 
 # Constitution VIII on the message itself. Drop the `git commit -v` diff and comment lines.
-if sed '/^# -* >8 -*$/,$d' "$1" | grep -v '^#' | LC_ALL=C grep -P '\xE2\x80[\x93\x94\xA6]|\xE2\x86\x92'; then
-  echo "Constitution VIII: replace the em/en dash, ellipsis character or arrow in the commit message." >&2
-  exit 1
-fi
+# grep exits 1 on no match and 2 on an error, such as no -P (Nouuu/forge#13).
+status=0
+sed '/^# -* >8 -*$/,$d' "$1" | grep -v '^#' | LC_ALL=C grep -P '\xE2\x80[\x93\x94\xA6]|\xE2\x86\x92' || status=$?
+case $status in
+  0) echo "Constitution VIII: replace the em/en dash, ellipsis character or arrow in the commit message." >&2; exit 1 ;;
+  1) ;;
+  *) echo "Constitution VIII: the check needs a grep with -P (GNU grep)." >&2; exit 1 ;;
+esac

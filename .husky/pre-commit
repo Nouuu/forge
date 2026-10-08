@@ -5,7 +5,11 @@ npx lint-staged
 
 # Constitution VIII: no em dash, en dash, ellipsis character or arrow in added lines.
 # Byte patterns under LC_ALL=C so the check does not depend on the caller's locale.
-if git diff --cached -U0 | LC_ALL=C grep -P '^\+(?!\+\+ ).*(\xE2\x80[\x93\x94\xA6]|\xE2\x86\x92)'; then
-  echo "Constitution VIII: replace the em/en dash, ellipsis character or arrow above." >&2
-  exit 1
-fi
+# grep exits 1 on no match and 2 on an error, such as no -P (Nouuu/forge#13).
+status=0
+git diff --cached -U0 | LC_ALL=C grep -P '^\+(?!\+\+ ).*(\xE2\x80[\x93\x94\xA6]|\xE2\x86\x92)' || status=$?
+case $status in
+  0) echo "Constitution VIII: replace the em/en dash, ellipsis character or arrow above." >&2; exit 1 ;;
+  1) ;;
+  *) echo "Constitution VIII: the check needs a grep with -P (GNU grep)." >&2; exit 1 ;;
+esac
