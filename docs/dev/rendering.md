@@ -12,6 +12,13 @@ GNOME signals that follow one user action collapse into one layout pass.
   decorations/borders and returns.
 - Otherwise it schedules the idle body **once** (guarded by `_renderTreeSrcId`).
 
+During a window-system resize grab (pointer, touch, GNOME's Alt+F8), the grabbed tiled
+window's own `size-changed` renders, so its neighbours follow the edge live (F-08). Forge's
+own keyboard resize is excluded through `_manualResizeEndWindow`, which `resize()` sets
+before its `move()` because X11 emits `size-changed` inside the request. A floating
+grabbed window never renders. Alt+F8 begins with no edge: `_pickKeyboardResizeEdge` picks
+the one the frame shows moved, as Mutter does in place on the first arrow key.
+
 The idle body (`window.js`) runs this exact order — **the order is
 load-bearing**:
 
@@ -60,6 +67,18 @@ passes `commitDuringGrab`), and otherwise always calls `Compat.unmaximize()` bef
 `move_resize_frame`. It has **no fullscreen check** — the fullscreen exclusion lives
 in `Tree.apply`'s tiled-children filter, which is where fullscreen-dependent
 placement logic belongs.
+
+On Wayland a resize lands only when the client draws, with its position. Two rules
+follow:
+
+- The placement is **one** `move_resize_frame` (Nouuu/forge#10). Mutter applies a pure
+  move at once with the size the client last committed, so a separate `move_frame`
+  showed the new position with the old size, which could sit on another monitor and
+  re-home the window there.
+- Besides a window already at its target (Bug #351), it skips one whose last request
+  had the same target and whose client has drawn nothing since (`_forgeRequest`,
+  Nouuu/forge#12). Re-sending it would replace a move Mutter queued meanwhile, such as
+  `move_to_monitor`.
 
 ### Fullscreen / maximize gotchas
 
