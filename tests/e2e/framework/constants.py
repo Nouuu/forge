@@ -108,9 +108,10 @@ class RetryConfig:
 
 # Forge extension constants
 FORGE_UUID = "forge@jmmaranan.com"
-# Use --new-window to ensure multiple instances can be launched
+# One process per test window (Nouuu/forge#8): windows sharing a GApplication primary died
+# with it when it idle-exited after a workspace drain.
 DEFAULT_TEST_APP = "gnome-text-editor"
-DEFAULT_TEST_APP_ARGS = ["--new-window"]
+DEFAULT_TEST_APP_ARGS = ["--standalone"]
 
 # App palette for the fuzzer's input-diversity angle (forge-v9o7 family / Angle 2). ONLY apps
 # reliably present in the e2e image may live here — docker/Dockerfile.e2e installs exactly two
