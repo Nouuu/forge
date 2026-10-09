@@ -8,12 +8,6 @@
 name: e2e-testing
 
 on:
-  workflow_dispatch:
-    inputs:
-      fedora_version:
-        description: "Fedora version to run alone (see tests/e2e/gnome-versions.json); empty runs all"
-        required: false
-        default: ""
   push:
     branches: ["main", "dev"]
     paths-ignore:
