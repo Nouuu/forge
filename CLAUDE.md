@@ -10,7 +10,7 @@ Forge is a GNOME Shell extension providing i3/sway-style tiling window managemen
 
 Run `make help` for the full target list; `npm install` first (needs Node.js 20+ and gettext).
 
-- **`make dev`** installs a debug build locally; **`make prod`** does a full install + enable + shell restart.
+- **`make dev`** installs a debug build locally; **`make prod`** does a full install + enable + shell restart. `make prod` is the maintainer's only: on Wayland its restart logs the session out.
 - **`make test`** (nested Wayland, no restart) / **`make test-x`** (X11) for manual in-shell testing.
 - **`npm test`** runs the unit suite (mocked GNOME APIs); **`make unit-test-docker`** and **`make e2e-test`** are the canonical Docker environments.
 - **`npm run format`** / **`npm run lint`** — Prettier; **`npm run lint:src`** / **`npm run lint:e2e`** — ESLint; **`npm run typecheck`** — `tsc --noEmit`. The husky pre-commit hook (`lint-staged`) runs all of these plus `vitest related` and `ruff`.
@@ -99,4 +99,5 @@ resolved locally — treat them as stable labels, not as queryable tickets.
 **Committing and pushing are the maintainer's call.** Do not commit or push unless
 asked explicitly, in this session, for this change. Prepare the work and report it;
 never push on your own initiative, and never treat an earlier approval as covering a
-later change.
+later change. One exception: before a proof run (an e2e lane, a live check), commit the
+change locally so the proof names a sha. The push still waits for the maintainer.
