@@ -58,7 +58,7 @@ See **[docs/dev/](docs/dev/)** for the detailed reference: [architecture.md](doc
 - `legacy`/`gnome-3-36` - GNOME 3.36 support (feature-frozen)
 
 
-## Issue Tracking
+## Work Tracking
 
 This fork does **not** run a tracker inside the repository. Upstream
 (`jcrussell/forge`) uses **bd (beads)** — a Dolt-backed issue store synced over
@@ -70,14 +70,22 @@ resolved locally — treat them as stable labels, not as queryable tickets.
 
 ### Rules
 
-- Track follow-up work in this fork's GitHub issues, not in files. Do not add markdown
-  TODO lists to the repo.
+- Work to do goes into a Spec Kit spec under `specs/`: a task of the feature in progress,
+  or a new spec. That covers defects, review findings, gaps and follow-ups. `specs/` is
+  gitignored and stays local.
+- This fork's GitHub issues track subjects for the medium or long term only: an
+  upstream blocker, a parked release, a topic that waits on an outside event or on a
+  later decision (Nouuu/forge#5 is the model).
+- Do not add markdown TODO lists to tracked files.
 - `TodoWrite` is fine for within-session task lists; it is not persistence.
 - Durable knowledge goes to the session memory directory, not to a `MEMORY.md` in the
   repo.
-- When fixing a defect, keep the existing traceability convention: reference the issue
-  id in the commit subject, in a comment at the fix site, and in the header of the
-  pinned `tests/regression/bug-<id>-<slug>.test.js`.
+- When fixing a defect, keep the existing traceability convention: reference its id in
+  the commit subject, in a comment at the fix site, and in the header of the pinned
+  `tests/regression/bug-<id>-<slug>.test.js`.
+- A defect tracked in a spec uses `<spec>:<item>` as its id (`input-commands:G-002`) and
+  `<spec>-<item>` in the test name (`bug-input-commands-g002-...`). Like a bead id, it
+  only resolves on this machine.
 - A bare number in this repo means a forge-ext issue (`bug-040-...`, "Bug #40"). For
   this fork's issues use `nouuu<N>` in the test name (`bug-nouuu2-...`) and cite
   `Nouuu/forge#N` everywhere else, never `#N` alone.
@@ -91,7 +99,7 @@ resolved locally — treat them as stable labels, not as queryable tickets.
 **When ending a work session**, complete the steps below, then stop and report.
 
 1. **Run quality gates** (if code changed) - tests, linters, type check, build
-2. **Note remaining work** - anything needing follow-up goes to this fork's GitHub issues
+2. **Note remaining work** - follow-up goes to a spec; a medium or long-term subject to this fork's GitHub issues
 3. **Show the state** - `git status` and `git diff --stat`, so the change set is visible
 4. **Clean up** - clear stashes, remove scratch artifacts
 5. **Hand off** - what changed, what was verified, what is still open
