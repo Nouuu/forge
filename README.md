@@ -1,10 +1,10 @@
 # Forge (maintained by Claude)
 
-[![CI](https://github.com/jcrussell/forge/actions/workflows/testing.yml/badge.svg)](https://github.com/jcrussell/forge/actions/workflows/testing.yml)
-[![codecov](https://codecov.io/github/jcrussell/forge/graph/badge.svg?token=MFNOBH5D4L)](https://codecov.io/github/jcrussell/forge)
+[![CI](https://github.com/Nouuu/forge/actions/workflows/testing.yml/badge.svg)](https://github.com/Nouuu/forge/actions/workflows/testing.yml)
 
 An AI-maintained fork of [Forge](https://github.com/forge-ext/forge), the GNOME
-Shell extension that provides i3/sway-style tiling window management.
+Shell extension that provides i3/sway-style tiling window management. It builds on
+[jcrussell/forge](https://github.com/jcrussell/forge), itself a fork of Forge.
 
 This fork addresses bugs and adds features while the upstream project seeks a
 new maintainer. Contributions here are intended to be upstreamed when possible.
@@ -13,7 +13,7 @@ contributors for creating this excellent extension.
 
 ## Features
 
-- Works on GNOME 45+ (X11 and Wayland)
+- Works on GNOME 45-50 (X11 and Wayland)
 - Tree-based tiling with vertical and horizontal split containers similar to i3-wm and sway-wm
 - Vim-like keybindings for navigation/swapping windows/moving windows in the containers
 - Drag and drop tiling
@@ -42,6 +42,10 @@ This fork includes significant improvements over the upstream version:
 - **Additional keybindings** - Config reload, evenly distribute windows, workspace monocle, and more
 - **More customization** - Border radius, tab margins, default layout, adjustable gap limits
 - **Monitor exclusion** - Option to exclude specific monitors from tiling
+- **Live resize** - Neighbours follow a resize grab as it moves, GNOME's keyboard resize (Alt+F8) included
+- **New windows on the focused monitor** - `new-window-placement` takes a `focus` value
+- **Tabs by default** - A new window opens as a tab of the focused one when the default layout is tabbed or stacked
+- **Monitor hot-plug** - The layout survives a display change that leaves the monitors as they were; monocle is scoped per monitor
 
 ### Bug Fixes
 
@@ -51,48 +55,24 @@ This fork includes significant improvements over the upstream version:
 - Preview hints and border rendering fixes
 - Cross-workspace window operations
 - Preferences saving and theme handling
+- Windows placed in one request on Wayland, so position and size change together
+- GNOME 50 Wayland detection, stacked tabs on GNOME 45-47
+- GNOME's own shortcuts (`Super+L`, `Super+arrows`, the Ubuntu dock's `Super+Q`) are taken only while a Forge binding uses them, and given back across a logout
 
 ### Code Quality
 
-- Comprehensive unit test suite (1,750+ tests, ~92% line coverage, 90% enforced in CI) plus a Dockerized E2E suite
+- Comprehensive unit test suite (2,100+ tests, ~94% line coverage, 90% enforced in CI) plus a Dockerized E2E suite with one lane per supported GNOME release and multi-monitor gates
+- Dead code, duplicated helpers and hand-rolled platform features removed (about 660 lines) with no behaviour change
 - Refactored architecture with focused, extracted managers (see [architecture docs](docs/dev/architecture.md))
 - Riskier options stay behind clearly-marked experimental toggles
 
 ## Known Issues / Limitations
 
-- Does not support dynamic workspaces
-- Does not support vertical monitor setup
+- Vertical (portrait) monitor setups are not fully supported, see [multi-monitor](docs/user/monitors.md)
 
 ## Installation
 
-### From extensions.gnome.org
-
-_Listing pending review — this fork is not yet published on extensions.gnome.org._
-Once it is, install it from the [GNOME Extensions](https://extensions.gnome.org)
-website (with the browser integration) or the **Extensions** / **Extension Manager**
-app by searching for "Forge".
-
-### From a pre-built release
-
-Download `forge@jmmaranan.com.zip` from the
-[latest release](https://github.com/jcrussell/forge/releases/latest), then:
-
-```bash
-# (optional) verify the checksum and build provenance
-sha256sum -c SHA256SUMS
-gh attestation verify forge@jmmaranan.com.zip --repo jcrussell/forge
-
-# install
-gnome-extensions install --force forge@jmmaranan.com.zip
-
-# then log out and back in (X11: Alt+F2, then r) so the shell picks it up
-
-# ...and enable
-gnome-extensions enable forge@jmmaranan.com
-```
-
-`enable` fails with "does not exist" until the shell has re-scanned — that's why the
-log-out/restart step comes between install and enable, not after.
+This fork has no release and no extensions.gnome.org listing yet: build it from source.
 
 ### Build from source
 
@@ -103,7 +83,8 @@ npm install
 # Development build: compile and install to ~/.local/share/gnome-shell/extensions/
 make dev
 
-# Production build: compile, install, enable extension, restart shell
+# Production build: compile, install, enable extension, restart the shell
+# (on Wayland the restart logs you out)
 make prod
 ```
 
@@ -115,18 +96,18 @@ After installation, log out and log back in (or restart GNOME Shell on X11 with 
 
 Full docs live in [`docs/`](docs/):
 
-- **User guide** ([`docs/user/`](docs/user/)) — [layouts & tiling](docs/user/layouts.md),
+- **User guide** ([`docs/user/`](docs/user/)): [layouts & tiling](docs/user/layouts.md),
   [keybindings](docs/user/keybindings.md), [theming](docs/user/theming.md),
   [window rules](docs/user/rules.md), [portable config](docs/user/config.md),
   [multi-monitor](docs/user/monitors.md), [troubleshooting](docs/user/troubleshooting.md).
-- **Developer reference** ([`docs/dev/`](docs/dev/)) — architecture, rendering
-  pipeline, Mutter compatibility.
+- **Developer reference** ([`docs/dev/`](docs/dev/)): architecture, rendering
+  pipeline, Mutter compatibility, the bug-class hazards catalogue.
 - Press **`Super+Shift+/`** in-session for the keybinding cheatsheet.
 
 ## Forge Override Paths
 
-- Window rules: `$HOME/.config/forge/config/windows.json` — see [window rules](docs/user/rules.md) and [portable config](docs/user/config.md)
-- Stylesheet: `$HOME/.config/forge/stylesheet/forge/stylesheet.css` — see [theming](docs/user/theming.md)
+- Window rules: `$HOME/.config/forge/config/windows.json`, see [window rules](docs/user/rules.md) and [portable config](docs/user/config.md)
+- Stylesheet: `$HOME/.config/forge/stylesheet/forge/stylesheet.css`, see [theming](docs/user/theming.md)
 
 ## GNOME Defaults
 

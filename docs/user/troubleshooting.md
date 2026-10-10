@@ -56,5 +56,4 @@ the fork: <https://github.com/Nouuu/forge/issues>.
 
 ## Known limitations
 
-No dynamic workspaces; no full vertical-monitor support (see
-[monitors.md](monitors.md)).
+No full vertical-monitor support (see [monitors.md](monitors.md)).
