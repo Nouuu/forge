@@ -1,5 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import GLib from "gi://GLib";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { WINDOW_MODES } from "../../lib/extension/window.js";
 import { NODE_TYPES, LAYOUT_TYPES } from "../../lib/extension/tree.js";
 import * as Utils from "../../lib/extension/utils.js";
@@ -27,16 +26,10 @@ describe("Nouuu/forge#13: a dialog recentres on release, not during a live resiz
   beforeEach(() => {
     ctx = createWindowManagerFixture();
     global.Meta = { ...(global.Meta || {}), GrabOp, MotionDirection };
-    // Each render finishes before the next step, as between real pointer motions.
-    vi.spyOn(GLib, "idle_add").mockImplementation((_priority, fn) => {
-      fn();
-      return 0;
-    });
   });
 
   afterEach(() => {
     ctx.cleanup();
-    vi.restoreAllMocks();
     delete global.Meta;
   });
 

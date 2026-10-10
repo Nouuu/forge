@@ -32,14 +32,16 @@ describe("forge-5l9b: queued raise-float must not undo the fullscreen demotion",
   const wm = () => ctx.windowManager;
 
   // Track a window through the real pipeline (so "focus" signal handlers are
-  // bound), then convert it into a Forge-pinned always-on-top float.
+  // bound). A float override keeps it a Forge-pinned always-on-top float on every
+  // render, as a user's float rule does.
   function trackFloat() {
+    ctx.configMgr.windowProps.overrides = [{ wmClass: "FloatApp", mode: "float" }];
     const win = createMockWindow({ wm_class: "FloatApp", workspace: ctx.workspaces[0] });
     wm().trackWindow(null, win);
+    wm().renderTree("setup");
     const node = wm().tree.findNode(win);
-    node.mode = WINDOW_MODES.FLOAT;
-    win.make_above();
-    win._forgeSetAbove = true;
+    expect(node.mode).toBe(WINDOW_MODES.FLOAT);
+    expect(win.is_above() && win._forgeSetAbove).toBe(true);
     return { win, node };
   }
 

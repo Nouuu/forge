@@ -32,10 +32,9 @@ describe("Bug monitors-changed-same-geometry: unchanged monitor set keeps the tr
   const realIdleAdd = GLib.idle_add;
   let pending;
 
-  // The default GLib mock runs idle_add synchronously and hands back the source id
-  // after the callback has already cleared it, so a second reloadTree on the same
-  // fixture would be debounced forever. Defer and flush by hand, like real GJS
-  // (same recipe as bug-531-rendertree-wedge).
+  // The default GLib mock runs idle_add synchronously. Defer and flush by hand, like
+  // real GJS, so the debounce sees a pending reload (same recipe as
+  // bug-531-rendertree-wedge).
   function flush() {
     while (pending.length) pending.shift()();
   }

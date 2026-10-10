@@ -598,13 +598,6 @@ describe("Live resize: neighbours follow a resize grab (F-08)", () => {
   beforeEach(() => {
     ctx = createWindowManagerFixture();
     global.Meta = { GrabOp, MotionDirection };
-    // Each render has finished before the next motion event, as between real pointer
-    // motions. (The plain mock runs the callback but returns an id, so renderTree would
-    // believe a render is still pending and skip every later one.)
-    vi.spyOn(GLib, "idle_add").mockImplementation((_priority, fn) => {
-      fn();
-      return 0;
-    });
   });
 
   afterEach(() => {
@@ -751,7 +744,7 @@ describe("Live resize: neighbours follow a resize grab (F-08)", () => {
     const { metas } = tiled(2);
     wm()._signalsBound = true; // as after enable(), so disable() reaches its cleanup
     wm()._handleGrabOpBegin(ctx.display, metas[0], GrabOp.RESIZING_E);
-    GLib.idle_add.mockImplementation(() => 99); // the live render is still queued
+    vi.spyOn(GLib, "idle_add").mockImplementation(() => 99); // the live render is still queued
     const remove = vi.spyOn(GLib.Source, "remove");
     drag(metas[0], { dx: 100 });
     expect(wm()._renderTreeSrcId).toBe(99);

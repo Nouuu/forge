@@ -57,7 +57,9 @@ export function idle_add(priority, callback) {
   if (typeof callback === "function") {
     callback();
   }
-  return Math.random();
+  // The source has already run, so no id stays pending (a non-zero id here made
+  // renderTree skip every later render).
+  return 0;
 }
 
 export function source_remove(id) {

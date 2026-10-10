@@ -412,4 +412,15 @@ describe("WindowManager - Window Lifecycle", () => {
       expect(wm()._validWindow(metaWindow)).toBe(false);
     });
   });
+
+  describe("renderTree", () => {
+    it("renders again once the previous render has finished", () => {
+      const render = vi.spyOn(ctx.tree, "render");
+
+      wm().renderTree("first");
+      wm().renderTree("second");
+
+      expect(render.mock.calls.map(([from]) => from)).toEqual(["first", "second"]);
+    });
+  });
 });
