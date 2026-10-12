@@ -1596,7 +1596,7 @@ describe("WindowManager - moveWindowToPointer Comprehensive", () => {
       expect(swapSpy).toHaveBeenCalled();
     });
 
-    it("should detect corner as top region (top takes priority over left)", () => {
+    it("should detect corner as left region (left takes priority over top)", () => {
       const monitor = getMonitor();
 
       const { nodeWindow: target } = createWindowWithRect(monitor, {
@@ -1617,7 +1617,7 @@ describe("WindowManager - moveWindowToPointer Comprehensive", () => {
 
       wm().moveWindowToPointer(dragged, false);
 
-      // Left region is checked before top, so HSPLIT expected
+      // detectDropZone checks left before top, so the corner is a left drop (HSPLIT)
       expect(dragged.parentNode.layout).toBe(LAYOUT_TYPES.HSPLIT);
     });
   });
