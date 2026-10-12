@@ -80,7 +80,7 @@ jobs:
       - name: Type check
         run: npm run typecheck
 
-      # One run: the coverage run is the unit suite, and it enforces the thresholds.
+      # Two runs: the unit suite, then the prefs floor. Both enforce their thresholds.
       - name: Run unit tests with coverage
         run: npm run test:coverage --verbose
 

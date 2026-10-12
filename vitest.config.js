@@ -9,10 +9,9 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       reporter: ["text", "html", "lcov"],
-      include: ["lib/**/*.js"],
+      include: ["lib/**/*.js", "extension.js", "prefs.js"],
       exclude: [
-        "lib/prefs/**", // Preferences UI, not testable without GTK4
-        "lib/extension/cheatsheet.js", // UI-only (St/Clutter widgets)
+        "lib/prefs/**", // measured by vitest.prefs.config.js
         "lib/extension/extension-theme-manager.js", // UI-only (stylesheet management)
         "**/*.test.js",
         "**/mocks/**",

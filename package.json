@@ -6,7 +6,7 @@
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage",
+    "test:coverage": "vitest run --coverage && vitest run --coverage --config vitest.prefs.config.js",
     "lint": "prettier --list-different \"./**/*.{js,jsx,ts,tsx,json}\"",
     "lint:e2e": "eslint tests/e2e/framework",
     "lint:src": "eslint lib extension.js prefs.js",
