@@ -48,7 +48,8 @@ describe("WindowManager - grab-sequence fuzzer", () => {
   let ctx;
 
   beforeEach(() => {
-    ctx = createWindowManagerFixture();
+    // Preview on, or the orphaned-previewHint check below sees no hint to leak.
+    ctx = createWindowManagerFixture({ settings: { "preview-hint-enabled": true } });
     // The fixture leaves keybindings null; allowDragDropTile() reads through it.
     ctx.extension.keybindings = { allowDragDropTile: () => true };
   });

@@ -40,7 +40,7 @@ def _env_int(name, default):
 
 
 @pytest.fixture
-def fuzz_engine(shell_proxy, launch_window):
+def fuzz_engine(shell_proxy, launch_window, restore_settings):
     """Engine wired to the real shell. launch_window (conftest) reuses _launch_window
     and rides clean_workspace for setup/teardown, so the working set starts empty.
 
@@ -52,6 +52,8 @@ def fuzz_engine(shell_proxy, launch_window):
     # forge-fhen.9: disposal/ordering hazard sequences are opt-in and default OFF (0), so the
     # existing default lane runs the exact pre-hazard generator. Set >0 to bias toward them.
     hazard_weight = _env_int("FORGE_FUZZ_HAZARDS", 0)
+    # The preview-leak oracle sees a hint only when the preview is on.
+    restore_settings.set_preview_hint_enabled(True)
     engine = FuzzEngine(
         shell_proxy,
         launch_window,
