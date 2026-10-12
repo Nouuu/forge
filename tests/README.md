@@ -72,8 +72,13 @@ The mocks simulate GNOME Shell APIs so tests run in Node.js without GNOME Shell:
 | `Shell.js` | Shell integration |
 | `St.js` | Shell toolkit (Bin, Widget, Label) |
 | `Clutter.js` | Event handling |
+| `Gtk.js`, `Adw.js`, `Gdk.js` | Prefs process widgets (see `tests/unit/prefs/gtk-mock.test.js` for the pinned GTK behaviours) |
 
 Global mocks available: `global.display`, `global.get_pointer()`, `global.stage`.
+
+### Known mock quirks
+
+- `Gio.Settings` `set_*` does not emit `changed::<key>`; a test emits it by hand.
 
 ### Expanding Mocks
 

@@ -158,6 +158,12 @@ export class Settings extends withSignals() {
 
   set_value(key, value) {
     this._settings.set(key, value instanceof Variant ? value.recursiveUnpack() : value);
+    return true;
+  }
+
+  // Drops the stored value, which is the unset state of a key without a schema default here.
+  reset(key) {
+    this._settings.delete(key);
   }
 
   // Schema view: the keys that hold a value (a real schema lists every key it defines).
@@ -173,20 +179,25 @@ export class Settings extends withSignals() {
   }
 
   /**
-   * Two-way boolean property binding, like the real GSettings.bind: the key is pushed
+   * Two-way property binding (numbers stay numbers, the rest read as booleans), like
+   * the real GSettings.bind: the key is pushed
    * into the property now and on every change, and a notify::<property> from the object
    * writes the key back. Like GLib, destroy() does not end it: only Settings.unbind does
    * (or the object's finalize, which the mock does not model).
    */
   bind(key, object, property, _flags) {
-    object[property] = this.get_boolean(key);
+    const read = () => {
+      const value = this._settings.get(key);
+      return typeof value === "number" ? value : this.get_boolean(key);
+    };
+    object[property] = read();
     const fromSettings = this.connect(`changed::${key}`, () => {
-      object[property] = this.get_boolean(key);
+      object[property] = read();
     });
     const fromObject =
       typeof object.connect === "function"
         ? object.connect(`notify::${property}`, () => {
-            if (object[property] !== this.get_boolean(key)) this.set_boolean(key, object[property]);
+            if (object[property] !== read()) this.set_boolean(key, object[property]);
           })
         : null;
     if (!bindings.has(object)) bindings.set(object, new Map());
