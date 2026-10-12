@@ -1220,6 +1220,7 @@
       const windows = workspace.list_windows();
       return JSON.stringify(
         windows.map((w) => ({
+          id: w.get_id(),
           title: w.get_title(),
           wmClass: w.get_wm_class(),
           rect: rect(w.get_frame_rect()),

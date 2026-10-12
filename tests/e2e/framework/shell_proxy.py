@@ -1254,27 +1254,6 @@ class ShellProxy:
 })();""").substitute(x=x, y=y)
         self.eval(js)
 
-    def simulate_mouse_button(self, button: int, pressed: bool) -> None:
-        """
-        Press or release a mouse button.
-
-        Args:
-            button: Mouse button (1=left, 2=middle, 3=right).
-            pressed: True to press, False to release.
-        """
-        self._ensure_virtual_devices()
-        # Map logical button numbers to evdev button codes
-        btn_code = {1: 0x110, 2: 0x112, 3: 0x111}.get(button, 0x110)
-        state = "PRESSED" if pressed else "RELEASED"
-        js = Template("""(function() {
-    const Clutter = imports.gi.Clutter;
-    const GLib = imports.gi.GLib;
-    globalThis._forgeTestVMouse.notify_button(
-        GLib.get_monotonic_time(), ${btn_code}, Clutter.ButtonState.${state});
-    return 'ok';
-})();""").substitute(btn_code=btn_code, state=state)
-        self.eval(js)
-
     def simulate_click(self, x: int, y: int, button: int = 1) -> None:
         """Click at specific coordinates."""
         self._ensure_virtual_devices()

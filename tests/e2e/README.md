@@ -290,15 +290,11 @@ the hook shells out to `ruff`, committing Python changes requires ruff on your
   wall-clock cost), which is deferred. Tests that strengthen focus/movement assertions keep a
   weaker check under `keybinding` so the gate stays green (see `test_focus_navigation.py`).
 
-- **Drag-drop tiling has no real headless grab coverage (deferred — forge-v9o7).** The
-  drop pipeline (`grab-op-begin` → `GRAB_TILE` → `_handleMoving` → `moveWindowToPointer`)
-  only engages on a real Mutter move grab. Synthetic drags — xdotool mousedown+motion on
-  X11 and Clutter `VirtualInputDevice` on headless Wayland — fire **zero** `grab-op-begin`
-  signals (verified live on both lanes), so no drop ever lands. The tests in
-  `test_drag_drop_tiling.py` therefore assert only on settle-state geometry and `xfail`
-  their landing gate (visible-gap, not skip) rather than passing vacuously. Real coverage
-  would need a programmatic grab (`begin_grab_op` is not driven from GJS today) or
-  `gnome-ponytail-daemon` (not integrated); both are deferred. Until then the drop-decision
-  logic is best covered by unit tests (mocked GNOME APIs), not this lane.
+- **Drag-drop tiling runs through bridge-driven handlers (forge-v9o7).** Synthetic drags
+  (xdotool on X11, Clutter `VirtualInputDevice` on headless Wayland) fire no `grab-op-begin`.
+  `test_drag_drop_tiling.py` therefore calls `fuzz_drag_path`, which runs the real
+  `_handleGrabOpBegin`, `_handleMoving` and `_handleGrabOpEnd` and patches only focus, pointer,
+  hover hit-test and the modifier gate. The drop pipeline is asserted by window id. Mutter's
+  signal wiring and the real hit-test stay out of e2e.
 
 The containerized GNOME Shell testing approach, Dockerfile setup (Fedora base image, `gnomeshell` user, systemd configuration, `systemd-logind` override), and `set-env.sh` script are derived from [gnome-shell-pod](https://github.com/Schneegans/gnome-shell-pod) by Simon Schneegans, licensed under the MIT License.

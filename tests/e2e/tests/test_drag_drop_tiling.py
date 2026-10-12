@@ -1,252 +1,123 @@
 """
-Drag and Drop Tiling Tests for Forge.
+Drag and Drop Tiling Tests for Forge (input-commands:G-002).
 
-Tests drag-and-drop tiling with drop zone detection.
-
-Note: xdotool mouse operations may not trigger Mutter's grab-op protocol
-in all environments. When drop-zone detection does not fire, these tests
-report xfail (not skip) so the coverage gap is visible in the report rather
-than masquerading as green; when the drag lands they pass normally.
+Drags TILED windows through the real grab handlers (_handleGrabOpBegin,
+_handleMoving, _handleGrabOpEnd) via the bridge, since synthetic pointer input
+fires no grab-op-begin headless (forge-v9o7). Results are asserted by window id.
 """
 
 import time
 
 import pytest
-from framework.constants import Timing
-from framework.wait import wait_for_window_count
+from framework.constants import Timing, Tolerance
+from framework.wait import wait_for, wait_for_layout, wait_for_window_count
+from framework.window_helper import WindowHelper
+
+
+def _by_x(shell_proxy):
+    return sorted(shell_proxy.get_windows(), key=lambda w: w["rect"]["x"])
+
+
+def _assert_two_tiled_hsplit(shell_proxy, two_windows):
+    wait_for_window_count(shell_proxy, 2)
+    wm_class = two_windows[0].get("wmClass")
+    assert shell_proxy.count_tiled_windows_of_class(wm_class) == 2
+    wait_for_layout(shell_proxy, "HSPLIT")
+    return wm_class
+
+
+def _overlap(shell_proxy):
+    windows = shell_proxy.get_windows()
+    if len(windows) != 2:
+        return None
+    r1, r2 = (tuple(w["rect"][k] for k in ("x", "y", "width", "height")) for w in windows)
+    return WindowHelper.calculate_overlap(r1, r2)
+
+
+def _assert_settled(shell_proxy, wm_class):
+    assert shell_proxy.count_tiled_windows_of_class(wm_class) == 2
+    assert len(shell_proxy.get_windows()) == 2, "window count changed"
+    wait_for(
+        lambda: _overlap(shell_proxy),
+        predicate=lambda o: o is not None and o <= Tolerance.OVERLAP,
+        message=f"tiled windows overlap beyond {Tolerance.OVERLAP}px after the drop",
+    )
 
 
 @pytest.mark.drag
 class TestDragDropBasic:
-    """Test basic drag-and-drop tiling operations."""
+    """Drag one tiled window onto a zone of the other."""
 
-    def test_drag_float_to_right_zone(self, shell_proxy, input_sim, window_helper, two_windows):
-        """Dragging a floated window to the right zone should tile it."""
-        wait_for_window_count(shell_proxy, 2)
+    def test_drag_tiled_to_right_zone(self, shell_proxy, two_windows):
+        wm_class = _assert_two_tiled_hsplit(shell_proxy, two_windows)
+        left_id = _by_x(shell_proxy)[0]["id"]
 
-        # Float the focused window
-        input_sim.toggle_float()
-        time.sleep(Timing.LAYOUT_CHANGE)
+        res = shell_proxy.fuzz_drag_path("leftmost", "rightmost", "right")
+        assert isinstance(res, dict) and res.get("ok"), f"fuzzDragPath failed: {res}"
 
-        windows = shell_proxy.get_windows()
-        # wait_for_window_count(2) above already guarantees two windows, and
-        # toggle_float() cannot change the count — so a shortfall here is a real
-        # regression (a window vanished), not a drag precondition worth skipping.
-        # Assert (not skip) so it fails loudly instead of masquerading as green.
-        assert len(windows) >= 2, "expected two windows before drag (did one vanish?)"
-
-        # Find floating and tiled windows by size
-        sorted_by_width = sorted(windows, key=lambda w: w.get("rect", {}).get("width", 0))
-        floating = sorted_by_width[0]  # Smaller = floating
-        tiled = sorted_by_width[-1]  # Larger = tiled
-
-        floating_rect = floating.get("rect", {})
-        tiled_rect = tiled.get("rect", {})
-
-        # Drag from center of floating window to right 30% zone of tiled
-        start_x = floating_rect["x"] + floating_rect["width"] // 2
-        start_y = floating_rect["y"] + 10  # Near titlebar
-        end_x = tiled_rect["x"] + int(tiled_rect["width"] * 0.85)
-        end_y = tiled_rect["y"] + tiled_rect["height"] // 2
-
-        input_sim.drag_window(start_x, start_y, end_x, end_y)
-        time.sleep(Timing.LAYOUT_CHANGE)
-
-        # Read the Forge container layout. A right-zone drop re-tiles the floated
-        # window beside its sibling, forming an HSPLIT; we assert that layout
-        # UNCONDITIONALLY when the drag engaged. If the synthetic drag never
-        # engaged Mutter's grab-op protocol (headless xdotool limitation), the
-        # floated window stays floating and no HSPLIT is formed — that is the only
-        # path we xfail (never a silent pass, never a hard fail-on-no-engage).
-        layout = shell_proxy.get_container_layout()
-        if layout == "HSPLIT":
-            assert layout == "HSPLIT", f"right-zone drop should yield HSPLIT, got {layout}"
-        else:
-            # Engaged-vs-xfail gate: the drop never produced the expected split,
-            # which headless means the grab-op never fired (see forge-v9o7). xfail
-            # so the coverage gap stays visible rather than masquerading as green.
-            pytest.xfail(
-                "xdotool drag did not trigger Mutter grab-op drop-zone detection "
-                f"(no HSPLIT formed, got {layout}; forge-v9o7: no real grab headless)"
-            )
-
-    def test_drag_float_to_bottom_zone(self, shell_proxy, input_sim, window_helper, two_windows):
-        """Dragging a floated window to the bottom zone should create VSPLIT."""
-        wait_for_window_count(shell_proxy, 2)
-
-        input_sim.toggle_float()
-        time.sleep(Timing.LAYOUT_CHANGE)
-
-        windows = shell_proxy.get_windows()
-        # wait_for_window_count(2) above already guarantees two windows, and
-        # toggle_float() cannot change the count — so a shortfall here is a real
-        # regression (a window vanished), not a drag precondition worth skipping.
-        # Assert (not skip) so it fails loudly instead of masquerading as green.
-        assert len(windows) >= 2, "expected two windows before drag (did one vanish?)"
-
-        sorted_by_width = sorted(windows, key=lambda w: w.get("rect", {}).get("width", 0))
-        floating = sorted_by_width[0]
-        tiled = sorted_by_width[-1]
-
-        floating_rect = floating.get("rect", {})
-        tiled_rect = tiled.get("rect", {})
-
-        # Drag to bottom 30% zone
-        start_x = floating_rect["x"] + floating_rect["width"] // 2
-        start_y = floating_rect["y"] + 10
-        end_x = tiled_rect["x"] + tiled_rect["width"] // 2
-        end_y = tiled_rect["y"] + int(tiled_rect["height"] * 0.85)
-
-        input_sim.drag_window(start_x, start_y, end_x, end_y)
-        time.sleep(Timing.LAYOUT_CHANGE)
-
-        # A bottom-zone drop stacks the floated window below its sibling, forming
-        # a VSPLIT; assert that layout UNCONDITIONALLY when the drag engaged. If
-        # the synthetic drag never engaged Mutter's grab-op protocol (headless
-        # xdotool limitation), no VSPLIT is formed — that is the only path we
-        # xfail (never a silent pass, never a hard fail-on-no-engage).
-        layout = shell_proxy.get_container_layout()
-        if layout == "VSPLIT":
-            assert layout == "VSPLIT", f"bottom-zone drop should yield VSPLIT, got {layout}"
-        else:
-            # Engaged-vs-xfail gate: the drop never produced the expected split,
-            # which headless means the grab-op never fired (see forge-v9o7). xfail
-            # so the coverage gap stays visible rather than masquerading as green.
-            pytest.xfail(
-                "xdotool drag did not trigger Mutter grab-op drop-zone detection "
-                f"(no VSPLIT formed, got {layout}; forge-v9o7: no real grab headless)"
-            )
-
-    def test_drag_float_to_left_zone(self, shell_proxy, input_sim, window_helper, two_windows):
-        """Dragging a floated window to the left zone should tile on left."""
-        wait_for_window_count(shell_proxy, 2)
-
-        input_sim.toggle_float()
-        time.sleep(Timing.LAYOUT_CHANGE)
-
-        windows = shell_proxy.get_windows()
-        # wait_for_window_count(2) above already guarantees two windows, and
-        # toggle_float() cannot change the count — so a shortfall here is a real
-        # regression (a window vanished), not a drag precondition worth skipping.
-        # Assert (not skip) so it fails loudly instead of masquerading as green.
-        assert len(windows) >= 2, "expected two windows before drag (did one vanish?)"
-
-        sorted_by_width = sorted(windows, key=lambda w: w.get("rect", {}).get("width", 0))
-        floating = sorted_by_width[0]
-        tiled = sorted_by_width[-1]
-
-        floating_rect = floating.get("rect", {})
-        tiled_rect = tiled.get("rect", {})
-
-        # Drag to left 15% zone
-        start_x = floating_rect["x"] + floating_rect["width"] // 2
-        start_y = floating_rect["y"] + 10
-        end_x = tiled_rect["x"] + int(tiled_rect["width"] * 0.15)
-        end_y = tiled_rect["y"] + tiled_rect["height"] // 2
-
-        input_sim.drag_window(start_x, start_y, end_x, end_y)
-        time.sleep(Timing.LAYOUT_CHANGE)
-
-        # A left-zone drop re-tiles the floated window beside its sibling, forming
-        # an HSPLIT; assert that layout UNCONDITIONALLY when the drag engaged —
-        # mirroring the right/bottom-zone siblings. The previous `width > 20% of
-        # workspace` gate was always true (the leftmost window always exceeds 20%),
-        # so the xfail never fired and the test passed green asserting NOTHING —
-        # silently hiding the very forge-v9o7 gap its siblings keep visible. If the
-        # synthetic drag never engaged Mutter's grab-op protocol (headless xdotool
-        # limitation), no HSPLIT forms — that is the only path we xfail (never a
-        # silent pass). xpass when the drag does land is expected/allowed (forge-q0k).
-        layout = shell_proxy.get_container_layout()
-        if layout == "HSPLIT":
-            assert layout == "HSPLIT", f"left-zone drop should yield HSPLIT, got {layout}"
-        else:
-            pytest.xfail(
-                "xdotool drag did not trigger Mutter grab-op drop-zone detection "
-                f"(no HSPLIT formed, got {layout}; forge-v9o7: no real grab headless)"
-            )
-
-    def test_drag_preserves_window_count(self, shell_proxy, input_sim, two_windows):
-        """Drag operations should not create or destroy windows."""
-        wait_for_window_count(shell_proxy, 2)
-        count_before = len(shell_proxy.get_windows())
-
-        input_sim.toggle_float()
-        time.sleep(Timing.LAYOUT_CHANGE)
-
-        windows = shell_proxy.get_windows()
-        # wait_for_window_count(2) above already guarantees two windows, and
-        # toggle_float() cannot change the count — so a shortfall here is a real
-        # regression (a window vanished), not a drag precondition worth skipping.
-        # Assert (not skip) so it fails loudly instead of masquerading as green.
-        assert len(windows) >= 2, "expected two windows before drag (did one vanish?)"
-
-        sorted_by_width = sorted(windows, key=lambda w: w.get("rect", {}).get("width", 0))
-        floating = sorted_by_width[0]
-        tiled = sorted_by_width[-1]
-
-        floating_rect = floating.get("rect", {})
-        tiled_rect = tiled.get("rect", {})
-
-        start_x = floating_rect["x"] + floating_rect["width"] // 2
-        start_y = floating_rect["y"] + 10
-        end_x = tiled_rect["x"] + int(tiled_rect["width"] * 0.85)
-        end_y = tiled_rect["y"] + tiled_rect["height"] // 2
-
-        input_sim.drag_window(start_x, start_y, end_x, end_y)
-        time.sleep(Timing.LAYOUT_CHANGE)
-
-        count_after = len(shell_proxy.get_windows())
-        assert count_after == count_before, (
-            f"Window count changed during drag: {count_before} -> {count_after}"
+        wait_for(
+            lambda: _by_x(shell_proxy)[-1]["id"],
+            predicate=lambda wid: wid == left_id,
+            message="right-zone drop did not move the left window after the right one",
         )
+        _assert_settled(shell_proxy, wm_class)
+
+    def test_drag_tiled_to_left_zone(self, shell_proxy, two_windows):
+        wm_class = _assert_two_tiled_hsplit(shell_proxy, two_windows)
+        right_id = _by_x(shell_proxy)[-1]["id"]
+
+        res = shell_proxy.fuzz_drag_path("rightmost", "leftmost", "left")
+        assert isinstance(res, dict) and res.get("ok"), f"fuzzDragPath failed: {res}"
+
+        wait_for(
+            lambda: _by_x(shell_proxy)[0]["id"],
+            predicate=lambda wid: wid == right_id,
+            message="left-zone drop did not move the right window before the left one",
+        )
+        _assert_settled(shell_proxy, wm_class)
+
+    def test_drag_tiled_to_bottom_zone(self, shell_proxy, two_windows):
+        wm_class = _assert_two_tiled_hsplit(shell_proxy, two_windows)
+        windows = _by_x(shell_proxy)
+        left_id, right_id = windows[0]["id"], windows[-1]["id"]
+
+        res = shell_proxy.fuzz_drag_path("leftmost", "rightmost", "bottom")
+        assert isinstance(res, dict) and res.get("ok"), f"fuzzDragPath failed: {res}"
+
+        wait_for_layout(shell_proxy, "VSPLIT")
+        by_id = {w["id"]: w for w in shell_proxy.get_windows()}
+        assert by_id[left_id]["rect"]["y"] > by_id[right_id]["rect"]["y"], (
+            "bottom-zone drop should place the dragged window below the target"
+        )
+        _assert_settled(shell_proxy, wm_class)
 
 
 @pytest.mark.drag
 class TestDragPreviewCleanup:
     """forge-63y (gh-529): no drag-preview overlay may survive a tab drag.
 
-    The reporter saw a red preview overlay stuck on screen after moving a
-    browser-tab window. The preview hint is an St.Bin cached on the dragged
-    WINDOW node, created by _handleMoving while a GRAB_TILE drag hovers drop
-    zones; _grabCleanup/_handleGrabOpEnd must release it on EVERY outcome.
-
-    Drop-zone detection only engages when allowDragDropTile() passes, i.e.
-    the mod-mask-mouse-tile modifier is held - which xdotool drags never do,
-    so with the default 'Super' mask the preview path is silently never
-    exercised headless. The test sets the mask to 'None' (a supported user
-    config, and the forge-2iw touch recommendation) so dragging a TABBED
-    member really creates the preview, then asserts nothing leaks.
+    The preview hint is an St.Bin cached on the dragged WINDOW node, created by
+    _handleMoving while a GRAB_TILE drag hovers drop zones; _grabCleanup and
+    _handleGrabOpEnd must release it on EVERY outcome. The drag runs through the
+    real handlers (fuzz_drag_path) with the preview hint enabled.
     """
 
     def test_no_preview_hint_leak_after_tab_drag(
-        self, shell_proxy, input_sim, window_helper, restore_settings, two_windows
+        self, shell_proxy, window_helper, restore_settings, two_windows
     ):
-        from framework.wait import wait_for_layout
-
         restore_settings.set_tabbed_tiling_mode_enabled(True)
-        restore_settings.set_keybinding_string("mod-mask-mouse-tile", "None")
+        restore_settings.set_preview_hint_enabled(True)
         time.sleep(Timing.SETTINGS_SETTLE)
 
-        # Wrap the LEFT window into a single-child TABBED CON (flat-monitor
-        # forceSplit wraps only the targeted window); the right one stays tiled.
+        # Wrap the LEFT window into a single-child TABBED CON; the right one stays tiled.
         shell_proxy.invoke_forge_action(
             {"name": "LayoutTabbedToggle"}, focus_window="leftmost", also_activate=True
         )
         time.sleep(Timing.STACKED_LAYOUT_CHANGE)
         wait_for_layout(shell_proxy, "TABBED")
+        assert len(shell_proxy.get_windows()) == 2, "expected two windows before drag"
 
-        windows = shell_proxy.get_windows()
-        assert len(windows) >= 2, "expected two windows before drag (did one vanish?)"
-
-        # The tab member is the activated (focused) window; drag it onto the
-        # right zone of the plain tiled sibling.
-        source = next((w for w in windows if w.get("isFocused")), windows[0])
-        target = next(w for w in windows if w is not source)
-        src, tgt = source.get("rect", {}), target.get("rect", {})
-
-        # Landing detector: a landed drop pulls the member out of its
-        # single-child TABBED CON, which is then reaped - the rects alone can't
-        # discriminate (the two windows just swap identical half slots).
+        # A landed drop pulls the member out of its single-child TABBED CON, which is reaped.
         def count_cons(node):
             if not isinstance(node, dict):
                 return 0
@@ -256,29 +127,19 @@ class TestDragPreviewCleanup:
         cons_before = count_cons(shell_proxy.get_tree_structure())
         assert cons_before >= 1, "expected the TABBED CON in the tree before the drag"
 
-        input_sim.drag_window(
-            src["x"] + src["width"] // 2,
-            src["y"] + 10,
-            tgt["x"] + int(tgt["width"] * 0.85),
-            tgt["y"] + tgt["height"] // 2,
-        )
-        time.sleep(Timing.LAYOUT_CHANGE)
+        res = shell_proxy.fuzz_drag_path("leftmost", "rightmost", "right")
+        assert isinstance(res, dict) and res.get("ok"), f"fuzzDragPath failed: {res}"
+        assert res["trail"][-1]["hint"], f"no preview hint existed during the drag: {res}"
 
-        # The leak assertion runs regardless of whether the drop landed: no
-        # tree node may still hold a preview hint, visible or not.
-        hint_state = shell_proxy.get_preview_hint_state()
-        assert hint_state.get("count", -1) == 0, (
-            f"Drag preview hint leaked after tab drag: {hint_state}"
+        hint_state = wait_for(
+            shell_proxy.get_preview_hint_state,
+            predicate=lambda h: h.get("count", -1) == 0 and h.get("visible", -1) == 0,
+            message="Drag preview hint leaked after tab drag (gh-529 shape)",
         )
-        assert hint_state.get("visible", -1) == 0, (
-            f"Drag preview hint still VISIBLE after tab drag (gh-529 shape): {hint_state}"
-        )
+        assert hint_state.get("count") == 0
 
-        # Landing gate (same xfail pattern as the other drag tests): if the
-        # TABBED CON is still in the tree, the member never left it - the drag
-        # didn't engage Mutter's grab-op protocol and the leak assert above was
-        # vacuous for the in-drag path.
-        if count_cons(shell_proxy.get_tree_structure()) >= cons_before:
-            pytest.xfail(
-                "xdotool drag did not trigger Mutter grab-op drop-zone detection (forge-v9o7: no real grab headless)"
-            )
+        wait_for(
+            lambda: count_cons(shell_proxy.get_tree_structure()),
+            predicate=lambda n: n < cons_before,
+            message="the drop did not pull the member out of its TABBED CON",
+        )
