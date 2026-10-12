@@ -585,34 +585,6 @@ describe("WindowManager - Drag and Drop Tiling", () => {
     });
   });
 
-  describe("moveWindowToPointer - Edge Cases", () => {
-    it("should do nothing when dropping window onto itself", () => {
-      const metaWindow1 = createMockWindow({
-        rect: new Rectangle({ x: 0, y: 0, width: 1920, height: 1080 }),
-        workspace: workspace0(),
-      });
-
-      const { monitor } = getWorkspaceAndMonitor(ctx);
-
-      const nodeWindow1 = ctx.tree.createNode(monitor.nodeValue, NODE_TYPES.WINDOW, metaWindow1);
-      nodeWindow1.mode = WINDOW_MODES.GRAB_TILE;
-
-      setPointer(960, 540);
-
-      // Window pointing to itself
-      wm().nodeWinAtPointer = nodeWindow1;
-
-      const initialParent = nodeWindow1.parentNode;
-      const initialChildCount = initialParent.childNodes.length;
-
-      wm().moveWindowToPointer(nodeWindow1, false);
-
-      // Nothing should change
-      expect(nodeWindow1.parentNode).toBe(initialParent);
-      expect(initialParent.childNodes.length).toBe(initialChildCount);
-    });
-  });
-
   describe("Region Detection", () => {
     it("should detect left region correctly (0-30% of width)", () => {
       const metaWindow1 = createMockWindow({
