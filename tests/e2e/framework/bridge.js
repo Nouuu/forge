@@ -1058,19 +1058,19 @@
           const r = w.get_frame_rect();
           return [Math.round(r.x + r.width / 2), Math.round(r.y + r.height / 2)];
         };
-        const tr = tgt.get_frame_rect();
         const fx = { center: 0.5, left: 0.12, right: 0.88, top: 0.5, bottom: 0.5 };
         const fy = { center: 0.5, left: 0.5, right: 0.5, top: 0.12, bottom: 0.88 };
         const zone = o.zone in fx ? o.zone : "center";
-        const waypoints = [center(src)];
+        // Waypoints are lazy: the mid-drag render re-tiles the target, so aim at its live frame.
+        const waypoints = [() => center(src)];
         for (const v of o.vias || []) {
           const vw = pick(v);
-          if (vw !== src) waypoints.push(center(vw));
+          if (vw !== src) waypoints.push(() => center(vw));
         }
-        waypoints.push([
-          Math.round(tr.x + tr.width * fx[zone]),
-          Math.round(tr.y + tr.height * fy[zone]),
-        ]);
+        waypoints.push(() => {
+          const tr = tgt.get_frame_rect();
+          return [Math.round(tr.x + tr.width * fx[zone]), Math.round(tr.y + tr.height * fy[zone])];
+        });
 
         const display = global.display;
         const grabOp = Meta.GrabOp.MOVING_UNCONSTRAINED;
@@ -1103,7 +1103,8 @@
         };
 
         const trail = [];
-        for (const wp of waypoints) {
+        for (const wpFn of waypoints) {
+          const wp = wpFn();
           cur = [wp[0], wp[1], 0];
           wm._handleMoving(dragged); // creates/uses previewHint + live-preview moveWindowToPointer
           trail.push({

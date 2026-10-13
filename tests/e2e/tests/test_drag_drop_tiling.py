@@ -85,9 +85,15 @@ class TestDragDropBasic:
         assert isinstance(res, dict) and res.get("ok"), f"fuzzDragPath failed: {res}"
 
         wait_for_layout(shell_proxy, "VSPLIT")
-        by_id = {w["id"]: w for w in shell_proxy.get_windows()}
-        assert by_id[left_id]["rect"]["y"] > by_id[right_id]["rect"]["y"], (
-            "bottom-zone drop should place the dragged window below the target"
+
+        def dragged_is_below():
+            by_id = {w["id"]: w for w in shell_proxy.get_windows()}
+            return by_id[left_id]["rect"]["y"] > by_id[right_id]["rect"]["y"]
+
+        wait_for(
+            dragged_is_below,
+            predicate=bool,
+            message="bottom-zone drop should place the dragged window below the target",
         )
         _assert_settled(shell_proxy, wm_class)
 
