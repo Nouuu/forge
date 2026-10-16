@@ -229,7 +229,7 @@ describe("WindowManager - teardown fuzzer", () => {
       // already covers it — and reading it back off wm.allNodeWindows would not,
       // since disable() nulls the tree and the list comes back empty either way.
       // The manager's own grabOp / _draggedNodeWindow are not asserted: the instance
-      // is discarded on disable (extension.js:245), so its fields have no later
+      // is discarded on disable (`this.extWm = null` in disable()), so its fields have no later
       // reader and pinning them would test bookkeeping instead of an outcome.
 
       // T6 — teardown is IDEMPOTENT. extension.js calls extWm.disable() from its own
@@ -237,8 +237,8 @@ describe("WindowManager - teardown fuzzer", () => {
       // update racing a lock). The second pass runs against an already-null tree.
       //
       // Deliberately NOT tested here: enable() on this same instance. extension.js
-      // builds a fresh WindowManager on every enable (extension.js:104) and nulls it
-      // on disable (:245), so re-entering enable() on a torn-down manager is not a
+      // builds a fresh WindowManager on every enable (`this.extWm = new WindowManager(this)`) and nulls it
+      // on disable (`this.extWm = null`), so re-entering enable() on a torn-down manager is not a
       // path the shell can take — asserting it would pin a contract nothing relies
       // on, and would have had us "fix" a disabled flag that is never read again.
       expect(() => wm.disable(), `seed ${seed}: second disable() threw`).not.toThrow();

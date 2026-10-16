@@ -9,7 +9,8 @@ import { createWindowManagerFixture } from "../mocks/helpers/index.js";
  * drag, leaving the dragged node stuck in GRAB_TILE for the rest of the session.
  *
  * The fixture reproduces the construction order: keybindings is null at build
- * time (extension.js:112) and assigned afterwards (extension.js:113).
+ * time (`this.extWm = new WindowManager(this)` in enable()) and assigned afterwards
+ * (`this.keybindings = new Keybindings(this)`).
  */
 describe("forge-3jx9: kbd getter resolves keybindings assigned after construction", () => {
   let ctx;
@@ -25,10 +26,10 @@ describe("forge-3jx9: kbd getter resolves keybindings assigned after constructio
   const wm = () => ctx.windowManager;
 
   it("kbd reflects keybindings assigned after the WindowManager was built", () => {
-    expect(ctx.extension.keybindings).toBeNull(); // mirrors extension.js:112
+    expect(ctx.extension.keybindings).toBeNull(); // mirrors enable() before `new Keybindings(this)`
 
     const keybindings = { allowDragDropTile: vi.fn(() => true) };
-    ctx.extension.keybindings = keybindings; // mirrors extension.js:113
+    ctx.extension.keybindings = keybindings; // mirrors `this.keybindings = new Keybindings(this)`
 
     expect(wm().kbd).toBe(keybindings);
   });
