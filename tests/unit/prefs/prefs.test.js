@@ -19,7 +19,7 @@ function makeWindow(withHeaderBar) {
 }
 
 describe("ForgeExtensionPreferences.fillPreferencesWindow", () => {
-  it("adds Tiling, Appearance, Keyboard, Windows, Portability in order", () => {
+  it("adds the Tiling, Appearance, Keyboard, Windows (FloatingPage), Portability pages in order", () => {
     const { win, pages } = makeWindow(true);
     new ForgeExtensionPreferences().fillPreferencesWindow(win);
     expect(pages.map((p) => p.constructor)).toEqual([
@@ -34,18 +34,20 @@ describe("ForgeExtensionPreferences.fillPreferencesWindow", () => {
   });
 
   it("packs About into the header bar when one is found", () => {
-    const { win, bar } = makeWindow(true);
+    const { win, bar, pages } = makeWindow(true);
     bar.pack_end = vi.fn();
     const prefs = new ForgeExtensionPreferences();
     prefs.fillPreferencesWindow(win);
     expect(bar.pack_end).toHaveBeenCalledTimes(1);
     expect(prefs.aboutButton).toBeNull();
+    expect(pages[0]._children[0].header_suffix).toBeFalsy();
   });
 
   it("keeps About for the Tiling page when no header bar is found", () => {
-    const { win } = makeWindow(false);
+    const { win, pages } = makeWindow(false);
     const prefs = new ForgeExtensionPreferences();
     prefs.fillPreferencesWindow(win);
     expect(prefs.aboutButton).toBeInstanceOf(Gtk.Button);
+    expect(pages[0]._children[0].header_suffix).toBe(prefs.aboutButton);
   });
 });
