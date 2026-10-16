@@ -21,6 +21,7 @@ import Gtk from "gi://Gtk";
 
 import { ExtensionPreferences } from "resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js";
 
+import { Logger } from "./lib/shared/logger.js";
 import { KeyboardPage } from "./lib/prefs/keyboard.js";
 import { AppearancePage } from "./lib/prefs/appearance.js";
 import { SettingsPage, makeAboutButton, findHeaderBar } from "./lib/prefs/settings.js";
@@ -35,6 +36,7 @@ export default class ForgeExtensionPreferences extends ExtensionPreferences {
   /** @param {ConstructorParameters<typeof ExtensionPreferences>} args */
   constructor(...args) {
     super(...args);
+    Logger.init(this.settings); // prefs-lifecycle:G004
     const iconPath = this.dir.get_child("resources").get_child("icons").get_path();
     const display = Gdk.Display.get_default();
     if (display && iconPath) {
