@@ -327,6 +327,10 @@ msgstr ""
 msgid "Border size"
 msgstr ""
 
+#: lib/prefs/appearance.js lib/prefs/floating.js lib/prefs/widgets.js
+msgid "Reset to default"
+msgstr ""
+
 #: lib/prefs/appearance.js
 msgid "Border color"
 msgstr ""
@@ -371,6 +375,10 @@ msgstr ""
 
 #: lib/prefs/floating.js
 msgid "Title-only rule"
+msgstr ""
+
+#: lib/prefs/floating.js
+msgid "Could not save the window rules"
 msgstr ""
 
 #: lib/prefs/keyboard.js
@@ -803,23 +811,19 @@ msgid ""
 msgstr ""
 
 #: lib/prefs/widgets.js
-msgid "Clear shortcut"
-msgstr ""
-
-#: lib/prefs/widgets.js
-msgid "Reset to default"
-msgstr ""
-
-#: lib/prefs/widgets.js
-msgid "Remove Item"
-msgstr ""
-
-#: lib/prefs/widgets.js
 msgid "Saved"
 msgstr ""
 
 #: lib/prefs/widgets.js
 msgid "Invalid input"
+msgstr ""
+
+#: lib/prefs/widgets.js
+msgid "Clear shortcut"
+msgstr ""
+
+#: lib/prefs/widgets.js
+msgid "Remove Item"
 msgstr ""
 
 #: schemas/org.gnome.shell.extensions.forge.gschema.xml
@@ -1007,6 +1011,10 @@ msgstr ""
 
 #: schemas/org.gnome.shell.extensions.forge.gschema.xml
 msgid "Timestamp of last config file export (Unix epoch in seconds)"
+msgstr ""
+
+#: schemas/org.gnome.shell.extensions.forge.gschema.xml
+msgid "GNOME values Forge overrides while enabled, kept until restored"
 msgstr ""
 
 #: schemas/org.gnome.shell.extensions.forge.gschema.xml

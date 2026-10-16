@@ -24,3 +24,6 @@ export * from "./testFixtures.js";
 
 // Tree navigation and creation helpers
 export * from "./treeHelpers.js";
+
+// In-memory file store for ConfigManager round trips
+export * from "./fileStore.js";
