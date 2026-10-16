@@ -12,7 +12,7 @@ export default defineConfig({
       include: ["lib/prefs/**/*.js"],
       exclude: ["lib/prefs/metadata.js", "**/*.test.js", "**/mocks/**"],
       reportsDirectory: "./coverage/prefs",
-      thresholds: { lines: 78, branches: 84, functions: 75, statements: 78 }, // raise as coverage grows, never lower
+      thresholds: { lines: 84, branches: 87, functions: 80, statements: 84 }, // raise as coverage grows, never lower
     },
   },
 });
