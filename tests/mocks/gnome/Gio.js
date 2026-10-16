@@ -149,6 +149,14 @@ export class Settings extends withSignals() {
     this._settings.set(key, value);
   }
 
+  get_uint64(key) {
+    return this._settings.get(key) || 0;
+  }
+
+  set_uint64(key, value) {
+    this._settings.set(key, value);
+  }
+
   // Real get_value returns a GVariant; typed getters keep reading the plain value,
   // so a Variant stored through set_value is unpacked on the way in.
   get_value(key) {
