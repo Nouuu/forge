@@ -378,6 +378,10 @@ msgid "Title-only rule"
 msgstr ""
 
 #: lib/prefs/floating.js
+msgid "This window only, until it closes"
+msgstr ""
+
+#: lib/prefs/floating.js
 msgid "Could not save the window rules"
 msgstr ""
 
