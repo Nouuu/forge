@@ -213,6 +213,21 @@ describe("boxOrientation", () => {
   });
 });
 
+// prefs-lifecycle:G006: the explicit pin wins; the fallback serves builds without it.
+describe("isAlwaysOnAllWorkspaces", () => {
+  it("falls back to is_on_all_workspaces() when the pin getter is missing", async () => {
+    const Compat = await loadCompat("47.0");
+    expect(Compat.isAlwaysOnAllWorkspaces({ is_on_all_workspaces: () => true })).toBe(true);
+    expect(Compat.isAlwaysOnAllWorkspaces({ is_on_all_workspaces: () => false })).toBe(false);
+  });
+
+  it("returns the pin, not the effective value, when the getter exists", async () => {
+    const Compat = await loadCompat("47.0");
+    const win = { is_always_on_all_workspaces: () => false, is_on_all_workspaces: () => true };
+    expect(Compat.isAlwaysOnAllWorkspaces(win)).toBe(false);
+  });
+});
+
 // Mutter 50 dropped the X11 backend and meta_is_wayland_compositor with it.
 describe("isWaylandCompositor", () => {
   it("follows Meta.is_wayland_compositor() on GNOME 49", async () => {
