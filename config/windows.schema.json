@@ -13,7 +13,8 @@
       "description": "List of window override rules",
       "items": {
         "type": "object",
-        "required": ["wmClass", "mode"],
+        "required": ["mode"],
+        "anyOf": [{ "required": ["wmClass"] }, { "required": ["wmTitle"] }],
         "properties": {
           "wmClass": {
             "type": "string",
