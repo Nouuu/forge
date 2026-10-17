@@ -621,11 +621,11 @@ msgid "Configuration imported successfully"
 msgstr ""
 
 #: lib/prefs/portability.js
-msgid "Import failed"
+msgid "Configuration partially imported"
 msgstr ""
 
 #: lib/prefs/portability.js
-msgid "Configuration partially imported"
+msgid "Import failed"
 msgstr ""
 
 #: lib/prefs/settings.js
