@@ -1,6 +1,6 @@
 // theming-config:G012: pins the reset guards of AppearancePage._createColorOptionWidget
 // (forge-el84, forge-ijl3). The stylesheet has no .tiled rule, so defaultPalette.tiled is
-// all undefined. Each test was shown red under the mutation named in its describe.
+// all undefined. Each test was shown red under the mutation named in the comment above it.
 import { describe, it, expect, vi, afterEach } from "vitest";
 import Gtk from "gi://Gtk";
 import { AppearancePage } from "../../../lib/prefs/appearance.js";
@@ -32,6 +32,7 @@ function build() {
 }
 
 describe("forge-el84: border reset without a source rule", () => {
+  // Mutation: drop `if (borderDefault === undefined) return;` in the border reset.
   it("keeps the border width instead of writing undefinedpx", () => {
     const { page, sizeReset } = build();
     sizeReset.emit("clicked");
@@ -41,6 +42,7 @@ describe("forge-el84: border reset without a source rule", () => {
 });
 
 describe("forge-el84 / forge-ijl3: colour reset without a source rule", () => {
+  // Mutation: drop either typeof guard, on rgbaString in updateCssColors or on selectorColor.
   it("does not throw out of the clicked handler", () => {
     const { colorReset } = build();
     expect(() => colorReset.emit("clicked")).not.toThrow();
