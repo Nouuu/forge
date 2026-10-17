@@ -26,6 +26,7 @@ function importWith(seed, refuse = []) {
   settings.set_value = (key, v) => (refuse.includes(key) ? false : realSet(key, v));
   const kbdSettings = new Settings();
   kbdSettings.set_strv("window-focus-right", ["<Super>l"]);
+  kbdSettings.set_strv("window-focus-left", ["<Super>h"]);
   const toasts = [];
   const window = { add_toast: (t) => toasts.push(t.title) };
   const page = new PortabilityPage({ settings, kbdSettings, dir: new File("/mock"), window });
@@ -57,5 +58,21 @@ describe("a partly applied import is not a failure", () => {
       [KEYBINDINGS]: JSON.stringify(KEYS),
     });
     expect(toasts).toEqual(["Configuration imported successfully"]);
+  });
+
+  it("only keybindings.json, one binding rejected: partially imported", () => {
+    const keys = {
+      bindings: { "window-focus-left": "<Super>h", "window-focus-right": ["<Super>k"] },
+    };
+    expect(importWith({ [KEYBINDINGS]: JSON.stringify(keys) })).toEqual([
+      "Configuration partially imported",
+    ]);
+  });
+
+  it("only keybindings.json, a valid string key and a rejected binding: partially imported", () => {
+    const keys = { "mod-mask-mouse-tile": "Super", bindings: { "window-focus-left": "<Super>h" } };
+    expect(importWith({ [KEYBINDINGS]: JSON.stringify(keys) })).toEqual([
+      "Configuration partially imported",
+    ]);
   });
 });
