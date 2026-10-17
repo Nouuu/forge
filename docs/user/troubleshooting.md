@@ -52,7 +52,7 @@ journalctl -e -u gnome-shell        # jump to the end (Wayland)
 (`make log` wraps this during development.) Set `log-level` back to `0` when done.
 
 Preferences run in their own process, not in `gnome-shell`. To see their lines, follow
-`journalctl --user -f -o cat` and look for lines that start with `[Forge]`.
+`journalctl --user -f -o cat` and look for lines that contain `[Forge]`.
 
 ## Reporting a bug
 

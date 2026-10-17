@@ -165,5 +165,7 @@ installed file) or bump `cssTag`, then restart the shell.
 
 `_updateCss()` refuses to write when the profile copy could not be read or its parse
 reported errors, so the user's file is never replaced by the fallback. The cheatsheet
-overlay sets no inline `style` that would override a `.forge-cheatsheet*` class rule, so
-the stylesheet styles it.
+overlay sets no inline `style` over a property that `stylesheet.css` declares for a
+`.forge-cheatsheet*` class. The close button is the exception: it keeps an inline
+`color`, `border-radius` and `padding`, so a `.forge-cheatsheet-close` rule cannot change
+those three.

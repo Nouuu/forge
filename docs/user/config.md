@@ -25,11 +25,15 @@ In **Preferences → Portability**:
   `keybindings.json` (with "Last export" timestamp).
 - **Import** — reads those files back into GSettings ("Last import" timestamp).
 
-Import applies every value GSettings accepts and skips the others, such as a value of
-the wrong type or outside its range (a `window-gap-size` above 32, for example). The
-toast then says "Configuration partially imported"; "Import failed" means nothing was
-applied. With logging on in a debug build, each skipped key is logged as
-`Import rejected <key>`.
+Import applies every value GSettings accepts and skips one it refuses, such as a
+`window-gap-size` above 32. The toast then says "Configuration partially imported";
+"Import failed" means nothing was applied. With logging on in a debug build, each
+skipped key is logged as `Import rejected <key>`.
+
+Import does not check a value's type, so keep each value in the type an export writes.
+A wrong type or a negative number can stop the import of that file at that key: the
+keys after it are not applied and no `Import rejected` line is logged. It can also be
+applied as another value: the text `"false"` for a switch turns it on.
 
 On startup, Forge's config sync imports any present files automatically, so dropping
 a known-good `settings.json`/`keybindings.json` into the config dir and restarting

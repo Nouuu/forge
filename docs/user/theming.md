@@ -39,10 +39,10 @@ it does not touch the stylesheet. Changing a colour from **Preferences → Appea
 does reload it live, because prefs writes the `css-updated` key the extension
 watches.
 
-If Forge cannot read your stylesheet (for example a file left owned by root after a
-`sudo` edit), it draws with the bundled default and does not save colour changes from
-Preferences, so your file is never overwritten. Fix the file's owner, then restart the
-shell.
+If Forge cannot read your stylesheet (a file without read permission for you), the
+shell loads none of Forge's styling. Preferences shows the bundled default colours and
+does not save colour changes, so your file is never overwritten. Make the file readable
+again, then restart the shell.
 
 Selectors Forge exposes (see the bundled `stylesheet.css` for the full set):
 
