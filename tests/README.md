@@ -26,6 +26,7 @@ tests/
 ├── setup.js                     # Global test setup (mocks GNOME APIs)
 ├── mocks/
 │   ├── gnome/                   # GNOME API mocks (Meta, Gio, GLib, etc.)
+│   ├── metadata.js              # Stub for the generated lib/prefs/metadata.js
 │   └── helpers/
 │       ├── index.js             # Central export for all test helpers
 │       ├── mockWindow.js        # Helper to create mock windows
@@ -78,9 +79,12 @@ The mocks simulate GNOME Shell APIs so tests run in Node.js without GNOME Shell:
 Global mocks available: `global.display`, `global.get_pointer()`, `global.stage`.
 
 `tests/setup.js` also mocks the prefs resource module (`gettext` returns its string,
-`ExtensionPreferences` gives a mock `dir` and `getSettings`) and `lib/prefs/metadata.js`.
-`make metadata` generates that file and git ignores it, so a fresh clone needs the mock to
-import `lib/prefs`.
+`ExtensionPreferences` gives a mock `dir` and `getSettings`). `make metadata` generates
+`lib/prefs/metadata.js` and git ignores it, so a fresh clone and `make unit-test-docker`
+lack it. A `vi.mock` cannot stand in for it, since Vitest resolves the import first. Instead
+`test.alias` in `vitest.config.js` points the `./metadata.js` import at
+`tests/mocks/metadata.js`, for both coverage runs, and the suite never reads the generated
+file.
 
 The Gtk, Adw and Gdk mocks follow GTK where a prefs bug could hide: a property write
 notifies synchronously and only on a real change, `set_text` with the same text emits no

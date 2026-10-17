@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
@@ -5,6 +6,10 @@ export default defineConfig({
     globals: true,
     environment: "node",
     setupFiles: ["./tests/setup.js"],
+    // close-spec-gaps:T058: lib/prefs/metadata.js is generated, absent on a fresh clone
+    alias: {
+      "./metadata.js": fileURLToPath(new URL("./tests/mocks/metadata.js", import.meta.url)),
+    },
     include: ["tests/**/*.test.js", "lib/**/*.test.js"],
     coverage: {
       provider: "v8",
