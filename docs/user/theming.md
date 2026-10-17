@@ -40,9 +40,9 @@ does reload it live, because prefs writes the `css-updated` key the extension
 watches.
 
 If Forge cannot read your stylesheet (a file without read permission for you), the
-shell loads none of Forge's styling. Preferences shows the bundled default colours and
-does not save colour changes, so your file is never overwritten. Make the file readable
-again, then restart the shell.
+shell loads the bundled default stylesheet instead. Preferences shows the bundled default
+colours and does not save colour changes, so your file is never overwritten. Make the
+file readable again, then restart the shell.
 
 Selectors Forge exposes (see the bundled `stylesheet.css` for the full set):
 
