@@ -87,8 +87,16 @@ A fullscreen window keeps `mode === TILE` (fullscreen doesn't change node mode),
 - `apply()` must **filter `is_fullscreen`** out of its tiled children, or it
   re-slices the fullscreen window to a split rect.
 - `apply()` also skips a tile that keeps its maximize (`_keepsMaximize`): the lone
-  tiled window (forge-dyt2), or any tile while `auto-unmaximize-for-tiling` is off
-  (close-spec-gaps:N11). `move()` is the render's only unmaximizer.
+  tiled window, any axis (forge-dyt2), or, while `auto-unmaximize-for-tiling` is off, a
+  tile maximized on both axes (close-spec-gaps:N11). `move()` is the render's only
+  unmaximizer.
+- `_shouldRejectExternalMaximize` (Bug #461, on `size-changed`/`position-changed`)
+  unmaximizes every maximized tile `_keepsMaximize` does not keep, so the signal path
+  and the render share one definition of a kept maximize: a kept window survives its
+  next size change, and a one-axis edge snap beside tiled windows is rejected whatever
+  the setting.
+- A swap (`swapPairs`, through `move()`) and a keyboard move (`tree.move`, through
+  `_finishMove` or `move()`) unmaximize the windows they move, a kept one included.
 - `handleMaximizeOnSingle()` (`window.js`) maximizes the sole tiled window per
   monitor — but must **skip a lone fullscreen window** (it reads as not-maximized).
 - `updateDecorationLayout()` (`window.js`) hides decorations on monitors with a

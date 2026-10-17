@@ -4,7 +4,7 @@ import {
   createTiledWindow,
   createWindowManagerFixture,
 } from "../mocks/helpers/index.js";
-import { WindowType } from "../mocks/gnome/Meta.js";
+import { MaximizeFlags, WindowType } from "../mocks/gnome/Meta.js";
 import { WINDOW_MODES } from "../../lib/extension/window.js";
 
 /**
@@ -20,9 +20,11 @@ import { WINDOW_MODES } from "../../lib/extension/window.js";
  * forge-dyt2 kept only a lone tile maximized.
  *
  * Fix: one decision, at render time, once processFloats knows the new window tiles.
- * The track-time handler is gone; the render's keep-maximize predicate
- * (_keepsMaximize, was _isLoneMaximizedTile) also keeps a maximized tile while the
- * setting is off. A new maximize beside tiled windows is still rejected (Bug #461).
+ * The track-time handler is gone. _keepsMaximize (was _isLoneMaximizedTile) keeps a
+ * lone tile's maximize and, while the setting is off, a full (both-axis) maximize.
+ * _shouldRejectExternalMaximize (Bug #461) rejects every other maximized, non-fullscreen
+ * tile, so a kept window survives its next size change and a one-axis edge snap is
+ * still re-tiled. A keyboard move or a swap still unmaximizes the window it moves.
  */
 describe("close-spec-gaps:N11: auto-unmaximize-for-tiling decides the neighbour's maximize", () => {
   let ctx;
@@ -118,12 +120,61 @@ describe("close-spec-gaps:N11: auto-unmaximize-for-tiling decides the neighbour'
     expect(metaWindow.is_maximized()).toBe(true);
   });
 
-  it("off: a new maximize beside a tiled window is still rejected (Bug #461)", () => {
+  // updateMetaPositionSize ends with the decoration layout; stub the UI bits.
+  function sizeChanged(metaWindow) {
+    const wm = ctx.windowManager;
+    vi.spyOn(wm.decorationManager, "updateBorderLayout").mockImplementation(() => {});
+    vi.spyOn(wm.decorationManager, "updateDecorationLayout").mockImplementation(() => {});
+    wm.updateMetaPositionSize(metaWindow, "size-changed");
+  }
+
+  it("off: a kept maximize survives its next size change", () => {
     setup({ "auto-unmaximize-for-tiling": false });
-    const { metaWindow, nodeWindow } = maximizedTile();
+    const { metaWindow } = maximizedTile();
+    const node = openWindow();
+    ctx.display.get_focus_window.mockReturnValue(node.nodeValue);
+    sizeChanged(metaWindow);
+    expect(metaWindow.is_maximized()).toBe(true);
+  });
+
+  it("on: a maximize beside a tiled window is rejected at its size change (Bug #461)", () => {
+    setup({ "auto-unmaximize-for-tiling": true });
+    const { metaWindow } = maximizedTile();
     metaWindow.unmaximize();
-    openWindow();
+    const node = openWindow();
     metaWindow.maximize();
-    expect(ctx.windowManager._shouldRejectExternalMaximize(nodeWindow, metaWindow)).toBe(true);
+    ctx.display.get_focus_window.mockReturnValue(node.nodeValue);
+    sizeChanged(metaWindow);
+    expect(metaWindow.get_maximized()).toBe(0);
+  });
+
+  it("off: a one-axis snap beside a tiled window is rejected at its size change (Bug #461)", () => {
+    setup({ "auto-unmaximize-for-tiling": false });
+    const { metaWindow } = maximizedTile();
+    metaWindow.unmaximize();
+    const node = openWindow();
+    metaWindow.maximize(MaximizeFlags.VERTICAL);
+    ctx.display.get_focus_window.mockReturnValue(node.nodeValue);
+    sizeChanged(metaWindow);
+    expect(metaWindow.get_maximized()).toBe(0);
+  });
+
+  it("off: a lone one-axis snap is re-tiled once a new window tiles", () => {
+    setup({ "auto-unmaximize-for-tiling": false });
+    const { metaWindow } = maximizedTile();
+    metaWindow.unmaximize();
+    metaWindow.maximize(MaximizeFlags.VERTICAL);
+    openWindow();
+    expect(metaWindow.get_maximized()).toBe(0);
+  });
+
+  it.each(["Move", "Swap"])("off: the %s command unmaximizes a kept window", (name) => {
+    setup({ "auto-unmaximize-for-tiling": false });
+    const { metaWindow } = maximizedTile();
+    openWindow();
+    expect(metaWindow.is_maximized()).toBe(true);
+    ctx.display.get_focus_window.mockReturnValue(metaWindow);
+    ctx.windowManager.command({ name, direction: name === "Move" ? "down" : "right" });
+    expect(metaWindow.get_maximized()).toBe(0);
   });
 });

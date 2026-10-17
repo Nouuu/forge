@@ -89,8 +89,10 @@ Keyboard.
 
 **Unmaximize windows when tiling** (`auto-unmaximize-for-tiling`, on by default, on the
 Tiling page of Preferences) unmaximizes the maximized tiled windows of a monitor when a
-new window tiles there, so the new window gets its share. Turn it off to keep them
-maximized.
+new window tiles there, so the new window gets its share. Turn it off and a window you
+fully maximized stays maximized, also when its size changes later. Even off, a window
+snapped to a screen edge (maximized on one axis only) is still re-tiled beside other
+tiled windows, and the swap and move commands still unmaximize the windows they move.
 
 ## Float vs tile
 

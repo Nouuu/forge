@@ -12,8 +12,9 @@ import { Settings } from "../mocks/gnome/Gio.js";
  * would do nothing).
  *
  * close-spec-gaps:N09: the switch subtitle said a maximized window is unmaximized before
- * it joins the tiling tree, but handleUnmaximizeForTiling unmaximizes the OTHER maximized
- * windows of the monitor when a new window tiles there. Fix: a subtitle that says so.
+ * it joins the tiling tree, but the setting is about the OTHER maximized windows of the
+ * monitor when a new window tiles there (decided at render time, close-spec-gaps:N11).
+ * Fix: a subtitle that says so.
  */
 let mockProduction = false;
 vi.mock("../../lib/shared/settings.js", () => ({
