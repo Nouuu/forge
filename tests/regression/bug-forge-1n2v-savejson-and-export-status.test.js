@@ -43,6 +43,21 @@ describe("Bug forge-1n2v/forge-q9e5: save/export/import report real success", ()
       );
       expect(cm._saveJsonConfig(f, { a: 1 }, "settings.json")).toBe(false);
     });
+
+    it("returns false and never writes when the file has no parent path", () => {
+      const replace = vi.fn(() => [true, null]);
+      const f = fileWith(replace);
+      f.get_parent = () => null;
+      expect(cm._saveJsonConfig(f, { a: 1 }, "settings.json")).toBe(false);
+      expect(replace).not.toHaveBeenCalled();
+    });
+
+    it("returns false and never writes when mkdir_with_parents fails", () => {
+      vi.spyOn(GLib, "mkdir_with_parents").mockReturnValue(-1);
+      const replace = vi.fn(() => [true, null]);
+      expect(cm._saveJsonConfig(fileWith(replace), { a: 1 }, "settings.json")).toBe(false);
+      expect(replace).not.toHaveBeenCalled();
+    });
   });
 
   describe("ConfigSync propagates failures", () => {
