@@ -153,3 +153,17 @@ CSS parser in `lib/css/` and exposes `getCssProperty`/`setCssProperty`.
 Users override appearance at
 `~/.config/forge/stylesheet/forge/stylesheet.css`; `patchCss()` syncs bundled
 defaults into the user profile, and a GSettings trigger reloads the stylesheet.
+
+Every build, debug included, reads and writes that profile copy. The installed
+`stylesheet.css` is only read, as a fallback, and never written. `patchCss()` runs when
+`cssTag` (`theme.js`) is above the stored `css-last-update`, and keeps the copy it
+replaces as `stylesheet.css.<tag>.bak`, one per tag.
+
+**Dev builds:** after `make dev`, an edit to the source `stylesheet.css` does not show,
+because the shell loads the profile copy. Delete that copy (it is re-seeded from the
+installed file) or bump `cssTag`, then restart the shell.
+
+`_updateCss()` refuses to write when the profile copy could not be read or its parse
+reported errors, so the user's file is never replaced by the fallback. The cheatsheet
+overlay sets no inline `style` that would override a `.forge-cheatsheet*` class rule, so
+the stylesheet styles it.

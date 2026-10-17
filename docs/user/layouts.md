@@ -85,6 +85,13 @@ sizes) puts everything back to an even split.
 **`window-golden-ratio` has no default chord** — assign one in Preferences →
 Keyboard.
 
+## Maximized windows
+
+**Unmaximize windows when tiling** (`auto-unmaximize-for-tiling`, on by default, on the
+Tiling page of Preferences) unmaximizes the maximized tiled windows of a monitor when a
+new window tiles there, so the new window gets its share. Turn it off to keep them
+maximized.
+
 ## Float vs tile
 
 Any window can be pulled out of the tree to **float**, or floated for its whole app

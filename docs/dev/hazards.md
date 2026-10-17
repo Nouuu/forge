@@ -188,8 +188,10 @@ covered on its own and nobody had written the transition BETWEEN two of them:
 - **Seeded e2e fuzzer** (`tests/e2e/fuzz/`) — stateless step executor with an
   oracle bundle (liveness eval, `fuzzCheckInvariants`, log scan) after every step;
   ddmin shrinker for repros. Invariant list: `tests/e2e/README.md`.
-- **Coverage ratchet** (`vitest.config.js`) — a floor below the measured baseline;
-  raise, never lower.
+- **Coverage ratchet** (`npm run test:coverage`, blocking in CI): two runs, two floors.
+  `vitest.config.js` holds `lib/`, `extension.js` and `prefs.js` to 90 / 85 / 90 / 90;
+  `vitest.prefs.config.js` holds `lib/prefs/` to its own floor. Each floor sits below the
+  measured baseline: raise, never lower. See `tests/README.md`.
 - **CSS property round-trip tests** (`tests/unit/css/roundtrip.test.js`) — seeded
   in-grammar stylesheets assert `stringify(parse(x))` is a fixed point (the
   `forge-y3jy` data-loss cluster).

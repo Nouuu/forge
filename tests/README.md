@@ -30,7 +30,8 @@ tests/
 │       ├── index.js             # Central export for all test helpers
 │       ├── mockWindow.js        # Helper to create mock windows
 │       ├── treeHelpers.js       # Tree navigation and creation helpers
-│       └── testFixtures.js      # Complete test fixture factories
+│       ├── testFixtures.js      # Complete test fixture factories
+│       └── fileStore.js         # In-memory Gio.File store for ConfigManager round trips
 ├── unit/                        # Unit tests by module
 ├── integration/                 # Full workflow tests
 └── regression/                  # Bug regression tests
@@ -76,34 +77,75 @@ The mocks simulate GNOME Shell APIs so tests run in Node.js without GNOME Shell:
 
 Global mocks available: `global.display`, `global.get_pointer()`, `global.stage`.
 
+`tests/setup.js` also mocks the prefs resource module (`gettext` returns its string,
+`ExtensionPreferences` gives a mock `dir` and `getSettings`) and `lib/prefs/metadata.js`.
+`make metadata` generates that file and git ignores it, so a fresh clone needs the mock to
+import `lib/prefs`.
+
+The Gtk, Adw and Gdk mocks follow GTK where a prefs bug could hide: a property write
+notifies synchronously and only on a real change, `set_text` with the same text emits no
+`changed`, and a `SpinButton` clamps to its range.
+
+### In-memory file store
+
+`installFileStore(seed)` (`tests/mocks/helpers/fileStore.js`) spies on `Gio.File.prototype`
+so the real `ConfigManager` reads and writes a map keyed by path. `seed` maps a path to its
+text; the returned `files` is that map, and `failWrites()` makes every later write throw. A
+path that does not end in `.json` reads as an existing directory. Call
+`vi.restoreAllMocks()` in `afterEach`.
+
 ### Known mock quirks
 
-- `Gio.Settings` `set_*` does not emit `changed::<key>`; a test emits it by hand.
+- `Gio.Settings` has no schema. Its setters never refuse a value, and neither they nor
+  `reset` emit `changed::<key>`: a test emits it by hand.
+- `set_value`, `set_string` and `set_strv` return true. To test a refused write (a value
+  outside its gschema range), stub the setter to return false.
+- `get_default_value` returns the current value, and `reset` drops the stored one, so a
+  getter then returns its type's zero (`false`, `0`, `""`, `[]`), not the gschema default.
+- `bind` reads a number as a number and any other value as a boolean.
+- `GLib.idle_add` runs its callback at once and returns 0, so no idle source stays
+  pending. `timeout_add` never runs its callback and returns a random id.
 - `Gio.File` stores no contents: `load_contents` returns empty bytes and `copy` or
-  `replace_contents` keep nothing. A test that reads back what was copied keeps its own
-  store (see `bug-theming-config-g014-bak-survives-bumps.test.js`).
+  `replace_contents` keep nothing. A `ConfigManager` round trip uses the file store above;
+  a test that reads back what was copied keeps its own store (see
+  `bug-theming-config-g014-bak-survives-bumps.test.js`).
 
 ### Expanding Mocks
 
 When tests need missing functionality, add it to the appropriate mock file. Keep mocks minimal - only implement what tests actually use.
 
-## What's Excluded From Coverage
+## Coverage: two runs
 
-Coverage measures `lib/**/*.js`. The `coverage.exclude` list in `vitest.config.js` drops
-four source paths, all UI-only — they would need a full St/Clutter or GTK4 stack mocked
-for little benefit:
+`npm run test:coverage` runs Vitest twice, and fails when either run misses its
+thresholds. CI runs the same script.
 
-- **`lib/prefs/**`** - Preferences UI, not testable without GTK4.
-- **`lib/extension/cheatsheet.js`** - St/Clutter overlay widgets.
-- **`lib/extension/indicator.js`** - Quick Settings panel integration.
-- **`lib/extension/extension-theme-manager.js`** - stylesheet management.
+| Run | Config | Measures | Lines / branches / functions / statements |
+|-----|--------|----------|-------------------------------------------|
+| Global | `vitest.config.js` | `lib/**/*.js`, `extension.js`, `prefs.js`, from every test | 90 / 85 / 90 / 90 |
+| Prefs | `vitest.prefs.config.js` | `lib/prefs/**/*.js`, from `tests/unit/prefs/` and `tests/regression/` only | 87 / 89 / 84 / 87 |
 
-(The list also carries `**/*.test.js` and `**/mocks/**`, which keep the test code itself
-out of the report.)
+Vitest 2.1.9 checks every file of the coverage map against the global thresholds, so
+`lib/prefs` gets its own run and its own floor. The prefs report lands in
+`coverage/prefs/`. Both floors sit below the measured values: raise them as coverage
+grows, never lower them to make a red build pass.
+
+Run one alone:
+
+```bash
+npx vitest run --coverage                                   # global
+npx vitest run --coverage --config vitest.prefs.config.js   # prefs
+```
+
+Excluded from the reports, besides the test files and `tests/mocks/`:
+
+- **`lib/prefs/**`** from the global run, because the prefs run measures it.
+- **`lib/prefs/metadata.js`** from the prefs run: `make metadata` generates it.
+- **`lib/extension/extension-theme-manager.js`** from the global run: UI-only stylesheet
+  loading into the St theme.
 
 Everything else is expected to be covered. `keybindings.js` in particular IS tested
-(`tests/unit/keybindings/`, 52 tests) — its drag-modifier and dispatch logic is real
-logic; only the `Main.wm` registration glue is inherently untestable.
+(`tests/unit/keybindings/`): its drag-modifier and dispatch logic is real logic; only the
+`Main.wm` registration glue is inherently untestable.
 
 ## Troubleshooting
 

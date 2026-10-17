@@ -6,12 +6,19 @@ rules for common apps (JetBrains splashes, Conky, ddterm, GNOME setup dialogs, �
 
 ## Two ways to add a rule
 
-- **Preferences → Windows** — "Add Floating Window": type the window class (and
-  optionally a title); Forge saves the rule. This is the easy path.
+- **Preferences, Windows page**: under "Add Floating Window", type a window class, a
+  title, or both; Forge saves the rule. This is the easy path.
 - **Toggle shortcuts** — the per-window and per-class float toggles (see
   [keybindings](keybindings.md#common-defaults)) write a rule for you.
 
 You can also edit the file directly.
+
+The **Floating Windows** list on that page shows each float rule. A rule set by the
+per-window toggle reads "This window only, until it closes", and a rule with no class
+reads "Title-only rule". **Reset to default** (the undo button) puts back the bundled
+float rules and drops the float rules you added; your tile rules stay. Saving from the
+page keeps the rest of `windows.json`, such as `$schema`. If the file cannot be written,
+a toast says "Could not save the window rules" and the list does not change.
 
 ## The file: `~/.config/forge/config/windows.json`
 

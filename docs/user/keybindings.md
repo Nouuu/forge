@@ -76,6 +76,12 @@ Keyboard warns you and names the actions it collides with. The binding is still
 applied — Forge doesn't block it — so you can resolve the conflict whichever way
 you prefer.
 
+## Resize step
+
+The resize shortcuts (`window-resize-*`, listed in the cheatsheet) move a window edge by
+**Resize step (px)** (`resize-amount`, default 15, 1 to 100), on the Keyboard page of
+Preferences.
+
 ## Drag to tile
 
 Dragging a window can tile it (see [layouts.md](layouts.md#drag-to-tile)). The

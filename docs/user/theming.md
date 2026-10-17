@@ -14,10 +14,11 @@ group has a **Reset** to restore the gschema default.
 
 ## Gaps
 
-- `window-gap-size` (default 4) — space between tiled windows; adjustable live with
-  the gap inc/dec shortcuts (`window-gap-size-increment` is the step).
+- `window-gap-size` (default 4, 0 to 32): space between tiled windows; adjustable live
+  with the gap inc/dec shortcuts (`window-gap-size-increment`, 0 to 32, is the step).
 - `window-gap-hidden-on-single` — hide the gap when a workspace has one window.
-- `window-margin-{top,bottom,left,right}` — reserve screen-edge space for panels/docks.
+- `window-margin-{top,bottom,left,right}` (0 to 100): reserve screen-edge space for
+  panels/docks.
 
 ## Custom CSS
 
@@ -38,6 +39,11 @@ it does not touch the stylesheet. Changing a colour from **Preferences → Appea
 does reload it live, because prefs writes the `css-updated` key the extension
 watches.
 
+If Forge cannot read your stylesheet (for example a file left owned by root after a
+`sudo` edit), it draws with the bundled default and does not save colour changes from
+Preferences, so your file is never overwritten. Fix the file's owner, then restart the
+shell.
+
 Selectors Forge exposes (see the bundled `stylesheet.css` for the full set):
 
 | Selector | What it styles |
@@ -49,6 +55,7 @@ Selectors Forge exposes (see the bundled `stylesheet.css` for the full set):
 | `.window-tabbed-tab`, `.window-tabbed-tab-active`, `.window-tabbed-tab-icon`, `.window-tabbed-tab-close` | Tab strip elements |
 | `.window-tilepreview-tiled` / `-stacked` / `-tabbed` / `-swap` | Drag/drop preview hints |
 | `.tiled`, `.split`, `.stacked`, `.tabbed`, `.floated` | Palette classes (color/opacity) |
+| `.forge-cheatsheet`, `.forge-cheatsheet-category`, `.forge-cheatsheet-row`, `.forge-cheatsheet-key`, `.forge-cheatsheet-desc` | Keybinding cheatsheet overlay (`Super+Shift+/`) |
 
 Border width, color, radius, and opacity are plain CSS properties; colors accept
 `rgba(...)` or hex.

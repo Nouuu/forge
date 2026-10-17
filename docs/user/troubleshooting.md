@@ -36,6 +36,9 @@ gsettings set org.gnome.shell.extensions.forge logging-enabled true
 gsettings set org.gnome.shell.extensions.forge log-level 5   # 0=OFF … 5=DEBUG 6=TRACE 7=ALL
 ```
 
+A debug build also shows both settings in Preferences: the **Logger** group at the end of
+the Tiling page has **Enable logging** and **Log level**.
+
 Then watch the logs:
 
 ```bash
@@ -47,6 +50,9 @@ journalctl -e -u gnome-shell        # jump to the end (Wayland)
 ```
 
 (`make log` wraps this during development.) Set `log-level` back to `0` when done.
+
+Preferences run in their own process, not in `gnome-shell`. To see their lines, follow
+`journalctl --user -f -o cat` and look for lines that start with `[Forge]`.
 
 ## Reporting a bug
 
