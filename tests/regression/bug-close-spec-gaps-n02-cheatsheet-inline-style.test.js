@@ -1,6 +1,4 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { readFileSync } from "node:fs";
-import { parse } from "../../lib/css/index.js";
 import { Cheatsheet } from "../../lib/extension/cheatsheet.js";
 import { installGnomeGlobals } from "../mocks/helpers/index.js";
 
@@ -13,17 +11,23 @@ import { installGnomeGlobals } from "../mocks/helpers/index.js";
  * no effect (FR-015).
  *
  * Fix: those inline declarations are removed, for every classed actor the cheatsheet builds.
- * Inline properties no class rule declares stay (moving them would need a cssTag bump).
+ *
+ * close-spec-gaps:N06: the close button kept an inline color, border-radius and padding. The
+ * N02 check only looked at properties that stylesheet.css declares, and it had no
+ * .forge-cheatsheet-close rule, so a user rule for the button had no effect (FR-015).
+ *
+ * Fix: the three declarations move to a .forge-cheatsheet-close rule and cssTag goes from 38
+ * to 39, so each user copy is replaced on the next start and kept as stylesheet.css.38.bak
+ * (theming-config:G014). The check is now that no actor with a forge-cheatsheet* class sets
+ * an inline style, whatever the stylesheet declares. Actors with no forge class keep theirs.
  */
-const css = readFileSync(new URL("../../stylesheet.css", import.meta.url), "utf8");
-
 const walk = (actor, out = []) => {
   out.push(actor);
   for (const child of actor.get_children?.() ?? []) walk(child, out);
   return out;
 };
 
-describe("close-spec-gaps:N02: no cheatsheet actor sets an inline property its class rule declares", () => {
+describe("close-spec-gaps:N02/N06: no forge-cheatsheet actor sets an inline style", () => {
   let ctx;
 
   beforeEach(() => {
@@ -34,43 +38,29 @@ describe("close-spec-gaps:N02: no cheatsheet actor sets an inline property its c
     ctx.cleanup();
   });
 
-  it("every classed actor, shorthands included", () => {
-    const declaredBy = new Map();
-    for (const r of parse(css).stylesheet.rules) {
-      if (r.type !== "rule") continue;
-      for (const sel of r.selectors) {
-        if (!/^\.forge-cheatsheet[\w-]*$/.test(sel)) continue;
-        declaredBy.set(
-          sel.slice(1),
-          r.declarations.filter((d) => d.type === "declaration").map((d) => d.property)
-        );
-      }
-    }
-    expect(declaredBy.size).toBeGreaterThan(0);
-
+  it("overlay, category section and backdrop", () => {
     const cheatsheet = new Cheatsheet({ kbdSettings: { list_keys: () => [] } });
     cheatsheet._buildOverlay();
-    const actors = [
+    cheatsheet._ensureBackdrop();
+    const classed = [
       ...walk(cheatsheet._overlay),
       ...walk(
         cheatsheet._createCategorySection("Cat", [{ shortcut: "Super+a", description: "Do a" }])
       ),
-    ];
+      ...walk(cheatsheet._backdrop),
+    ].filter((a) => /(^|\s)forge-cheatsheet/.test(a.style_class ?? ""));
 
-    const clashes = [];
-    for (const actor of actors) {
-      const inline = (actor.style ?? "")
-        .split(";")
-        .map((p) => p.split(":")[0].trim())
-        .filter(Boolean);
-      for (const cls of (actor.style_class ?? "").split(/\s+/)) {
-        for (const prop of declaredBy.get(cls) ?? []) {
-          for (const q of inline) {
-            if (q === prop || q.startsWith(`${prop}-`)) clashes.push(`${cls}: ${q}`);
-          }
-        }
-      }
-    }
-    expect(clashes).toEqual([]);
+    expect(new Set(classed.map((a) => a.style_class))).toEqual(
+      new Set([
+        "forge-cheatsheet",
+        "forge-cheatsheet-close",
+        "forge-cheatsheet-category",
+        "forge-cheatsheet-row",
+        "forge-cheatsheet-key",
+        "forge-cheatsheet-desc",
+        "forge-cheatsheet-backdrop",
+      ])
+    );
+    expect(classed.filter((a) => a.style).map((a) => `${a.style_class}: ${a.style}`)).toEqual([]);
   });
 });

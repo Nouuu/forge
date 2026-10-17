@@ -153,6 +153,12 @@
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
 }
 
+.forge-cheatsheet-close {
+  color: #cccccc;
+  border-radius: 6px;
+  padding: 2px 4px;
+}
+
 .forge-cheatsheet-category {
   font-size: 13px;
   font-weight: bold;

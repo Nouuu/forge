@@ -28,10 +28,10 @@ Forge loads a user stylesheet from:
 ~/.config/forge/stylesheet/forge/stylesheet.css
 ```
 
-It's seeded from the bundled default on first run (and re-synced by `patchCss` on
-update).
-Each re-sync first saves your previous file next to it as `stylesheet.css.<N>.bak`,
-where `<N>` is the stylesheet version it replaces, so older backups are kept.
+It's seeded from the bundled default on first run.
+An upgrade that bumps the stylesheet version replaces your copy with the new default on
+the next start. Your previous file is kept next to it as `stylesheet.css.<N>.bak`, where
+`<N>` is the version it replaces, so older backups are kept.
 
 **A hand-edited stylesheet needs a shell restart** (`Alt+F2` → `r` on X11, or log
 out/in on Wayland). `Super+Shift+r` reloads window rules and portable config only —
@@ -55,7 +55,7 @@ Selectors Forge exposes (see the bundled `stylesheet.css` for the full set):
 | `.window-tabbed-tab`, `.window-tabbed-tab-active`, `.window-tabbed-tab-icon`, `.window-tabbed-tab-close` | Tab strip elements |
 | `.window-tilepreview-tiled` / `-stacked` / `-tabbed` / `-swap` | Drag/drop preview hints |
 | `.tiled`, `.split`, `.stacked`, `.tabbed`, `.floated` | Palette classes (color/opacity) |
-| `.forge-cheatsheet`, `.forge-cheatsheet-category`, `.forge-cheatsheet-row`, `.forge-cheatsheet-key`, `.forge-cheatsheet-desc` | Keybinding cheatsheet overlay (`Super+Shift+/`) |
+| `.forge-cheatsheet`, `.forge-cheatsheet-close`, `.forge-cheatsheet-category`, `.forge-cheatsheet-row`, `.forge-cheatsheet-key`, `.forge-cheatsheet-desc` | Keybinding cheatsheet overlay (`Super+Shift+/`) |
 
 Border width, color, radius, and opacity are plain CSS properties; colors accept
 `rgba(...)` or hex.

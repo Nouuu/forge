@@ -8,9 +8,9 @@ import { readFileSync } from "node:fs";
  * class, so the rule styled nothing.
  *
  * Fix: the rule is deleted (no cssTag bump: a dead rule in a user copy is harmless, a bump
- * would overwrite the copy). forge-cheatsheet-close and forge-cheatsheet-backdrop have no
- * rule on purpose: kept as hooks (the backdrop is the locator of test_cheatsheet_dismiss.py,
- * the close class lets users theme the button).
+ * would overwrite the copy). forge-cheatsheet-backdrop has no rule on purpose: it is kept as
+ * the locator of test_cheatsheet_dismiss.py. forge-cheatsheet-close got its rule with
+ * close-spec-gaps:N06.
  */
 const css = readFileSync(new URL("../../stylesheet.css", import.meta.url), "utf8");
 const js = readFileSync(new URL("../../lib/extension/cheatsheet.js", import.meta.url), "utf8");
