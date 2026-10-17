@@ -6,7 +6,7 @@ vertically, landscape monitors split horizontally.
 
 ## Where new windows open
 
-`new-window-placement` (Preferences → general settings):
+`new-window-placement` (Preferences, Tiling page, Behavior group):
 
 - **`pointer`** (default) — a new window tiles on the monitor with the pointer.
 - **`window-actual`** — a new window tiles on the monitor it actually opened on
@@ -34,9 +34,14 @@ media) — or as a workaround for the vertical-monitor limitation below.
   workspace itself goes away. `monitor-skip-tile` is *not* index-tracked: unplugging a
   monitor renumbers the ones above it, so check that list after a display change.
 
-Hot-plugging a monitor is **not** handled by a dedicated signal: Forge listens to
-`workareas-changed`, and there is no code path that adds or removes monitor nodes for
-a display change. The tree recovers only incidentally — a new window that cannot find
-its `mo{m}ws{n}` node triggers a full `reloadTree()`. If a layout looks wrong after a
-display change, reload with `Super+Shift+r` and see
-[troubleshooting.md](troubleshooting.md).
+Forge handles a monitor hot-plug through the shell's `monitors-changed` signal:
+
+- A report of no monitors is ignored, so a KVM switch, a lock or DPMS off does not
+  wipe the tree.
+- The same monitor set (same primary, same geometries) only re-renders the layout.
+- A changed set reloads the tree (`reloadTree()`): Forge rebuilds the `mo{m}ws{n}`
+  nodes for the new monitors and adds every window back to the tree. Stacked and
+  tabbed groups survive the reload.
+
+`Super+Shift+r` reloads the config files, not the tree. If a layout looks wrong after
+a display change, see [troubleshooting.md](troubleshooting.md).

@@ -83,5 +83,7 @@ Wayland. Mutter API differences belong in `lib/extension/compat.js`
 Maintainers: cutting a release and submitting to extensions.gnome.org is
 documented in [RELEASING.md](RELEASING.md).
 
-> Maintainers: this repo tracks work with **bd** (beads) and additional automation
-> conventions documented in [CLAUDE.md](CLAUDE.md).
+> Maintainers: work to do goes into a local Spec Kit spec under `specs/`, which is
+> gitignored. This fork's GitHub issues track only medium or long-term subjects. bd
+> (beads) is upstream's tracker and is not used here. See "Work Tracking" in
+> [CLAUDE.md](CLAUDE.md).
