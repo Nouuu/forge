@@ -41,7 +41,9 @@ Forge handles a monitor hot-plug through the shell's `monitors-changed` signal:
 - The same monitor set (same primary, same geometries) only re-renders the layout.
 - A changed set reloads the tree (`reloadTree()`): Forge rebuilds the `mo{m}ws{n}`
   nodes for the new monitors and adds every window back to the tree. Stacked and
-  tabbed groups survive the reload.
+  tabbed groups survive the reload when at least two of their windows land back
+  together on one monitor. A window closed meanwhile drops out of its group, and a
+  group scattered across monitors comes back in part or not at all.
 
 `Super+Shift+r` reloads the config files, not the tree. If a layout looks wrong after
 a display change, see [troubleshooting.md](troubleshooting.md).
