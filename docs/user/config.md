@@ -30,10 +30,10 @@ Import applies every value GSettings accepts and skips one it refuses, such as a
 "Import failed" means nothing was applied. With logging on in a debug build, each
 skipped key is logged as `Import rejected <key>`.
 
-Import does not check a value's type, so keep each value in the type an export writes.
-A wrong type or a negative number can stop the import of that file at that key: the
-keys after it are not applied and no `Import rejected` line is logged. It can also be
-applied as another value: the text `"false"` for a switch turns it on.
+Import also skips a value of the wrong type, and logs it the same way. A number
+setting needs a whole number from 0 up, a switch needs `true` or `false`, a text
+setting needs text, and a shortcut needs a list of texts. So the text `"false"` for a
+switch is skipped, not applied. The keys after a skipped one are still applied.
 
 On startup, Forge's config sync imports any present files automatically, so dropping
 a known-good `settings.json`/`keybindings.json` into the config dir and restarting

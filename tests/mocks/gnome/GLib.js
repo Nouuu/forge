@@ -92,6 +92,13 @@ export class Variant {
   constructor(typeString, value) {
     this._type = typeString;
     this._value = value;
+    // Like GJS: ('b', "false") is true, ('u', "5") is 5, ('u', "abc") and ('u', -1) throw.
+    if (typeString === "b") this._value = Boolean(value);
+    if (typeString === "u") {
+      const n = Number(value);
+      if (!(n >= 0 && n <= 0xffffffff)) throw new TypeError("value is out of range for uint32");
+      this._value = Math.trunc(n);
+    }
   }
 
   static new(typeString, value) {

@@ -100,6 +100,9 @@ path that does not end in `.json` reads as an existing directory. Call
   `reset` emit `changed::<key>`: a test emits it by hand.
 - `set_value`, `set_string` and `set_strv` return true. To test a refused write (a value
   outside its gschema range), stub the setter to return false.
+- `GLib.Variant` coerces and throws like GJS for `b` and `u` only, except that a `u` of
+  `undefined` or `NaN` throws where GJS gives 0. For `s` and `as` it keeps a non-string
+  value where GJS throws, and `set_string` and `set_strv` accept any value.
 - `get_default_value` returns the current value, and `reset` drops the stored one, so a
   getter then returns its type's zero (`false`, `0`, `""`, `[]`), not the gschema default.
 - `bind` reads a number as a number and any other value as a boolean.
