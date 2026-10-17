@@ -11,6 +11,14 @@
 // Determinism: every input is derived from a fixed BASE_SEED + index via a
 // hand-rolled mulberry32 PRNG. No Date.now / Math.random anywhere, so a failure
 // reproduces from its printed seed.
+//
+// theming-config:G006: the generator only emits @media and @keyframes, so the
+// other at-rule productions and their visitors never ran in a test. The fixture
+// table at the end runs each at-rule the parser knows, written in the
+// stringifier's own format, and pins a byte-identical round trip. Test only:
+// lib/css stays vendored. @-moz-document is the one exception: its visitor
+// emits two spaces before "{", so its row pins that normalized text and a fixed
+// point on the second trip.
 
 import { describe, it, expect } from "vitest";
 import { parse, stringify } from "../../../lib/css/index.js";
@@ -339,5 +347,38 @@ describe("CSS parse/stringify round-trip (seeded property)", () => {
         `declaration count changed on round trip for seed ${seed}\n--- input ---\n${x}\n--- output ---\n${a}`
       ).toBe(countDeclarations(ast));
     }
+  });
+});
+
+describe("CSS at-rule round trip (theming-config:G006)", () => {
+  const rule = ".tiled {\n    color: red;\n  }";
+  const AT_RULES = [
+    ["import", '@import url("theme.css");'],
+    ["charset", '@charset "UTF-8";'],
+    ["namespace", "@namespace svg url(http://www.w3.org/2000/svg);"],
+    ["supports", `@supports (display: grid) {\n  ${rule}\n}`],
+    ["page", "@page :first {\n  margin: 1in;\n}"],
+    ["host", `@host {\n  ${rule}\n}`],
+    ["font-face", "@font-face {\n  font-family: Forge;\n  src: url(forge.woff);\n}"],
+    ["custom-media", "@custom-media --narrow (max-width: 600px);"],
+    [
+      "document",
+      `@-moz-document url-prefix() {\n  ${rule}\n}`,
+      `@-moz-document url-prefix()  {\n  ${rule}\n}`,
+    ],
+    ["media", `@media screen {\n  ${rule}\n}`],
+    [
+      "keyframes",
+      "@keyframes fade {\n  from {\n    opacity: 0;\n  }\n\n  to {\n    opacity: 1;\n  }\n}",
+    ],
+  ];
+
+  it.each(AT_RULES)("%s parses without error and round-trips", (type, src, out = src) => {
+    const ast = parse(src, { silent: true });
+    expect(ast.stylesheet.parsingErrors).toHaveLength(0);
+    expect(ast.stylesheet.rules[0].type).toBe(type);
+    const first = stringify(ast);
+    expect(first).toBe(out);
+    expect(stringify(parse(first, { silent: true }))).toBe(out);
   });
 });
