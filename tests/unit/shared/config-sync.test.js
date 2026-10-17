@@ -31,6 +31,7 @@ describe("ConfigSync", () => {
       },
       set_value: (key, variant) => {
         store.set(key, { type: variant.get_type_string(), value: variant.recursiveUnpack() });
+        return true;
       },
       // Schema view: the keys and types this mock has seen.
       list_keys: () => [...store.keys()],
@@ -53,6 +54,7 @@ describe("ConfigSync", () => {
       get_string: (key) => store.get(key)?.value ?? "",
       set_string: (key, value) => {
         store.set(key, { type: "s", value });
+        return true;
       },
       get_double: (key) => store.get(key)?.value ?? 0.0,
       set_double: (key, value) => {
@@ -61,6 +63,7 @@ describe("ConfigSync", () => {
       get_strv: (key) => store.get(key)?.value ?? [],
       set_strv: (key, value) => {
         store.set(key, { type: "as", value });
+        return true;
       },
       connect: (signal, callback) => {
         if (!signals[signal]) signals[signal] = [];

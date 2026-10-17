@@ -131,6 +131,7 @@ export class Settings extends withSignals() {
 
   set_string(key, value) {
     this._settings.set(key, value);
+    return true;
   }
 
   get_strv(key) {
@@ -139,6 +140,7 @@ export class Settings extends withSignals() {
 
   set_strv(key, value) {
     this._settings.set(key, value);
+    return true;
   }
 
   get_uint(key) {
