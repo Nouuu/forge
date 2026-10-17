@@ -351,7 +351,7 @@ msgid "Window Class"
 msgstr ""
 
 #: lib/prefs/floating.js
-msgid "Window Title (optional)"
+msgid "Window Title"
 msgstr ""
 
 #: lib/prefs/floating.js
@@ -364,8 +364,8 @@ msgstr ""
 
 #: lib/prefs/floating.js
 msgid ""
-"Add a rule to exclude windows from tiling. Use xprop WM_CLASS to find window "
-"class."
+"Add a rule to exclude windows from tiling by window class, title, or both. "
+"Use xprop WM_CLASS to find window class."
 msgstr ""
 
 #: lib/prefs/floating.js
@@ -765,7 +765,9 @@ msgid "Unmaximize windows when tiling"
 msgstr ""
 
 #: lib/prefs/settings.js
-msgid "A maximized window is unmaximized before it joins the tiling tree"
+msgid ""
+"When a new window tiles, unmaximize the other maximized windows on its "
+"monitor"
 msgstr ""
 
 #: lib/prefs/settings.js

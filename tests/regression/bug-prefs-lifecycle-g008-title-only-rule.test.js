@@ -2,6 +2,9 @@
 // create a title-only rule although the shell, sortFloatOverrides and floatRowSubtitle handle one.
 // Fix: reject only when both fields are empty, save { wmTitle, mode } with no wmClass key, and
 // rebuild the list through the same path as Reset so the new row is labelled and sorted as on open.
+// close-spec-gaps:N09: the dialog still titled the title field "Window Title (optional)", as if
+// the class were required. Fix: plain field titles and a group description that asks for a
+// class, a title or both.
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { FloatingPage } from "../../lib/prefs/floating.js";
 import { File, Settings } from "../mocks/gnome/Gio.js";
@@ -35,6 +38,18 @@ describe("Add dialog title-only rules", () => {
     expect(row.get_subtitle()).toBe("Title-only rule");
     expect(page.rows).toHaveLength(2);
     expect(page.wmTitleEntry.get_text()).toBe("");
+  });
+
+  it("close-spec-gaps:N09: the dialog asks for a class, a title or both", () => {
+    const { page } = setup();
+    const group = page._children.find((g) => g.title === "Add Floating Window");
+
+    expect(page.wmClassEntry.get_title()).toBe("Window Class");
+    expect(page.wmTitleEntry.get_title()).toBe("Window Title");
+    expect(group.description).toBe(
+      "Add a rule to exclude windows from tiling by window class, title, or both. " +
+        "Use xprop WM_CLASS to find window class."
+    );
   });
 
   it("rejects both fields empty: error class, nothing saved", () => {

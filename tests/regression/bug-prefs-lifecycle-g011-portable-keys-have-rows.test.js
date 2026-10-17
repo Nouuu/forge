@@ -10,6 +10,10 @@ import { Settings } from "../mocks/gnome/Gio.js";
  * button (1-100) for resize-amount on the Keyboard page, and a logging-enabled switch in
  * the dev-only Logger group (a shipped build keeps the logger off, so a switch there
  * would do nothing).
+ *
+ * close-spec-gaps:N09: the switch subtitle said a maximized window is unmaximized before
+ * it joins the tiling tree, but handleUnmaximizeForTiling unmaximizes the OTHER maximized
+ * windows of the monitor when a new window tiles there. Fix: a subtitle that says so.
  */
 let mockProduction = false;
 vi.mock("../../lib/shared/settings.js", () => ({
@@ -42,9 +46,11 @@ function boundKeys(Page) {
     if ("_low" in obj) spins.set(key, [obj._low, obj._high]);
     return realBind(key, obj, prop, flags);
   });
-  new Page({ settings, kbdSettings });
-  return { bound, spins };
+  const page = new Page({ settings, kbdSettings });
+  return { bound, spins, page };
 }
+
+const widgets = (w) => [w, ...w._children.flatMap(widgets)];
 
 describe("prefs-lifecycle:G011: portable keys have preference rows", () => {
   it("auto-unmaximize-for-tiling follows New window placement", () => {
@@ -52,6 +58,14 @@ describe("prefs-lifecycle:G011: portable keys have preference rows", () => {
     const i = bound.indexOf("new-window-placement");
     expect(i).toBeGreaterThanOrEqual(0);
     expect(bound[i + 1]).toBe("auto-unmaximize-for-tiling");
+  });
+
+  it("close-spec-gaps:N09: the switch says it unmaximizes the other windows", () => {
+    const { page } = boundKeys(SettingsPage);
+    const row = widgets(page).find((w) => w.title === "Unmaximize windows when tiling");
+    expect(row.get_subtitle()).toBe(
+      "When a new window tiles, unmaximize the other maximized windows on its monitor"
+    );
   });
 
   it("resize-amount is bound to a 1-100 spin button", () => {
