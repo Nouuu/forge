@@ -298,10 +298,79 @@ describe("CommandHandler", () => {
   });
 
   describe("ConfigReload command", () => {
+    let infoSpy;
+    let warnSpy;
+    let errorSpy;
+
+    beforeEach(() => {
+      infoSpy = vi.spyOn(Logger, "info").mockImplementation(() => {});
+      warnSpy = vi.spyOn(Logger, "warn").mockImplementation(() => {});
+      errorSpy = vi.spyOn(Logger, "error").mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+      infoSpy.mockRestore();
+      warnSpy.mockRestore();
+      errorSpy.mockRestore();
+    });
+
+    // close-spec-gaps:T063: a false file result means a rejected key since G010 and N05, so
+    // the reload is judged like PortabilityPage._importConfig (close-spec-gaps:N03).
+    function reload({ settingsFile = true, keybindingsFile = true, result }) {
+      mockExt.configMgr = {
+        settingsConfigFile: settingsFile ? {} : null,
+        keybindingsConfigFile: keybindingsFile ? {} : null,
+      };
+      mockExt.configSync = { importAll: vi.fn(() => result) };
+      commandHandler.execute({ name: "ConfigReload" });
+      return mockExt.configSync.importAll;
+    }
+
     it("should call reloadWindowOverrides", () => {
       commandHandler.execute({ name: "ConfigReload" });
 
       expect(mockWm.reloadWindowOverrides).toHaveBeenCalled();
+    });
+
+    it.each([
+      ["settings.json", { keybindingsFile: false }, { settings: true, keybindings: false }],
+      ["keybindings.json", { settingsFile: false }, { settings: false, keybindings: true }],
+    ])("should log success when the only file, %s, imported", (_, files, result) => {
+      reload({ ...files, result: { ...result, applied: 3 } });
+
+      expect(infoSpy).toHaveBeenCalledWith(
+        "Configuration and portable settings reloaded from files"
+      );
+      expect(warnSpy).not.toHaveBeenCalled();
+      expect(errorSpy).not.toHaveBeenCalled();
+    });
+
+    it("should log a partial reload when a key was rejected and others landed", () => {
+      reload({ result: { settings: false, keybindings: true, applied: 2 } });
+
+      expect(warnSpy).toHaveBeenCalledTimes(1);
+      expect(infoSpy).not.toHaveBeenCalled();
+      expect(errorSpy).not.toHaveBeenCalled();
+    });
+
+    it("should log a failure when no key landed", () => {
+      reload({ result: { settings: false, keybindings: false, applied: 0 } });
+
+      expect(errorSpy).toHaveBeenCalledTimes(1);
+      expect(infoSpy).not.toHaveBeenCalled();
+      expect(warnSpy).not.toHaveBeenCalled();
+    });
+
+    it("should reload only the window config when no portable file exists", () => {
+      const importAll = reload({
+        settingsFile: false,
+        keybindingsFile: false,
+        result: { settings: false, keybindings: false, applied: 0 },
+      });
+
+      expect(importAll).not.toHaveBeenCalled();
+      expect(infoSpy).toHaveBeenCalledWith("Window configuration reloaded from files");
+      expect(errorSpy).not.toHaveBeenCalled();
     });
   });
 
