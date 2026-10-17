@@ -454,3 +454,142 @@ describe("ConfigManager integration scenarios", () => {
     vi.restoreAllMocks();
   });
 });
+
+// theming-config:G001: the portable-config accessors, on a real ConfigManager.
+describe("ConfigManager portable-config accessors (theming-config:G001)", () => {
+  let cm;
+  let files;
+  let existing;
+
+  const dir = () => `${cm.confDir}/config`;
+  const SETTINGS = "settings.json";
+  const KEYBINDINGS = "keybindings.json";
+
+  beforeEach(() => {
+    cm = new ConfigManager({ dir: createMockDir("/test/extension") });
+    files = {};
+    existing = new Set();
+    vi.spyOn(File, "new_for_path").mockImplementation((path) => {
+      const name = path.split("/").pop();
+      const file = new File(path);
+      file.query_exists = vi.fn(() => existing.has(name));
+      files[name] = file;
+      return file;
+    });
+  });
+
+  afterEach(() => {
+    delete File.prototype.query_info; // the mock File has no query_info; tests add it
+    vi.restoreAllMocks();
+  });
+
+  const mtimeInfo = (sec, usec) => ({
+    get_attribute_uint64: (attr) => (attr === "time::modified" ? sec : -1),
+    get_attribute_uint32: (attr) => (attr === "time::modified-usec" ? usec : -1),
+  });
+
+  describe.each([
+    ["settings", SETTINGS, "settingsConfigFile", "settingsConfigPath", "settingsProps"],
+    [
+      "keybindings",
+      KEYBINDINGS,
+      "keybindingsConfigFile",
+      "keybindingsConfigPath",
+      "keybindingsProps",
+    ],
+  ])("%s", (_label, name, fileKey, pathKey, propsKey) => {
+    it("file accessor returns the existing file under <confDir>/config", () => {
+      existing.add(name);
+      expect(cm[fileKey].get_path()).toBe(`${dir()}/${name}`);
+    });
+
+    it("file accessor returns null when the file is absent", () => {
+      expect(cm[fileKey]).toBeNull();
+    });
+
+    it("path accessor returns the path whether or not the file exists", () => {
+      expect(cm[pathKey].get_path()).toBe(`${dir()}/${name}`);
+      existing.add(name);
+      expect(cm[pathKey].get_path()).toBe(`${dir()}/${name}`);
+    });
+
+    it("props parse the JSON of the existing file", () => {
+      existing.add(name);
+      const encoded = new TextEncoder().encode('{"a": 1}');
+      vi.spyOn(File.prototype, "load_contents").mockReturnValue([true, encoded, null]);
+      expect(cm[propsKey]).toEqual({ a: 1 });
+    });
+
+    it("props are null when the file is absent", () => {
+      expect(cm[propsKey]).toBeNull();
+    });
+  });
+
+  describe.each([
+    ["saveSettingsProps", SETTINGS],
+    ["saveKeybindingsProps", KEYBINDINGS],
+  ])("%s", (method, name) => {
+    it("writes the JSON to its own file and returns true", () => {
+      const spy = vi.spyOn(File.prototype, "replace_contents").mockReturnValue([true, null]);
+      expect(cm[method]({ a: 1 })).toBe(true);
+      expect(spy).toHaveBeenCalledTimes(1);
+      expect(spy.mock.contexts[0].get_path()).toBe(`${dir()}/${name}`);
+      expect(new TextDecoder().decode(spy.mock.calls[0][0])).toBe(
+        JSON.stringify({ a: 1 }, null, 2)
+      );
+    });
+
+    it("returns false when the write throws", () => {
+      vi.spyOn(File.prototype, "replace_contents").mockImplementation(() => {
+        throw new Error("disk full");
+      });
+      expect(cm[method]({ a: 1 })).toBe(false);
+    });
+  });
+
+  describe("getConfigMtime", () => {
+    it("returns microseconds since epoch for settings", () => {
+      existing.add(SETTINGS);
+      existing.add(KEYBINDINGS);
+      File.prototype.query_info = vi.fn(() => mtimeInfo(1700000000, 250000));
+      expect(cm.getConfigMtime("settings")).toBe(1700000000250000);
+    });
+
+    it("reads the keybindings file for keybindings", () => {
+      existing.add(SETTINGS);
+      existing.add(KEYBINDINGS);
+      const queried = [];
+      File.prototype.query_info = vi.fn(function () {
+        queried.push(this.get_path().split("/").pop());
+        return mtimeInfo(5, 7);
+      });
+      expect(cm.getConfigMtime("keybindings")).toBe(5000007);
+      expect(queried).toEqual([KEYBINDINGS]);
+    });
+
+    it("returns null when the file is absent", () => {
+      expect(cm.getConfigMtime("settings")).toBeNull();
+      expect(cm.getConfigMtime("keybindings")).toBeNull();
+    });
+
+    it("returns null when query_info throws", () => {
+      existing.add(SETTINGS);
+      File.prototype.query_info = vi.fn(() => {
+        throw new Error("stat failed");
+      });
+      expect(cm.getConfigMtime("settings")).toBeNull();
+    });
+  });
+
+  describe("hasPortableConfig", () => {
+    it.each([
+      [[], false],
+      [[SETTINGS], true],
+      [[KEYBINDINGS], true],
+      [[SETTINGS, KEYBINDINGS], true],
+    ])("with %j present gives %s", (present, expected) => {
+      present.forEach((n) => existing.add(n));
+      expect(cm.hasPortableConfig()).toBe(expected);
+    });
+  });
+});
