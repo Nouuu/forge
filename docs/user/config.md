@@ -34,6 +34,9 @@ Import also skips a value of the wrong type, and logs it the same way. A number
 setting needs a whole number from 0 up, a switch needs `true` or `false`, a text
 setting needs text, and a shortcut needs a list of texts. So the text `"false"` for a
 switch is skipped, not applied. The keys after a skipped one are still applied.
+A group that is not a JSON object, such as `"appearance": "x"` or a `bindings` list,
+is skipped whole and logged by its name (`Import rejected appearance`). Keys and groups
+this version does not know are ignored, not rejected.
 
 On startup, Forge's config sync imports any present files automatically, so dropping
 a known-good `settings.json`/`keybindings.json` into the config dir and restarting
