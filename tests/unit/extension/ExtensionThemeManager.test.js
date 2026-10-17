@@ -4,11 +4,10 @@ import { File } from "../../mocks/gnome/Gio.js";
 import { ExtensionThemeManager } from "../../../lib/extension/extension-theme-manager.js";
 import { Logger } from "../../../lib/shared/logger.js";
 
-// reloadStylesheet() branches on `production` (true = load the user's custom
-// stylesheet, false = the bundled default). The source's named import is a live
-// binding, so a getter lets each test pick the branch. The `mock` prefix opts the
-// holder past vitest's hoisted-factory variable restriction. PERMISSIONS_MODE is
-// re-exported because shared/theme.js (ThemeManagerBase) also imports it.
+// `production` is mocked so a test can run as a debug build: both builds load the
+// user stylesheet (theming-config:G005). The `mock` prefix opts the holder past
+// vitest's hoisted-factory variable restriction. PERMISSIONS_MODE is re-exported
+// because shared/theme.js (ThemeManagerBase) imports it.
 let mockProduction = true;
 vi.mock("../../../lib/shared/settings.js", () => ({
   get production() {
@@ -136,13 +135,13 @@ describe("ExtensionThemeManager.reloadStylesheet", () => {
     expect(mgr.stylesheet).toBe(stylesheetFile);
   });
 
-  it("loads the bundled default stylesheet in development", () => {
+  it("loads the user stylesheet in development too (theming-config:G005)", () => {
     mockProduction = false;
     mgr.reloadStylesheet();
 
     expect(theme.load_stylesheet).toHaveBeenCalledTimes(1);
-    expect(theme.load_stylesheet).toHaveBeenCalledWith(defaultStylesheetFile);
-    expect(mgr.stylesheet).toBe(defaultStylesheetFile);
+    expect(theme.load_stylesheet).toHaveBeenCalledWith(stylesheetFile);
+    expect(mgr.stylesheet).toBe(stylesheetFile);
   });
 
   it("unloads both default and custom stylesheets before loading (forge-wwn8 leak guard)", () => {
