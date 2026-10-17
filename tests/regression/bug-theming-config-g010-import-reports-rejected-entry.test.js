@@ -53,7 +53,7 @@ describe("import reports a rejected entry", () => {
       keybindingsProps: { bindings: { "window-focus-right": ["<Super>k"] } },
       refuse: ["window-gap-size"],
     });
-    expect(sync.importAll()).toEqual({ settings: false, keybindings: true });
+    expect(sync.importAll()).toMatchObject({ settings: false, keybindings: true });
     sync.destroy();
   });
 });

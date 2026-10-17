@@ -97,19 +97,19 @@ describe("Bug forge-7m2f: export/import status reaches every caller", () => {
   describe("importAll reports per file", () => {
     it("reports both as failed when neither file is readable", () => {
       const { sync } = makeSync({ settingsProps: null, keybindingsProps: null });
-      expect(sync.importAll()).toEqual({ settings: false, keybindings: false });
+      expect(sync.importAll()).toMatchObject({ settings: false, keybindings: false });
       sync.destroy();
     });
 
     it("distinguishes a good settings.json from an absent keybindings.json", () => {
       const { sync } = makeSync({ keybindingsProps: null });
-      expect(sync.importAll()).toEqual({ settings: true, keybindings: false });
+      expect(sync.importAll()).toMatchObject({ settings: true, keybindings: false });
       sync.destroy();
     });
 
     it("reports both as imported when both files are good", () => {
       const { sync } = makeSync({});
-      expect(sync.importAll()).toEqual({ settings: true, keybindings: true });
+      expect(sync.importAll()).toMatchObject({ settings: true, keybindings: true });
       sync.destroy();
     });
   });

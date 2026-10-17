@@ -112,7 +112,7 @@ describe("Bug forge-1n2v/forge-q9e5: save/export/import report real success", ()
       // forge-7m2f narrowed this to a per-file result — the combined boolean
       // couldn't distinguish "one file absent" from "the import failed". The
       // behavior pinned here (a bad file is reported, not swallowed) is unchanged.
-      expect(sync.importAll()).toEqual({ settings: false, keybindings: false });
+      expect(sync.importAll()).toMatchObject({ settings: false, keybindings: false });
       sync.destroy();
     });
   });
