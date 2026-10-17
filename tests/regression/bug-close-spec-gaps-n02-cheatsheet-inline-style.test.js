@@ -1,4 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { readFileSync } from "node:fs";
+import { parse } from "../../lib/css/index.js";
 import { Cheatsheet } from "../../lib/extension/cheatsheet.js";
 import { installGnomeGlobals } from "../mocks/helpers/index.js";
 
@@ -20,6 +22,8 @@ import { installGnomeGlobals } from "../mocks/helpers/index.js";
  * to 39, so each user copy is replaced on the next start and kept as stylesheet.css.38.bak
  * (theming-config:G014). The check is now that no actor with a forge-cheatsheet* class sets
  * an inline style, whatever the stylesheet declares. Actors with no forge class keep theirs.
+ * A second check pins the three declarations in the bundled stylesheet.css, so dropping the
+ * rule leaves the button unstyled and turns the suite red.
  */
 const walk = (actor, out = []) => {
   out.push(actor);
@@ -62,5 +66,17 @@ describe("close-spec-gaps:N02/N06: no forge-cheatsheet actor sets an inline styl
       ])
     );
     expect(classed.filter((a) => a.style).map((a) => `${a.style_class}: ${a.style}`)).toEqual([]);
+  });
+});
+
+describe("close-spec-gaps:N06: stylesheet.css styles the close button", () => {
+  it("declares color, border-radius and padding for .forge-cheatsheet-close", () => {
+    const css = readFileSync(new URL("../../stylesheet.css", import.meta.url), "utf8");
+    const rule = parse(css).stylesheet.rules.find((r) =>
+      r.selectors?.includes(".forge-cheatsheet-close")
+    );
+    expect(rule?.declarations.map((d) => d.property)).toEqual(
+      expect.arrayContaining(["color", "border-radius", "padding"])
+    );
   });
 });
