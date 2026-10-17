@@ -92,8 +92,8 @@ Tiling page of Preferences) unmaximizes the maximized tiled windows of a monitor
 new window tiles there, so the new window gets its share. Turn it off and a window you
 fully maximized stays maximized, also when its size changes later. Even off, a window
 snapped to a screen edge (maximized on one axis only) is still re-tiled beside other
-tiled windows, and the swap, move and resize (`window-resize-*`) shortcuts still unmaximize
-the windows they move or resize.
+tiled windows, and the swap, move, resize (`window-resize-*`), expand (`window-expand`) and
+shrink (`window-shrink`) shortcuts still unmaximize the windows they move or resize.
 
 ## Float vs tile
 

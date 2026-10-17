@@ -27,7 +27,9 @@ import { LAYOUT_TYPES, NODE_TYPES } from "../../lib/extension/tree.js";
  * tile, so a kept window survives its next size change and a one-axis edge snap is
  * still re-tiled. While off, a swap or a keyboard move unmaximizes the window it
  * moves, and a keyboard resize re-tiles a kept maximize instead of resizing from its
- * maximized frame, which would skew the split (forge-v4wh).
+ * maximized frame, which would skew the split (forge-v4wh). expand() (WindowExpand, and
+ * WindowShrink through shrink()) had no such guard and re-sliced the hidden split while the
+ * window stayed maximized; it now takes the same guard.
  *
  * forge-z9ky's pin went with handleUnmaximizeForTiling, but its case stays here: trackWindow
  * still reads each tiled sibling (insertChildPercent), and the render prunes a dead one.
@@ -186,6 +188,20 @@ describe("close-spec-gaps:N11: auto-unmaximize-for-tiling decides the neighbour'
     expect(metaWindow.get_maximized()).toBe(0);
     expect([nodeWindow.percent, node.percent]).toEqual(percents);
   });
+
+  it.each(["WindowExpand", "WindowShrink"])(
+    "off: %s of a kept maximize re-tiles it and keeps the split",
+    (name) => {
+      setup({ "auto-unmaximize-for-tiling": false });
+      const { metaWindow, nodeWindow } = maximizedTile();
+      const node = openWindow();
+      const percents = [nodeWindow.percent, node.percent];
+      ctx.display.get_focus_window.mockReturnValue(metaWindow);
+      ctx.windowManager.command({ name, amount: 50 });
+      expect(metaWindow.get_maximized()).toBe(0);
+      expect([nodeWindow.percent, node.percent]).toEqual(percents);
+    }
+  );
 
   it("on: a Move that reparents a lone maximized tile keeps its maximize", () => {
     setup({ "auto-unmaximize-for-tiling": true });
