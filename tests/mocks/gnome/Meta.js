@@ -256,7 +256,10 @@ export class Window extends withSignals() {
     // Mock delete operation
   }
 
+  // Mutter's meta_window_allows_resize: false while maximized on both axes or
+  // fullscreen; otherwise the size hints, which the `allows_resize` param stands for.
   allows_resize() {
+    if (this.is_maximized() || this.fullscreen) return false;
     return this._allows_resize;
   }
 

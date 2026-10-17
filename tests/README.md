@@ -96,6 +96,10 @@ path that does not end in `.json` reads as an existing directory. Call
 
 ### Known mock quirks
 
+- `Meta.Window.allows_resize()` follows Mutter: it is false while the window is
+  maximized on both axes or fullscreen. The `allows_resize` param stands for the size
+  hints only, so a test that maximizes a window reads false, and a one-axis edge snap
+  keeps the param's value.
 - `Gio.Settings` has no schema. Its setters never refuse a value, and neither they nor
   `reset` emit `changed::<key>`: a test emits it by hand.
 - `set_value`, `set_string` and `set_strv` return true. To test a refused write (a value

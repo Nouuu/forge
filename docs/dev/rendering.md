@@ -152,6 +152,10 @@ keeps its tree node, it is not detached.
   Toggled via `toggleFloatingMode`
   (`window.js`); `Super+c` = per-window, `Super+Shift+c` = class-wide. A
   per-window remove must never delete a class-wide override.
+- A **non-resizable** window (`allows_resize()` false) floats by type (Bug #294). Mutter
+  also reports a window maximized on both axes or fullscreen as non-resizable, so those
+  are not counted, or each maximized tile would float at the next render
+  (close-spec-gaps:N12). A one-axis edge snap stays resizable.
 - **Always-on-top** is re-pinned (`make_above`) by `processFloats` on every render,
   so any code changing a float's above-state must run *after* `processFloats` in the
   same idle. To put a float beneath a fullscreen window you need `unmake_above()`
