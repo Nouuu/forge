@@ -148,31 +148,35 @@ export default class ForgeExtension extends Extension {
    * (forge-abk) records the user's latest GNOME value.
    */
   _applyOverride(desc) {
-    if (!this._gnomeSettings || !this._savedSettings) return; // already disabled
-    const schema = Gio.SettingsSchemaSource.get_default()?.lookup(desc.schemaId, true);
-    if (!schema || !schema.has_key(desc.key)) {
-      const id = `${desc.schemaId} ${desc.key}`;
-      if (!missingOverrides.has(id)) {
-        missingOverrides.add(id);
-        Logger.debug(`Skipping GNOME override: ${id} is unavailable`);
+    try {
+      if (!this._gnomeSettings || !this._savedSettings) return; // already disabled
+      const schema = Gio.SettingsSchemaSource.get_default()?.lookup(desc.schemaId, true);
+      if (!schema || !schema.has_key(desc.key)) {
+        const id = `${desc.schemaId} ${desc.key}`;
+        if (!missingOverrides.has(id)) {
+          missingOverrides.add(id);
+          Logger.debug(`Skipping GNOME override: ${id} is unavailable`);
+        }
+        return;
       }
-      return;
+      if (!this._gnomeSettings.has(desc.schemaId)) {
+        this._gnomeSettings.set(desc.schemaId, new Gio.Settings({ schemaId: desc.schemaId }));
+      }
+      const gsettings = this._gnomeSettings.get(desc.schemaId);
+      if (!gsettings) return;
+      const current = gsettings.get_value(desc.key);
+      const forced = new GLib.Variant(current.get_type_string(), desc.newValue);
+      // Nouuu/forge#7: a forced value here was left by a session that ended without disable().
+      const original = current.equal(forced)
+        ? this._savedOriginals()[`${desc.schemaId} ${desc.key}`] ??
+          gsettings.get_default_value(desc.key)
+        : current;
+      this._saveOriginal(desc, original);
+      gsettings.set_value(desc.key, forced);
+      this._savedSettings.push({ schemaId: desc.schemaId, gsettings, key: desc.key, original });
+    } catch (e) {
+      Logger.warn(`Failed to apply GNOME override ${desc.schemaId} ${desc.key}: ${e}`); // prefs-lifecycle:G007
     }
-    if (!this._gnomeSettings.has(desc.schemaId)) {
-      this._gnomeSettings.set(desc.schemaId, new Gio.Settings({ schemaId: desc.schemaId }));
-    }
-    const gsettings = this._gnomeSettings.get(desc.schemaId);
-    if (!gsettings) return;
-    const current = gsettings.get_value(desc.key);
-    const forced = new GLib.Variant(current.get_type_string(), desc.newValue);
-    // Nouuu/forge#7: a forced value here was left by a session that ended without disable().
-    const original = current.equal(forced)
-      ? this._savedOriginals()[`${desc.schemaId} ${desc.key}`] ??
-        gsettings.get_default_value(desc.key)
-      : current;
-    this._saveOriginal(desc, original);
-    gsettings.set_value(desc.key, forced);
-    this._savedSettings.push({ schemaId: desc.schemaId, gsettings, key: desc.key, original });
   }
 
   /**
@@ -203,9 +207,13 @@ export default class ForgeExtension extends Extension {
     );
     if (idx < 0) return;
     const saved = this._savedSettings[idx];
-    saved.gsettings.set_value(saved.key, saved.original);
-    this._saveOriginal(saved, null);
-    this._savedSettings.splice(idx, 1);
+    try {
+      saved.gsettings.set_value(saved.key, saved.original);
+      this._saveOriginal(saved, null);
+      this._savedSettings.splice(idx, 1);
+    } catch (e) {
+      Logger.warn(`Failed to restore GNOME override ${desc.schemaId} ${desc.key}: ${e}`); // prefs-lifecycle:G007
+    }
   }
 
   _isOverrideSaved(desc) {
@@ -275,18 +283,11 @@ export default class ForgeExtension extends Extension {
 
     // Restore GNOME settings and keybindings (#461, #288)
     if (this._savedSettings) {
-      try {
-        for (const saved of this._savedSettings) {
-          saved.gsettings.set_value(saved.key, saved.original);
-          this._saveOriginal(saved, null);
-        }
-        Logger.info("Restored GNOME settings and keybindings");
-      } catch (e) {
-        Logger.warn(`Failed to restore GNOME settings: ${e}`);
-      }
+      for (const saved of [...this._savedSettings]) this._restoreOverride(saved);
+      Logger.info("Restored GNOME settings and keybindings");
       this._savedSettings = null;
-      this._gnomeSettings = null;
     }
+    this._gnomeSettings = null; // prefs-lifecycle:G017
 
     this._removeIndicator();
     this.extWm?.disable();
