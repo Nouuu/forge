@@ -33,7 +33,7 @@ function build() {
 
 describe("forge-el84: border reset without a source rule", () => {
   // Mutation: drop `if (borderDefault === undefined) return;` in the border reset.
-  it("keeps the border width instead of writing undefinedpx", () => {
+  it("keeps the border width instead of writing NaNpx", () => {
     const { page, sizeReset } = build();
     sizeReset.emit("clicked");
     const theme = page.themeMgr;

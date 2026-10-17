@@ -5,6 +5,9 @@
 // close-spec-gaps:N09: the dialog still titled the title field "Window Title (optional)", as if
 // the class were required. Fix: plain field titles and a group description that asks for a
 // class, a title or both.
+// A duplicate title-only rule marked the empty Window Class entry with the error class. Fix:
+// mark the entry the user filled (the title entry when the class is empty), and clear both
+// entries on the next valid Add.
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { FloatingPage } from "../../lib/prefs/floating.js";
 import { File, Settings } from "../mocks/gnome/Gio.js";
@@ -73,5 +76,21 @@ describe("Add dialog title-only rules", () => {
 
     expect(saved().filter((o) => o.wmTitle === "Picture-in-Picture")).toHaveLength(1);
     expect(page.rows).toHaveLength(2);
+    expect(page.wmTitleEntry.get_css_classes()).toContain("error");
+    expect(page.wmClassEntry.get_css_classes()).not.toContain("error");
+
+    page.wmTitleEntry.set_text("Other");
+    page.onAddHandler();
+    expect(page.wmTitleEntry.get_css_classes()).not.toContain("error");
+  });
+
+  it("a duplicate class rule still marks the Window Class entry", () => {
+    const { page } = setup();
+    page.wmClassEntry.set_text("Alpha");
+
+    page.onAddHandler();
+
+    expect(page.wmClassEntry.get_css_classes()).toContain("error");
+    expect(page.wmTitleEntry.get_css_classes()).not.toContain("error");
   });
 });

@@ -10,7 +10,8 @@ import { File, Settings } from "../mocks/gnome/Gio.js";
  * build).
  *
  * Fix: the page adds a warning group, like the forge-y3jy one, when the theme
- * manager could not read the user stylesheet.
+ * manager could not read the user stylesheet. The group had no title, unlike
+ * its sibling; it now has one.
  */
 const css = `.window-tiled-border { border-width: 3px; border-color: rgba(255, 0, 0, 1); }`;
 const userPath = "/home/test/.config/forge/stylesheet/forge/stylesheet.css";
@@ -37,7 +38,7 @@ describe("close-spec-gaps:N08: the Appearance page says when it cannot save", ()
     const page = buildPage({ userReadable: false });
 
     expect(page.themeMgr.setCssProperty(".window-tiled-border", "border-width", "5px")).toBe(false);
-    expect(unreadableWarning(page)).toBeDefined();
+    expect(unreadableWarning(page).title).toBe("Stylesheet cannot be read");
   });
 
   it("shows no warning when the user stylesheet is readable", () => {

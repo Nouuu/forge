@@ -159,7 +159,8 @@ describe("ExtensionThemeManager.reloadStylesheet", () => {
 
     expect(() => mgr.reloadStylesheet()).not.toThrow();
 
-    // The catch returns before assigning this.stylesheet, so no stale handle is
+    // Both loads throw (the stylesheet, then the close-spec-gaps:N07 default
+    // fallback), so this.stylesheet is never assigned and no stale handle is
     // left for a later unloadStylesheet() to release incorrectly.
     expect(mgr.stylesheet).toBeUndefined();
     expect(errorSpy).toHaveBeenCalled();
