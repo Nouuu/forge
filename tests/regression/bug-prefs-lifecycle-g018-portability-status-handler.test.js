@@ -52,5 +52,9 @@ describe("prefs-lifecycle:G018: the portability status refreshes only on its own
     for (const signal of ["changed", ...KEYS.map((key) => `changed::${key}`)]) {
       expect(settings.getHandlerCount(signal)).toBe(0);
     }
+    expect(() => page.vfunc_unroot()).not.toThrow();
+    for (const signal of ["changed", ...KEYS.map((key) => `changed::${key}`)]) {
+      expect(settings.getHandlerCount(signal)).toBe(0);
+    }
   });
 });

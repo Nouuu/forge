@@ -18,9 +18,11 @@ afterEach(() => vi.restoreAllMocks());
 // The launch callback runs after launch() returns, as GIO calls back from the main loop.
 const settle = () => new Promise((resolve) => setTimeout(resolve));
 
-function failLaunch(code) {
+const OTHER_DOMAIN = { name: "other-error-domain" };
+
+function failLaunch(code, domain = Gtk.DialogError) {
   vi.spyOn(Gtk.FileLauncher.prototype, "launch_finish").mockImplementation(() => {
-    throw new GLib.Error(Gtk.DialogError, code, "launch failed");
+    throw new GLib.Error(domain, code, "launch failed");
   });
 }
 
@@ -61,5 +63,27 @@ describe("prefs-lifecycle:G015: Open folder falls back when the launch fails lat
     failLaunch(Gtk.DialogError.DISMISSED);
     expect(await openFolder()).toEqual([]);
     expect(GLib.spawn_command_line_async).not.toHaveBeenCalled();
+  });
+
+  it("code 2 from another error domain is not a dismissal", async () => {
+    failLaunch(Gtk.DialogError.DISMISSED, OTHER_DOMAIN);
+    expect(await openFolder()).toEqual([]);
+    expect(GLib.spawn_command_line_async.mock.calls).toEqual([[`xdg-open "${CONF}"`]]);
+  });
+
+  it("a plain Error without matches falls back", async () => {
+    vi.spyOn(Gtk.FileLauncher.prototype, "launch_finish").mockImplementation(() => {
+      throw new Error("plain");
+    });
+    expect(await openFolder()).toEqual([]);
+    expect(GLib.spawn_command_line_async.mock.calls).toEqual([[`xdg-open "${CONF}"`]]);
+  });
+
+  it("a synchronous launch throw runs xdg-open", async () => {
+    vi.spyOn(Gtk.FileLauncher.prototype, "launch").mockImplementation(() => {
+      throw new Error("launch threw");
+    });
+    expect(await openFolder()).toEqual([]);
+    expect(GLib.spawn_command_line_async.mock.calls).toEqual([[`xdg-open "${CONF}"`]]);
   });
 });
