@@ -79,6 +79,9 @@ Global mocks available: `global.display`, `global.get_pointer()`, `global.stage`
 ### Known mock quirks
 
 - `Gio.Settings` `set_*` does not emit `changed::<key>`; a test emits it by hand.
+- `Gio.File` stores no contents: `load_contents` returns empty bytes and `copy` or
+  `replace_contents` keep nothing. A test that reads back what was copied keeps its own
+  store (see `bug-theming-config-g014-bak-survives-bumps.test.js`).
 
 ### Expanding Mocks
 

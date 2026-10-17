@@ -29,6 +29,8 @@ Forge loads a user stylesheet from:
 
 It's seeded from the bundled default on first run (and re-synced by `patchCss` on
 update).
+Each re-sync first saves your previous file next to it as `stylesheet.css.<N>.bak`,
+where `<N>` is the stylesheet version it replaces, so older backups are kept.
 
 **A hand-edited stylesheet needs a shell restart** (`Alt+F2` → `r` on X11, or log
 out/in on Wayland). `Super+Shift+r` reloads window rules and portable config only —
