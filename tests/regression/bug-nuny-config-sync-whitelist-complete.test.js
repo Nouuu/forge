@@ -19,6 +19,9 @@ import {
  * from the whitelist is never written) or a dead decoy key that documents a
  * knob nothing reads. This test parses the gschema straight off disk and
  * asserts the whitelists are exactly the portable surface of each schema.
+ *
+ * theming-config:G003: it also pins config/settings.schema.json and
+ * config/keybindings.schema.json to the same key sets and to the gschema ranges.
  */
 
 // Main-schema keys that are deliberately NOT portable (internal bookkeeping /
@@ -35,6 +38,9 @@ const INTERNAL_MAIN_KEYS = [
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const GSCHEMA_PATH = join(REPO_ROOT, "schemas", "org.gnome.shell.extensions.forge.gschema.xml");
+
+const readJson = (name) => JSON.parse(readFileSync(join(REPO_ROOT, "config", name), "utf8"));
+const HEADER_KEYS = ["$schema", "version"];
 
 const MAIN_SCHEMA_ID = "org.gnome.shell.extensions.forge";
 const KBD_SCHEMA_ID = "org.gnome.shell.extensions.forge.keybindings";
@@ -151,5 +157,78 @@ describe("config-sync whitelist completeness (forge-nuny / forge-eny3)", () => {
         `  In KEYBINDING_STRING_KEYS but not a string gschema key: ${JSON.stringify(onlyA)}\n` +
         `  String gschema keys missing from KEYBINDING_STRING_KEYS: ${JSON.stringify(onlyB)}`
     ).toBe(true);
+  });
+
+  describe("portable-config JSON schemas (theming-config:G003)", () => {
+    const settingsJson = readJson("settings.schema.json");
+    const kbdJson = readJson("keybindings.schema.json");
+    const categories = Object.keys(settingsJson.properties).filter((k) => !HEADER_KEYS.includes(k));
+
+    it("settings categories equal SETTINGS_KEYS categories", () => {
+      expect(categories.sort()).toEqual(Object.keys(SETTINGS_KEYS).sort());
+    });
+
+    it("each settings category lists exactly its SETTINGS_KEYS", () => {
+      for (const [cat, keys] of Object.entries(SETTINGS_KEYS)) {
+        const props = Object.keys(settingsJson.properties[cat]?.properties ?? {});
+        const { onlyA, onlyB } = symmetricDifference(props, keys);
+        expect(
+          onlyA.length === 0 && onlyB.length === 0,
+          `settings.schema.json '${cat}' drifted.\n` +
+            `  Only in JSON: ${JSON.stringify(onlyA)}\n  Only in SETTINGS_KEYS: ${JSON.stringify(
+              onlyB
+            )}`
+        ).toBe(true);
+      }
+    });
+
+    it("keybindings bindings equal the gschema 'as' keys", () => {
+      const asKeys = kbdKeys.filter((k) => k.type === "as").map((k) => k.name);
+      const { onlyA, onlyB } = symmetricDifference(
+        Object.keys(kbdJson.properties.bindings.properties),
+        asKeys
+      );
+      expect(
+        onlyA.length === 0 && onlyB.length === 0,
+        `keybindings.schema.json bindings drifted.\n` +
+          `  Only in JSON: ${JSON.stringify(onlyA)}\n  Only in gschema: ${JSON.stringify(onlyB)}`
+      ).toBe(true);
+    });
+
+    it("keybindings other properties equal KEYBINDING_STRING_KEYS", () => {
+      const others = Object.keys(kbdJson.properties).filter(
+        (k) => !HEADER_KEYS.includes(k) && k !== "bindings"
+      );
+      const { onlyA, onlyB } = symmetricDifference(others, [...KEYBINDING_STRING_KEYS]);
+      expect(
+        onlyA.length === 0 && onlyB.length === 0,
+        `keybindings.schema.json string keys drifted.\n` +
+          `  Only in JSON: ${JSON.stringify(
+            onlyA
+          )}\n  Only in KEYBINDING_STRING_KEYS: ${JSON.stringify(onlyB)}`
+      ).toBe(true);
+    });
+
+    it("every main-schema <range> equals the JSON minimum and maximum", () => {
+      const props = Object.assign(
+        {},
+        ...categories.map((c) => settingsJson.properties[c].properties)
+      );
+      const body = bodies.get(MAIN_SCHEMA_ID);
+      const keyRe = /<key\b[^>]*\bname="([^"]+)"[^>]*>\s*<range\s+min="([^"]+)"\s+max="([^"]+)"/g;
+      let m;
+      let seen = 0;
+      while ((m = keyRe.exec(body)) !== null) {
+        seen++;
+        const [, name, min, max] = m;
+        expect(props[name], `'${name}' has a gschema range but no JSON property`).toBeDefined();
+        expect([name, props[name].minimum, props[name].maximum]).toEqual([
+          name,
+          Number(min),
+          Number(max),
+        ]);
+      }
+      expect(seen).toBeGreaterThanOrEqual(10);
+    });
   });
 });
