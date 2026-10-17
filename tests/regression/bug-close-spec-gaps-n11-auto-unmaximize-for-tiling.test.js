@@ -4,6 +4,7 @@ import {
   createMockWindow,
   createTiledWindow,
   createWindowManagerFixture,
+  finalizeWindow,
 } from "../mocks/helpers/index.js";
 import { GrabOp, MaximizeFlags, WindowType } from "../mocks/gnome/Meta.js";
 import { WINDOW_MODES } from "../../lib/extension/window.js";
@@ -27,6 +28,9 @@ import { LAYOUT_TYPES, NODE_TYPES } from "../../lib/extension/tree.js";
  * still re-tiled. While off, a swap or a keyboard move unmaximizes the window it
  * moves, and a keyboard resize re-tiles a kept maximize instead of resizing from its
  * maximized frame, which would skew the split (forge-v4wh).
+ *
+ * forge-z9ky's pin went with handleUnmaximizeForTiling, but its case stays here: trackWindow
+ * still reads each tiled sibling (insertChildPercent), and the render prunes a dead one.
  */
 describe("close-spec-gaps:N11: auto-unmaximize-for-tiling decides the neighbour's maximize", () => {
   let ctx;
@@ -198,6 +202,24 @@ describe("close-spec-gaps:N11: auto-unmaximize-for-tiling decides the neighbour'
     ctx.windowManager.command({ name: "Move", direction: "down" });
     expect(nodeWindow.parentNode).toBe(monitor);
     expect(metaWindow.is_maximized()).toBe(true);
+  });
+
+  // forge-z9ky: trackWindow reads a dead sibling in insertChildPercent; render prunes it.
+  it.each([
+    [true, false],
+    [false, true],
+  ])("a finalized tiled sibling: on=%s keeps=%s, the new window tiles", (on, keeps) => {
+    setup({ "auto-unmaximize-for-tiling": on });
+    const { metaWindow } = maximizedTile();
+    const { metaWindow: dead } = createTiledWindow(ctx, {
+      id: "dead",
+      workspace: ctx.workspaces[0],
+      monitor: 0,
+    });
+    finalizeWindow(dead);
+    const node = openWindow();
+    expect(node.mode).toBe(WINDOW_MODES.TILE);
+    expect(metaWindow.is_maximized()).toBe(keeps);
   });
 
   it.each(["Move", "Swap"])("off: the %s command unmaximizes a kept window", (name) => {
