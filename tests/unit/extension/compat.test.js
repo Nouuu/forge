@@ -115,6 +115,21 @@ describe("compat (Mutter 49+ branch)", () => {
       expect(Compat.isMaximized(w)).toBe(false);
       expect(Compat.isNotMaximized(w)).toBe(true);
     });
+
+    // close-spec-gaps:N12: allows_resize() models Mutter's meta_window_allows_resize.
+    it("allows_resize() is false maximized on both axes or fullscreen, true on one axis", () => {
+      const both = new Window();
+      Compat.maximize(both);
+      expect(both.allows_resize()).toBe(false);
+
+      const fullscreen = new Window();
+      fullscreen.make_fullscreen();
+      expect(fullscreen.allows_resize()).toBe(false);
+
+      const oneAxis = new Window();
+      Compat.maximize(oneAxis, MaximizeFlags.VERTICAL);
+      expect(oneAxis.allows_resize()).toBe(true);
+    });
   });
 });
 

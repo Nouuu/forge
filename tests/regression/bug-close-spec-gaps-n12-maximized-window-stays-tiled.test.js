@@ -4,6 +4,7 @@ import {
   createTiledWindow,
   createWindowManagerFixture,
 } from "../mocks/helpers/index.js";
+import { MaximizeFlags } from "../mocks/gnome/Meta.js";
 import { WINDOW_MODES } from "../../lib/extension/window.js";
 
 /**
@@ -85,6 +86,16 @@ describe("close-spec-gaps:N12: a maximized window stays tiled", () => {
     setup();
     const { node } = openWindow({ allows_resize: false });
     render();
+    expect(node.mode).toBe(WINDOW_MODES.FLOAT);
+  });
+
+  // The guard is the both-axes maximize Mutter reports, not any maximize.
+  it("a non-resizable window maximized on one axis still floats", () => {
+    setup();
+    const { metaWindow, node } = openWindow({ allows_resize: false });
+    metaWindow.maximize(MaximizeFlags.VERTICAL);
+    render();
+    expect(metaWindow.maximized_vertically).toBe(true);
     expect(node.mode).toBe(WINDOW_MODES.FLOAT);
   });
 });
