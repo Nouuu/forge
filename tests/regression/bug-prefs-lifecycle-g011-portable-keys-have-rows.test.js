@@ -16,7 +16,7 @@ vi.mock("../../lib/shared/settings.js", () => ({
   get production() {
     return mockProduction;
   },
-  PERMISSIONS_MODE: 0o744,
+  PERMISSIONS_MODE: 0o755,
 }));
 
 const { SettingsPage } = await import("../../lib/prefs/settings.js");

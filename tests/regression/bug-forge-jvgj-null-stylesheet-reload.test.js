@@ -26,7 +26,7 @@ vi.mock("../../lib/shared/settings.js", () => ({
   get production() {
     return mockProduction;
   },
-  PERMISSIONS_MODE: 0o744,
+  PERMISSIONS_MODE: 0o755,
 }));
 
 const sampleCss = `.tiled { color: rgba(255,255,255,0.8); border-width: 1px; opacity: 0.8; }`;
