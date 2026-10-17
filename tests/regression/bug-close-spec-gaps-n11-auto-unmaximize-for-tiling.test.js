@@ -1,30 +1,32 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
 import {
+  createContainerNode,
   createMockWindow,
   createTiledWindow,
   createWindowManagerFixture,
 } from "../mocks/helpers/index.js";
-import { MaximizeFlags, WindowType } from "../mocks/gnome/Meta.js";
+import { GrabOp, MaximizeFlags, WindowType } from "../mocks/gnome/Meta.js";
 import { WINDOW_MODES } from "../../lib/extension/window.js";
+import { LAYOUT_TYPES, NODE_TYPES } from "../../lib/extension/tree.js";
 
 /**
  * close-spec-gaps:N11: auto-unmaximize-for-tiling (default on, a prefs switch) did not
  * do what it says. Off was meant to keep a maximized window maximized when a new
  * window tiles beside it, but the neighbour was unmaximized either way.
  *
- * Root cause: two places decided. handleUnmaximizeForTiling ran at window-created,
- * where a native Wayland window has no title or class yet, so it reads as float-exempt
- * and the handler never acted there; it also unmaximized a fullscreen neighbour, which
- * every other maximize path skips (forge-fw8). Then the window-create render re-sliced
- * the neighbour with move(), the render's only unmaximizer, whatever the setting:
- * forge-dyt2 kept only a lone tile maximized.
+ * Root cause: handleUnmaximizeForTiling never acted. trackWindow creates every node
+ * FLOAT until processFloats runs, and the handler returned at its isFloat() gate. Only
+ * the window-create render decided: move(), the render's only unmaximizer, re-sliced
+ * the neighbour whatever the setting, and forge-dyt2 kept only a lone tile maximized.
  *
  * Fix: one decision, at render time, once processFloats knows the new window tiles.
  * The track-time handler is gone. _keepsMaximize (was _isLoneMaximizedTile) keeps a
  * lone tile's maximize and, while the setting is off, a full (both-axis) maximize.
  * _shouldRejectExternalMaximize (Bug #461) rejects every other maximized, non-fullscreen
  * tile, so a kept window survives its next size change and a one-axis edge snap is
- * still re-tiled. A keyboard move or a swap still unmaximizes the window it moves.
+ * still re-tiled. While off, a swap or a keyboard move unmaximizes the window it
+ * moves, and a keyboard resize re-tiles a kept maximize instead of resizing from its
+ * maximized frame, which would skew the split (forge-v4wh).
  */
 describe("close-spec-gaps:N11: auto-unmaximize-for-tiling decides the neighbour's maximize", () => {
   let ctx;
@@ -166,6 +168,36 @@ describe("close-spec-gaps:N11: auto-unmaximize-for-tiling decides the neighbour'
     metaWindow.maximize(MaximizeFlags.VERTICAL);
     openWindow();
     expect(metaWindow.get_maximized()).toBe(0);
+  });
+
+  it("off: a keyboard resize of a kept maximize re-tiles it and keeps the split", () => {
+    setup({ "auto-unmaximize-for-tiling": false });
+    const { metaWindow, nodeWindow } = maximizedTile();
+    const node = openWindow();
+    metaWindow.move_resize_frame(false, 0, 0, 1920, 1080);
+    const percents = [nodeWindow.percent, node.percent];
+    ctx.display.get_focus_window.mockReturnValue(metaWindow);
+    ctx.windowManager.resize(GrabOp.KEYBOARD_RESIZING_E, 10);
+    sizeChanged(metaWindow);
+    expect(metaWindow.get_maximized()).toBe(0);
+    expect([nodeWindow.percent, node.percent]).toEqual(percents);
+  });
+
+  it("on: a Move that reparents a lone maximized tile keeps its maximize", () => {
+    setup({ "auto-unmaximize-for-tiling": true });
+    const { metaWindow, nodeWindow } = maximizedTile();
+    const monitor = nodeWindow.parentNode;
+    const con = createContainerNode(monitor, LAYOUT_TYPES.HSPLIT);
+    con.appendChild(nodeWindow);
+    ctx.tree.createNode(
+      con.nodeValue,
+      NODE_TYPES.WINDOW,
+      createMockWindow({ id: "f", window_type: WindowType.DIALOG })
+    ).mode = WINDOW_MODES.FLOAT;
+    ctx.display.get_focus_window.mockReturnValue(metaWindow);
+    ctx.windowManager.command({ name: "Move", direction: "down" });
+    expect(nodeWindow.parentNode).toBe(monitor);
+    expect(metaWindow.is_maximized()).toBe(true);
   });
 
   it.each(["Move", "Swap"])("off: the %s command unmaximizes a kept window", (name) => {

@@ -95,8 +95,12 @@ A fullscreen window keeps `mode === TILE` (fullscreen doesn't change node mode),
   and the render share one definition of a kept maximize: a kept window survives its
   next size change, and a one-axis edge snap beside tiled windows is rejected whatever
   the setting.
-- A swap (`swapPairs`, through `move()`) and a keyboard move (`tree.move`, through
-  `_finishMove` or `move()`) unmaximize the windows they move, a kept one included.
+- A swap (`swapPairs`, through `move()`) unmaximizes the windows it moves, a kept one
+  included. So does a keyboard move (`tree.move`): through `move()` across monitors, and
+  through `_finishMove` on a reparent while the setting is off. On, `_finishMove` leaves
+  it to the render, which keeps a lone tile's maximize as before.
+- A keyboard resize (`resize()`) of a kept maximize unmaximizes and re-renders instead
+  of resizing: the maximized frame as `initRect` would skew the split, as in forge-v4wh.
 - `handleMaximizeOnSingle()` (`window.js`) maximizes the sole tiled window per
   monitor — but must **skip a lone fullscreen window** (it reads as not-maximized).
 - `updateDecorationLayout()` (`window.js`) hides decorations on monitors with a

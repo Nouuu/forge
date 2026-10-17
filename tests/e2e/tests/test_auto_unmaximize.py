@@ -16,8 +16,9 @@ from framework.constants import Timing
 from framework.wait import WaitTimeoutError, wait_for
 
 # Mutter's own state for the window with this id, read by feature detection; the
-# monitors of the other normal windows that sit on another monitor; and how many tiled
-# windows Forge counts on its monitor node, the input of _keepsMaximize.
+# monitors of the other normal windows that sit on another monitor; how many tiled
+# windows Forge counts on its monitor node, the input of _keepsMaximize; and whether a
+# window holds focus.
 _STATE = r"""
 (() => {
   const wins = global.workspace_manager.get_active_workspace().list_windows();
@@ -43,6 +44,7 @@ _STATE = r"""
       )
       .map((x) => x.get_monitor()),
     tiledBeside: mon ? wm._tiledWindowsOnMonitor(mon).length : 0,
+    focused: !!global.display.get_focus_window(),
   });
 })()
 """
@@ -156,6 +158,14 @@ class TestAutoUnmaximizeForTiling:
             state,
             predicate=lambda s: not s["landed"],
             message="precondition: the unmaximized window should re-tile into its slot",
+        )
+        # Without a focus window (Xvfb) updateMetaPositionSize returns before the Bug #461
+        # check, so the maximize below would stay even without the shared predicate.
+        assert shell_proxy.ensure_focus()
+        wait_for(
+            state,
+            predicate=lambda s: s["focused"],
+            message="precondition: a window should hold focus",
         )
         assert shell_proxy.eval(_SET_MAXIMIZED % (first["id"], "true")) == "ok"
         wait_for(
