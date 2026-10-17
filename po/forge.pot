@@ -324,6 +324,13 @@ msgid ""
 msgstr ""
 
 #: lib/prefs/appearance.js
+msgid ""
+"Colors and border sizes cannot be saved because ~/.config/forge/stylesheet/"
+"forge/stylesheet.css cannot be read. Make that file readable again, then "
+"reopen Preferences."
+msgstr ""
+
+#: lib/prefs/appearance.js
 msgid "Border size"
 msgstr ""
 
