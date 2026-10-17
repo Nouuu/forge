@@ -28,7 +28,7 @@ msgstr ""
 msgid "Move"
 msgstr ""
 
-#: lib/extension/cheatsheet.js
+#: lib/extension/cheatsheet.js lib/prefs/keyboard.js
 msgid "Resize"
 msgstr ""
 
@@ -424,11 +424,11 @@ msgid "None"
 msgstr ""
 
 #: lib/prefs/keyboard.js
-msgid "Resize step (px)"
+msgid "How far the resize shortcuts move a window edge"
 msgstr ""
 
 #: lib/prefs/keyboard.js
-msgid "How far the resize shortcuts move a window edge"
+msgid "Resize step (px)"
 msgstr ""
 
 #: lib/prefs/keyboard.js
