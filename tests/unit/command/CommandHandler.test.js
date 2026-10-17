@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { CommandHandler } from "../../../lib/extension/command.js";
 import { NODE_TYPES, LAYOUT_TYPES, ORIENTATION_TYPES } from "../../../lib/extension/tree.js";
 import { WINDOW_MODES } from "../../../lib/extension/window.js";
+import { Logger } from "../../../lib/shared/logger.js";
 import {
   createMockWindow,
   installGnomeGlobals,
@@ -301,6 +302,84 @@ describe("CommandHandler", () => {
       commandHandler.execute({ name: "ConfigReload" });
 
       expect(mockWm.reloadWindowOverrides).toHaveBeenCalled();
+    });
+  });
+
+  describe("PrefsOpen command", () => {
+    let prefsWindow;
+
+    beforeEach(() => {
+      prefsWindow = createMockWindow({ title: "Forge Preferences" });
+      ctx.display.get_tab_list.mockReturnValue([prefsWindow]);
+    });
+
+    it("should focus and center an existing prefs window that has a workspace", () => {
+      const workspace = { activate_with_focus: vi.fn() };
+      prefsWindow.get_workspace = vi.fn(() => workspace);
+
+      commandHandler.execute({ name: "PrefsOpen" });
+
+      expect(workspace.activate_with_focus).toHaveBeenCalledWith(prefsWindow, 12345);
+      expect(mockWm.moveCenter).toHaveBeenCalledWith(prefsWindow);
+      expect(mockExt.openPreferences).not.toHaveBeenCalled();
+    });
+
+    it("should open preferences when the prefs window has no workspace", () => {
+      prefsWindow.get_workspace = vi.fn(() => null);
+
+      expect(() => commandHandler.execute({ name: "PrefsOpen" })).not.toThrow();
+
+      expect(mockExt.openPreferences).toHaveBeenCalledTimes(1);
+      expect(mockWm.moveCenter).not.toHaveBeenCalled();
+    });
+
+    it("should open preferences when no prefs window is found", () => {
+      ctx.display.get_tab_list.mockReturnValue([]);
+
+      commandHandler.execute({ name: "PrefsOpen" });
+
+      expect(mockExt.openPreferences).toHaveBeenCalledTimes(1);
+      expect(mockWm.moveCenter).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("ConfigExport command", () => {
+    let infoSpy;
+    let errorSpy;
+
+    beforeEach(() => {
+      infoSpy = vi.spyOn(Logger, "info").mockImplementation(() => {});
+      errorSpy = vi.spyOn(Logger, "error").mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+      infoSpy.mockRestore();
+      errorSpy.mockRestore();
+    });
+
+    it("should log info and no error when the export succeeds", () => {
+      mockExt.configSync = { enablePortableConfig: vi.fn(() => true) };
+
+      commandHandler.execute({ name: "ConfigExport" });
+
+      expect(infoSpy).toHaveBeenCalledWith(expect.stringContaining("exported"));
+      expect(errorSpy).not.toHaveBeenCalled();
+    });
+
+    it("should log an error and no info when the export fails", () => {
+      mockExt.configSync = { enablePortableConfig: vi.fn(() => false) };
+
+      commandHandler.execute({ name: "ConfigExport" });
+
+      expect(errorSpy).toHaveBeenCalledTimes(1);
+      expect(infoSpy).not.toHaveBeenCalled();
+    });
+
+    it("should do nothing without configSync", () => {
+      expect(() => commandHandler.execute({ name: "ConfigExport" })).not.toThrow();
+
+      expect(infoSpy).not.toHaveBeenCalled();
+      expect(errorSpy).not.toHaveBeenCalled();
     });
   });
 
