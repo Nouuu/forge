@@ -2,6 +2,19 @@ import { describe, it, expect, vi } from "vitest";
 import { ThemeManagerBase } from "../../lib/shared/theme.js";
 import { File, Settings } from "../mocks/gnome/Gio.js";
 
+// parse throws for this text only, so the default stylesheet still parses.
+const parseThrowsOn = vi.hoisted(() => ({ text: null }));
+vi.mock("../../lib/css/index.js", async (importOriginal) => {
+  const css = await importOriginal();
+  return {
+    ...css,
+    parse: (text, options) => {
+      if (text === parseThrowsOn.text) throw new Error("parse blew up");
+      return css.parse(text, options);
+    },
+  };
+});
+
 /**
  * close-spec-gaps:N04: when the user stylesheet exists but load_contents throws
  * (no read permission, EIO), _importCss falls back to the default AST
@@ -12,6 +25,10 @@ import { File, Settings } from "../mocks/gnome/Gio.js";
  * Fix: _importCss remembers that the user stylesheet could not be read (reset
  * on each import), and _updateCss refuses to write while it is set, before
  * _ensureWritable.
+ *
+ * A readable user stylesheet whose parse throws took the same default fallback
+ * without the flag, so the next write could replace it. Its catch now sets the
+ * flag too, when the failing file is the user stylesheet.
  */
 const userCss = `.tiled { color: rgb(1, 2, 3); border-width: 3px; opacity: 0.8; }`;
 const defaultCss = `.tiled { color: rgb(9, 9, 9); border-width: 3px; opacity: 0.8; }`;
@@ -55,6 +72,21 @@ describe("close-spec-gaps:N04: an unreadable user stylesheet is never overwritte
     expect(theme.reloadStylesheet).not.toHaveBeenCalled();
   });
 
+  it("a user stylesheet whose parse throws is refused and left untouched", () => {
+    parseThrowsOn.text = userCss;
+    try {
+      const { theme, userFile, defaultFile } = makeTheme();
+      expect(defaultFile.load_contents).toHaveBeenCalled();
+
+      expect(theme.setCssProperty(".tiled", "opacity", "0.5")).toBe(false);
+
+      expect(userFile.replace_contents).not.toHaveBeenCalled();
+      expect(userFile.set_attribute_uint32).not.toHaveBeenCalled();
+    } finally {
+      parseThrowsOn.text = null;
+    }
+  });
+
   it("a later readable import clears the refusal", () => {
     const { theme, userFile } = makeTheme({ userReadable: false });
     userFile.load_contents = vi.fn(() => [true, new TextEncoder().encode(userCss), null]);
@@ -96,6 +128,20 @@ describe("close-spec-gaps:N04: an unreadable user stylesheet is never overwritte
       throw new Error("GLib.Error g-io-error-quark: Input/output error");
     });
     theme._importCss();
+
+    configMgr.stylesheetFile = userFile;
+    expect(theme.setCssProperty(".tiled", "opacity", "0.5")).toBe(true);
+    expect(userFile.replace_contents).toHaveBeenCalledTimes(1);
+  });
+
+  it("a default whose parse throws alone does not block a later write", () => {
+    const { theme, userFile, configMgr } = makeTheme({ userPresent: false });
+    parseThrowsOn.text = defaultCss;
+    try {
+      theme._importCss();
+    } finally {
+      parseThrowsOn.text = null;
+    }
 
     configMgr.stylesheetFile = userFile;
     expect(theme.setCssProperty(".tiled", "opacity", "0.5")).toBe(true);
