@@ -424,6 +424,14 @@ msgid "None"
 msgstr ""
 
 #: lib/prefs/keyboard.js
+msgid "Resize step (px)"
+msgstr ""
+
+#: lib/prefs/keyboard.js
+msgid "How far the resize shortcuts move a window edge"
+msgstr ""
+
+#: lib/prefs/keyboard.js
 msgid "Shortcuts"
 msgstr ""
 
@@ -746,6 +754,14 @@ msgid "Focused window's monitor"
 msgstr ""
 
 #: lib/prefs/settings.js
+msgid "Unmaximize windows when tiling"
+msgstr ""
+
+#: lib/prefs/settings.js
+msgid "A maximized window is unmaximized before it joins the tiling tree"
+msgstr ""
+
+#: lib/prefs/settings.js
 msgid "Drag-and-drop behavior"
 msgstr ""
 
@@ -802,6 +818,10 @@ msgstr ""
 
 #: lib/prefs/settings.js
 msgid "Logger"
+msgstr ""
+
+#: lib/prefs/settings.js schemas/org.gnome.shell.extensions.forge.gschema.xml
+msgid "Enable logging"
 msgstr ""
 
 #: lib/prefs/settings.js
@@ -910,10 +930,6 @@ msgstr ""
 msgid ""
 "Provide log4j-like logging levels: 0 - OFF 1 - FATAL 2 - ERROR 3 - WARN 4 - "
 "INFO 5 - DEBUG 6 - TRACE 7 - ALL"
-msgstr ""
-
-#: schemas/org.gnome.shell.extensions.forge.gschema.xml
-msgid "Enable logging"
 msgstr ""
 
 #: schemas/org.gnome.shell.extensions.forge.gschema.xml

@@ -14,6 +14,8 @@ them up, version-control them, or copy them to another machine.
 
 GSettings remains the live source of truth; these files are an import/export layer.
 
+Three keys have no control in a shipped build: `tiling-mode-enabled` (quick settings toggle or `Super+w`), `log-level` and `logging-enabled` (debug builds only, no effect in a shipped build).
+
 ## Export / import
 
 In **Preferences → Portability**:

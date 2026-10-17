@@ -61,6 +61,7 @@ describe("prefs-lifecycle:G010: spin-bound keys carry their spin range in the sc
     new AppearancePage({ settings, dir });
     new KeyboardPage({ settings, kbdSettings: new Settings() });
 
+    expect(spins.has("resize-amount")).toBe(true);
     expect(spins.size).toBeGreaterThanOrEqual(9);
     const ranges = schemaRanges();
     for (const [key, spin] of spins) {
