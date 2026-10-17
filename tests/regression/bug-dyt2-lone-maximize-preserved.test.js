@@ -79,7 +79,7 @@ describe("forge-dyt2: tree.apply preserves a lone tiled window's maximize", () =
     win1.maximize();
 
     // With a sibling present the lone exemption does not apply; apply re-slices it.
-    expect(ctx.windowManager._isLoneMaximizedTile(node1)).toBe(false);
+    expect(ctx.windowManager._keepsMaximize(node1)).toBe(false);
     ctx.tree.apply(ctx.tree);
     expect(win1.is_maximized()).toBe(false);
   });

@@ -1,16 +1,10 @@
-"""close-spec-gaps:N11: auto-unmaximize-for-tiling acts when a new window tiles.
+"""close-spec-gaps:N11: auto-unmaximize-for-tiling decides whether a maximized window
+stays maximized when a new window tiles beside it.
 
-trackWindow runs inside display::window-created and, with the setting on, unmaximizes
-a maximized tiled neighbour when the new window will tile. About 200 ms later the
-window-create render re-slices every tiled window, and move() unmaximizes the
-neighbour whatever the setting says (forge-dyt2 keeps only a lone window maximized).
-So the end state is the same either way. The setting only decides whether the
-neighbour unmaximizes as the new window maps.
-
-The probe therefore reads the neighbour inside window-created, in a handler connected
-after Forge's own one, so it runs right after trackWindow and before any render. The
-lone window is maximized by window-maximize-on-single (Compat.maximize, then Mutter's
-own state), which is also the case where a user meets this setting.
+The render decides, once processFloats has tiled the new window, so a native Wayland
+window whose title and class land after window-created is covered too. On: the
+neighbour is unmaximized. Off: it stays maximized. The lone window is maximized by
+window-maximize-on-single, the case where a user meets this setting.
 """
 
 import time
@@ -19,76 +13,65 @@ import pytest
 from framework.constants import Timing
 from framework.wait import wait_for
 
-_ARM_PROBE = r"""
+# Mutter's own state for the window with this id, read by feature detection.
+_STATE = r"""
 (() => {
-  const isMax = (w) =>
+  const wins = global.workspace_manager.get_active_workspace().list_windows();
+  const w = wins.find((x) => x.get_id() === %d);
+  if (!w) return JSON.stringify({ error: "the first window is gone" });
+  const maximized =
     typeof w.is_maximized === "function"
       ? w.is_maximized()
       : w.get_maximized() === Meta.MaximizeFlags.BOTH;
-  const target = global.workspace_manager.get_active_workspace().list_windows().find(isMax);
-  if (!target) return "no-maximized-window";
-  globalThis.__forgeN11Probe = null;
-  globalThis.__forgeN11ProbeId = global.display.connect("window-created", (_d, w) => {
-    if (w === target || w.get_window_type() !== Meta.WindowType.NORMAL) return;
-    global.display.disconnect(globalThis.__forgeN11ProbeId);
-    globalThis.__forgeN11ProbeId = 0;
-    try {
-      const wm = Main.extensionManager.lookup("forge@jmmaranan.com").stateObj.extWm;
-      globalThis.__forgeN11Probe = JSON.stringify({
-        maximized: isMax(target),
-        willTile: !wm._shouldFloat(w),
-        title: w.get_title(),
-        wmClass: w.get_wm_class(),
-      });
-    } catch (e) {
-      globalThis.__forgeN11Probe = JSON.stringify({ error: String(e) });
-    }
+  const f = w.get_frame_rect();
+  const a = w.get_work_area_current_monitor();
+  return JSON.stringify({
+    maximized,
+    landed: f.width === a.width && f.height === a.height,
+    sameMonitor: wins.every((x) => x.get_monitor() === w.get_monitor()),
   });
-  return "ok";
 })()
 """
-
-_READ_PROBE = "globalThis.__forgeN11Probe ?? 'not-fired'"
-
-_DISARM_PROBE = (
-    "(() => { if (globalThis.__forgeN11ProbeId) "
-    "global.display.disconnect(globalThis.__forgeN11ProbeId); "
-    "globalThis.__forgeN11ProbeId = 0; return 'ok'; })()"
-)
 
 
 class TestAutoUnmaximizeForTiling:
     @pytest.mark.parametrize("enabled", [True, False], ids=["on", "off"])
-    def test_new_window_unmaximizes_its_maximized_neighbour(
+    def test_new_tiled_window_and_its_maximized_neighbour(
         self, shell_proxy, restore_settings, launch_window, enabled
     ):
         restore_settings.set("auto-unmaximize-for-tiling", enabled)
         restore_settings.set("window-maximize-on-single", True)
         time.sleep(Timing.SETTINGS_SETTLE)
 
-        launch_window()
+        first = launch_window()
+
+        def state():
+            return shell_proxy.eval(_STATE % first["id"])
+
+        # Wait for the maximized frame too: a late size-changed would hit the
+        # Bug #461 rejection once the second window tiles.
         wait_for(
-            shell_proxy.count_maximized_windows,
-            predicate=lambda n: n == 1,
+            state,
+            predicate=lambda s: s["maximized"] and s["landed"],
             message="precondition: the lone tiled window should be maximized",
         )
 
-        assert shell_proxy.eval(_ARM_PROBE) == "ok"
-        try:
-            launch_window()
-            probe = shell_proxy.eval(_READ_PROBE)
-        finally:
-            shell_proxy.eval(_DISARM_PROBE)
+        launch_window()
+        wait_for(
+            lambda: shell_proxy.count_tiled_windows_of_class(first["wmClass"]),
+            predicate=lambda n: n == 2,
+            message="the new window should tile beside the first",
+        )
+        assert state()["sameMonitor"], f"both windows must share a monitor: {state()}"
 
-        assert isinstance(probe, dict) and "error" not in probe, f"probe failed: {probe!r}"
         if enabled:
-            assert probe["willTile"], (
-                f"the new window mapped float-exempt, so the setting cannot act at track "
-                f"time on this lane: {probe}"
-            )
-            assert not probe["maximized"], (
-                f"the maximized neighbour was not unmaximized when the new window was "
-                f"tracked: {probe}"
+            wait_for(
+                state,
+                predicate=lambda s: not s["maximized"],
+                message="setting on: the maximized neighbour should be unmaximized",
             )
         else:
-            assert probe["maximized"], f"the setting is off but the neighbour unmaximized: {probe}"
+            # Every render after the tile would unmaximize it; give them time to run.
+            time.sleep(Timing.WINDOW_SETTLE)
+            after = state()
+            assert after["maximized"], f"setting off: the neighbour was unmaximized: {after}"

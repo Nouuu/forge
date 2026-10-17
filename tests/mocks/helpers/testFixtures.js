@@ -40,7 +40,7 @@ export const DEFAULT_SETTINGS = {
 
   // Behavior
   "window-maximize-on-single": false,
-  "auto-unmaximize-for-tiling": false,
+  "auto-unmaximize-for-tiling": true,
   "disable-edge-tiling": true,
   "workspace-skip-tile": "",
   "monitor-skip-tile": "",
