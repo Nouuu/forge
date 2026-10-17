@@ -6,6 +6,7 @@ export class Widget extends withSignals() {
     super();
     this.name = params.name || "";
     this.style_class = params.style_class || "";
+    this.style = params.style ?? null;
     this.visible = params.visible !== false;
   }
 
