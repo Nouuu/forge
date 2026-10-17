@@ -61,7 +61,7 @@ describe("input-commands:G-017: GapSize and the schema range agree", () => {
 
   it.each([
     [32, 1],
-    [0, -50],
+    [5, -50],
     [0, 50],
   ])("from %i, amount %i: the written value equals a schema bound", (from, amount) => {
     stored = from;

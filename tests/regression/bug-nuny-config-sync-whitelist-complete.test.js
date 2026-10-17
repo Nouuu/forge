@@ -228,7 +228,8 @@ describe("config-sync whitelist completeness (forge-nuny / forge-eny3)", () => {
           Number(max),
         ]);
       }
-      expect(seen).toBeGreaterThanOrEqual(10);
+      // A <range> that is not the key's first child would escape keyRe.
+      expect(seen).toBe(body.match(/<range\b/g).length);
     });
   });
 });

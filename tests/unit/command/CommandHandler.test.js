@@ -346,7 +346,7 @@ describe("CommandHandler", () => {
     });
 
     it("should log a partial reload when a key was rejected and others landed", () => {
-      reload({ result: { settings: false, keybindings: true, applied: 2 } });
+      reload({ result: { settings: false, keybindings: true, applied: 1 } });
 
       expect(warnSpy).toHaveBeenCalledTimes(1);
       expect(infoSpy).not.toHaveBeenCalled();
