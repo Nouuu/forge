@@ -12,6 +12,7 @@
       "type": "array",
       "description": "List of window override rules",
       "items": {
+        "$comment": "close-spec-gaps:N01",
         "type": "object",
         "required": ["mode"],
         "anyOf": [{ "required": ["wmClass"] }, { "required": ["wmTitle"] }],

@@ -13,7 +13,7 @@
         </key>
 
         <key type="u" name="window-gap-size">
-            <range min="0" max="32"/>
+            <range min="0" max="32"/> <!-- prefs-lifecycle:G010, input-commands:G-017 -->
             <default>4</default>
             <summary>
                 The size of the gap between windows in the workarea
