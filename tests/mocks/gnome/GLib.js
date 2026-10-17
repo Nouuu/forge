@@ -127,7 +127,23 @@ export class Variant {
   }
 }
 
+// GLib.Error as GJS throws it: a domain (an error enum such as Gtk.DialogError) and a code.
+class GError extends globalThis.Error {
+  constructor(domain, code, message) {
+    super(message);
+    this.domain = domain;
+    this.code = code;
+  }
+
+  matches(domain, code) {
+    return this.domain === domain && this.code === code;
+  }
+}
+
+export { GError as Error };
+
 export default {
+  Error: GError,
   getenv,
   spawn_command_line_async,
   get_home_dir,

@@ -4,6 +4,7 @@ import { Object as GObjectBase } from "./GObject.js";
 export const Align = { FILL: 0, START: 1, END: 2, CENTER: 3, BASELINE: 4 };
 export const Orientation = { HORIZONTAL: 0, VERTICAL: 1 };
 export const License = { GPL_3_0: 7 };
+export const DialogError = { FAILED: 0, CANCELLED: 1, DISMISSED: 2 };
 
 // A GObject property write: notify::<name> fires synchronously, and only on a real change.
 function setProp(obj, name, value) {
@@ -209,8 +210,15 @@ export class HeaderBar extends Widget {
   }
 }
 
+// Like GIO, launch calls back after it returns; launch_finish throws a failure (GLib.Error).
 export class FileLauncher extends GObjectBase {
-  launch(_parent, _cancellable) {}
+  launch(_parent, _cancellable, callback) {
+    queueMicrotask(() => callback?.(this, {}));
+  }
+
+  launch_finish(_result) {
+    return true;
+  }
 }
 
 const iconTheme = { add_search_path() {} };
@@ -241,6 +249,7 @@ export default {
   Align,
   Orientation,
   License,
+  DialogError,
   Widget,
   Box,
   Switch,
