@@ -1,7 +1,8 @@
 // prefs-lifecycle:G012: FloatingPage.saveOverrides wrote { overrides: modified }, so the first
 // Add, Remove or Reset dropped `$schema` and any hand-added top-level key of windows.json.
 // Fix: saveOverrides reads configMgr.windowProps, sets overrides on it and saves that object.
-// With a malformed user file the getter returns the bundled default, so its top level is kept.
+// With a malformed user file the save is refused and the file is left as it is
+// (close-spec-gaps:T045).
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { FloatingPage } from "../../lib/prefs/floating.js";
 import { File, Settings } from "../mocks/gnome/Gio.js";
@@ -20,8 +21,9 @@ function setup(userText) {
     [DEFAULT]: JSON.stringify({ $schema: SCHEMA, overrides: [float("Alpha")] }),
   });
   const page = new FloatingPage({ settings: new Settings(), dir: new File("/mock") });
-  page._root = { add_toast: () => {} };
-  return { store, page };
+  const toasts = [];
+  page._root = { add_toast: (t) => toasts.push(t.title) };
+  return { store, page, toasts };
 }
 
 describe("saves keep the other top-level fields", () => {
@@ -43,13 +45,11 @@ describe("saves keep the other top-level fields", () => {
     expect(saved.overrides).toEqual([float("Gamma")]);
   });
 
-  it("a malformed user file saves the bundled top level plus the change", () => {
-    const { store, page } = setup("{ not json");
+  it("a malformed user file is left unchanged and the save toasts (close-spec-gaps:T045)", () => {
+    const { store, page, toasts } = setup("{ not json");
     page.wmClassEntry.set_text("Gamma");
     page.onAddHandler();
-    expect(JSON.parse(store.files.get(USER))).toEqual({
-      $schema: SCHEMA,
-      overrides: [float("Alpha"), float("Gamma")],
-    });
+    expect(store.files.get(USER)).toBe("{ not json");
+    expect(toasts).toEqual(["Could not save the window rules"]);
   });
 });
