@@ -37,7 +37,9 @@ export class Widget extends withSignals() {
   }
 
   destroy() {
-    // Mock destroy
+    // Clutter detaches a destroyed actor from its parent.
+    const parent = this.get_parent ? this.get_parent() : null;
+    if (parent && parent.remove_child) parent.remove_child(this);
   }
 
   grab_key_focus() {
