@@ -348,6 +348,21 @@ class ShellProxy:
         except (ValueError, TypeError):
             return -1
 
+    def get_stale_decorations(self) -> dict:
+        """Return {"stale": n}: visible forge tab-bar actors owned by no stacked/tabbed node.
+
+        close-spec-gaps:N13: a container that left stacked/tabbed must not keep its bar.
+        Returns {"error": ...} if the tree is unavailable.
+        """
+        self._ensure_bridge()
+        result = self.eval("globalThis._forgeTestBridge.staleDecorations()")
+        if isinstance(result, dict):
+            return result
+        try:
+            return json.loads(result)
+        except (ValueError, TypeError):
+            return {"error": f"unparseable: {result!r}"}
+
     def get_preview_hint_state(self) -> dict:
         """Return drag-preview hint leak state: {"count": n, "visible": n}.
 

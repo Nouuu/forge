@@ -1729,6 +1729,32 @@
       }
     },
 
+    // close-spec-gaps:N13: count visible forge tab-bar actors in window_group that no
+    // STACKED/TABBED container in the tree owns (a bar left behind by an untabbed container).
+    staleDecorations() {
+      try {
+        const live = new Set();
+        const r = root();
+        if (r) {
+          reduceTree(
+            r,
+            (acc, n) => {
+              if (n.decoration && (n.layout === "STACKED" || n.layout === "TABBED"))
+                live.add(n.decoration);
+              return { acc };
+            },
+            null
+          );
+        }
+        const stale = global.window_group
+          .get_children()
+          .filter((a) => a.type === "forge-deco" && a.visible && !live.has(a));
+        return JSON.stringify({ stale: stale.length });
+      } catch (e) {
+        return JSON.stringify({ error: String(e) });
+      }
+    },
+
     // Render the screencast overlay label (forge-eyu): create-if-needed + set text + position +
     // raise + show. Cached on globalThis._forgeTestOverlay so it survives across evals. Parented
     // to uiGroup — NOT addChrome, which would register struts and perturb tiling geometry. Text
