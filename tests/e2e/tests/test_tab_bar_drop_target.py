@@ -55,6 +55,6 @@ def test_drop_on_tab_bar_joins_the_group(shell_proxy, restore_settings, three_wi
 
     wait_for(
         lambda: _cons(shell_proxy.get_forge_tree()),
-        predicate=lambda cons: ("TABBED", 3) in cons,
+        predicate=lambda cons: ("TABBED", 3) in cons and ("TABBED", 2) not in cons,
         message="the window dropped on the title bar did not join the TABBED pair",
     )

@@ -123,6 +123,7 @@ class TestMultiMonitorTiling:
         try:
             begin = shell_proxy.monitor_drag_begin()
             assert begin["ok"], begin
+            assert not begin["rebuilt"], begin
             moved = shell_proxy.monitor_drag_move()
             assert moved["ok"], moved
             state = wait_for(
