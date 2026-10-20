@@ -292,7 +292,7 @@ describe("WindowManager - Workspace Management", () => {
       const { monitor } = getWorkspaceAndMonitor(ctx);
 
       // A tiled window exists on ws0, but the focused window reports ws1, so the
-      // monitor/workspace guard (currentMonWs !== activeMetaMonWs) must exclude it.
+      // workspace guard (onCurrentWorkspace) must exclude it.
       const sibling = createMockWindow({ id: 2, workspace: workspace0(), monitor: 0 });
       ctx.tree.createNode(monitor.nodeValue, NODE_TYPES.WINDOW, sibling);
 
