@@ -883,7 +883,10 @@ class ShellProxy:
     def fuzz_drag(self, src: str = None, tgt: str = None, zone: str = "center") -> dict:
         """Simulate a drag-drop tile: drag the SRC window onto ZONE of the TGT window,
         exercising Forge's drop/reparent logic (the only path keybindings can't reach).
-        src/tgt are positional hints (leftmost/...). See bridge.fuzzDrag. Returns {'ok',...}.
+        src/tgt are positional hints (leftmost/...). ZONE is center, left, right, top,
+        bottom, or bar: the title bar of TGT's stacked or tabbed parent, which returns
+        {'ok': False, 'reason': 'no-bar'} when there is none. See bridge.fuzzDrag.
+        Returns {'ok',...}.
         """
         self._ensure_bridge()
         opts = json.dumps({"src": src, "tgt": tgt, "zone": zone})

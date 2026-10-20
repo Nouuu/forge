@@ -112,3 +112,6 @@ What a **center** drop does is set by `dnd-center-layout`: `tabbed` (the default
 `stacked` wraps the two windows in a container of that layout, and `swap` exchanges
 the two windows in place instead. Whether you must hold a modifier while dragging is
 set by the drag mask — see [keybindings.md](keybindings.md#drag-to-tile).
+
+A drop on the title bar of a stacked or tabbed container counts as a center drop on
+that container.

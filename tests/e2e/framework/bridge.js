@@ -956,9 +956,19 @@
         const tr = tgt.get_frame_rect();
         const fx = { center: 0.5, left: 0.12, right: 0.88, top: 0.5, bottom: 0.5 };
         const fy = { center: 0.5, left: 0.5, right: 0.5, top: 0.12, bottom: 0.88 };
-        const zone = o.zone in fx ? o.zone : "center";
+        let zone = o.zone in fx ? o.zone : "center";
         const px = Math.round(tr.x + tr.width * fx[zone]);
-        const py = Math.round(tr.y + tr.height * fy[zone]);
+        let py = Math.round(tr.y + tr.height * fy[zone]);
+        // close-spec-gaps:N16: "bar" is on the title bar of TGT's stacked or tabbed parent,
+        // halfway between TGT's frame and the parent edge on the bar side.
+        if (o.zone === "bar") {
+          const parent = wm.findNodeWindow(tgt)?.parentNode;
+          const pr = parent?.isStackedOrTabbed() && parent.decoration?.visible && parent.rect;
+          if (!pr) return JSON.stringify({ ok: false, reason: "no-bar" });
+          const bottom = wm.tree.tabPosition() === "bottom";
+          zone = "bar";
+          py = Math.round(bottom ? (tr.y + tr.height + pr.y + pr.height) / 2 : (pr.y + tr.y) / 2);
+        }
 
         const display = global.display;
         const grabOp = Meta.GrabOp.MOVING_UNCONSTRAINED;
