@@ -52,8 +52,11 @@ export function createMockDisplay(options = {}) {
     }),
     // Mutter maps a rect to the monitor it most overlaps (center fallback). Used
     // by move() to resolve the target monitor's work area for the off-screen
-    // clamp. Defaults to 0 when the rect sits outside every monitor.
+    // clamp. Defaults to 0 when the rect sits outside every monitor. GJS throws on
+    // anything but a boxed Mtk.Rectangle (close-spec-gaps:N14).
     get_monitor_index_for_rect: vi.fn((rect) => {
+      if (!(rect instanceof Rectangle))
+        throw new Error(`Object ${rect} is not a subclass of GObject_Struct, it's a Object`);
       const cx = rect.x + rect.width / 2;
       const cy = rect.y + rect.height / 2;
       const idx = geometries.findIndex(

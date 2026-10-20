@@ -5,6 +5,7 @@ import * as GnomeMocks from "./mocks/gnome/index.js";
 // Mock the gi:// import scheme used by GNOME Shell ESM
 // The extension uses: import Meta from "gi://Meta"
 vi.mock("gi://Meta", () => GnomeMocks.Meta);
+vi.mock("gi://Mtk", () => GnomeMocks.Mtk);
 vi.mock("gi://Gio", () => GnomeMocks.Gio);
 vi.mock("gi://GLib", () => GnomeMocks.GLib);
 vi.mock("gi://Shell", () => GnomeMocks.Shell);

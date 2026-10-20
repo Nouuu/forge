@@ -68,6 +68,7 @@ The mocks simulate GNOME Shell APIs so tests run in Node.js without GNOME Shell:
 | Mock | APIs |
 |------|------|
 | `Meta.js` | Window, Rectangle, Workspace, GrabOp |
+| `Mtk.js` | Rectangle (the `Meta.js` class; `global.display.get_monitor_index_for_rect` rejects a plain object, as GJS does) |
 | `Gio.js` | File, Settings |
 | `GLib.js` | Path utilities, timeouts |
 | `GObject.js` | Type system, signals |

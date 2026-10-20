@@ -1,6 +1,7 @@
 // Export all GNOME mocks
 
 import * as MetaMock from "./Meta.js";
+import * as MtkMock from "./Mtk.js";
 import * as GLibMock from "./GLib.js";
 import * as GioMock from "./Gio.js";
 import * as ShellMock from "./Shell.js";
@@ -12,6 +13,7 @@ import * as AdwMock from "./Adw.js";
 import * as GdkMock from "./Gdk.js";
 
 export const Meta = MetaMock;
+export const Mtk = MtkMock;
 export const GLib = GLibMock;
 export const Gio = GioMock;
 export const Shell = ShellMock;
@@ -24,6 +26,7 @@ export const Gdk = GdkMock;
 
 export default {
   Meta,
+  Mtk,
   GLib,
   Gio,
   Shell,

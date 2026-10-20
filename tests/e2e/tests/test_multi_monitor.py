@@ -56,6 +56,40 @@ class TestMultiMonitorTiling:
         # Proves Forge tiles the two monitors independently rather than sharing one.
         assert on0["rect"]["width"] > 1700 and on1["rect"]["width"] > 1700
 
+    def test_drop_onto_other_monitor_lands_there(self, shell_proxy, two_windows):
+        """close-spec-gaps:N14: a window dropped onto a window of the other monitor lands
+        on that monitor. The bridge drag leaves the dragged window on its own monitor until
+        the drop, the case where the render's clamp used to pull it back."""
+        if shell_proxy.get_monitor_count() < 2:
+            pytest.skip("requires 2 virtual monitors (FORGE_E2E_VIRTUAL_MONITORS=2)")
+
+        shell_proxy.ensure_focus()
+        assert shell_proxy.move_focused_window_to_monitor(1) == "ok"
+
+        def xs():
+            return sorted(w.get("rect", {}).get("x", 0) for w in shell_proxy.get_windows())
+
+        wait_for(
+            xs,
+            predicate=lambda v: len(v) == 2 and v[0] < MONITOR_1_X <= v[1],
+            message="setup: one window per monitor",
+        )
+
+        res = shell_proxy.fuzz_drag("leftmost", "rightmost", "left")
+        assert isinstance(res, dict) and res.get("ok") and res.get("dropped"), res
+
+        # The two windows commit their new frames a beat apart, so the width check must be
+        # inside the wait predicate.
+        wait_for(
+            shell_proxy.get_windows,
+            predicate=lambda ws: (
+                len(ws) == 2
+                and all(w.get("rect", {}).get("x", 0) >= MONITOR_1_X for w in ws)
+                and all(w.get("rect", {}).get("width", 0) < 1700 for w in ws)
+            ),
+            message="the dropped window should land on monitor 1, not back on monitor 0",
+        )
+
 
 class TestMonitorHotPlug:
     """Monitor hot-plug (workspaces-monitors G3/G4), on a real Mutter.
