@@ -65,6 +65,24 @@ describe("close-spec-gaps:N16: a drop on a stacked or tabbed title bar joins the
     wm.renderTree("setup");
   }
 
+  // The group is a tab of a TABBED container [A, group [X, Y]], raised above A. Outer bar
+  // y 0 to 35: A's frame and the group's rect both span y 35 to 1080.
+  function nested(layout) {
+    init();
+    const outer = createContainerNode(monitor, LAYOUT_TYPES.TABBED);
+    win("A", outer);
+    group = createContainerNode(outer, layout);
+    win("X", group);
+    win("Y", group);
+    dragged = win("D", monitor);
+    const bottomToTop = ["A", "X", "Y"];
+    ctx.display.sort_windows_by_stacking.mockImplementation((ws) =>
+      [...ws].sort((a, b) => bottomToTop.indexOf(a.id) - bottomToTop.indexOf(b.id))
+    );
+    wm.renderTree("setup");
+    return outer;
+  }
+
   // A real drag of D: grab at its center, move to (x, y), release.
   function drag(x, y) {
     const meta = dragged.nodeValue;
@@ -140,21 +158,8 @@ describe("close-spec-gaps:N16: a drop on a stacked or tabbed title bar joins the
   });
 
   it("nested group raised: its bar beats the frame of the hidden tab A", () => {
-    // The group is a STACKED tab of a TABBED container [A, group [X, Y]], raised above A.
-    // Outer bar y 0 to 35, inner bar column y 35 to 105: A's frame (y 35 to 1080) covers
-    // the inner bar, X and Y start at y 105.
-    init();
-    const outer = createContainerNode(monitor, LAYOUT_TYPES.TABBED);
-    win("A", outer);
-    group = createContainerNode(outer, LAYOUT_TYPES.STACKED);
-    win("X", group);
-    win("Y", group);
-    dragged = win("D", monitor);
-    const bottomToTop = ["A", "X", "Y"];
-    ctx.display.sort_windows_by_stacking.mockImplementation((ws) =>
-      [...ws].sort((a, b) => bottomToTop.indexOf(a.id) - bottomToTop.indexOf(b.id))
-    );
-    wm.renderTree("setup");
+    // Inner bar column y 35 to 105: A's frame covers it, X and Y start at y 105.
+    const outer = nested(LAYOUT_TYPES.STACKED);
     expect(framesAt(480, 70)).toEqual(["A"]);
     expect(Utils.rectContainsPoint(group.rect, [480, 70])).toBe(true);
 
@@ -166,5 +171,17 @@ describe("close-spec-gaps:N16: a drop on a stacked or tabbed title bar joins the
     expect(preview).toEqual({ visible: true, cls, rect: { x, y, width, height } });
     expect(ids(group)).toEqual(["X", "Y", "D"]);
     expect(ids(outer)).toEqual(["A", "CON"]);
+  });
+
+  it("nested split raised: a frame in it beats the hidden tab A", () => {
+    // X's frame (x 0 to 480) lies in A's frame and in the TABBED container's rect.
+    const outer = nested(LAYOUT_TYPES.HSPLIT);
+    expect(framesAt(240, 540)).toEqual(["A", "X"]);
+    expect(Utils.rectContainsPoint(outer.rect, [240, 540])).toBe(true);
+
+    const { target } = drag(240, 540);
+
+    expect(target).toBe("X");
+    expect(ids(group)).toEqual(["X", "Y", "D"]);
   });
 });
