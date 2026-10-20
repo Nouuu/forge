@@ -91,12 +91,10 @@ describe("forge-aydd: off-screen clamp resolves the target monitor (multi-monito
         },
       },
     });
-    // Active workspace's per-monitor work area must match the below layout.
-    const ws = ctx.workspaceManager.get_active_workspace();
-    ws.get_work_area_for_monitor = (idx) =>
-      new Rectangle({ x: 0, y: idx * 1080, width: 1920, height: 1080 });
-
+    // The window's per-monitor work area must match the below layout.
     const win = createMockWindow({ monitor: 0 });
+    win.get_work_area_for_monitor = (idx) =>
+      new Rectangle({ x: 0, y: idx * 1080, width: 1920, height: 1080 });
     // Rect entirely on the lower monitor (y:1080..2880). Against monitor A its
     // bottom (1780) overflows 1080 -> old clamp snapped y back onto A.
     wm().move(win, new Rectangle({ x: 100, y: 1200, width: 800, height: 600 }));
