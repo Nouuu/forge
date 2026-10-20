@@ -915,6 +915,76 @@
       });
     },
 
+    // close-spec-gaps:N15: a MOVING grab whose real frame crosses to monitor 1, pointer left on 0.
+    monitorDragBegin() {
+      if (this._monitorDrag) return JSON.stringify({ ok: false, reason: "already-open" });
+      const wm = forgeExt() && forgeExt().extWm;
+      if (!wm) return JSON.stringify({ ok: false, reason: "no-wm" });
+      const wins = global.workspace_manager
+        .get_active_workspace()
+        .list_windows()
+        .filter((w) => w.get_window_type() === Meta.WindowType.NORMAL);
+      const src = wins.find((w) => w.get_monitor() === 0);
+      const other = wins.find((w) => w.get_monitor() === 1);
+      if (!src || !other) return JSON.stringify({ ok: false, reason: "need-a-window-per-monitor" });
+      const display = global.display;
+      const state = { wm, src, other, sentinel: [] };
+      state.origFocus = display.get_focus_window;
+      state.origMonitor = display.get_current_monitor;
+      this._monitorDrag = state;
+      return this.monitorDragState(() => {
+        display.get_focus_window = () => src;
+        display.get_current_monitor = () => 0;
+        wm._handleGrabOpBegin(display, src, Meta.GrabOp.MOVING);
+        wm.sortedWindows = state.sentinel;
+      });
+    },
+
+    monitorDragMove() {
+      const state = this._monitorDrag;
+      return this.monitorDragState(() => {
+        const r = state.src.get_frame_rect();
+        const m = global.display.get_monitor_geometry(1);
+        state.src.move_frame(true, m.x - Math.round(r.width / 4), r.y);
+      });
+    },
+
+    monitorDragState(step) {
+      const state = this._monitorDrag;
+      if (!state) return JSON.stringify({ ok: false, reason: "no-drag" });
+      try {
+        if (step) step();
+        const list = state.wm.sortedWindows;
+        return JSON.stringify({
+          ok: true,
+          srcMonitor: state.src.get_monitor(),
+          otherMonitor: state.other.get_monitor(),
+          pointerMonitor: global.display.get_current_monitor(),
+          targets: list.length,
+          rebuilt: list !== state.sentinel,
+          holdsOther: list.includes(state.other),
+        });
+      } catch (e) {
+        try {
+          this.monitorDragEnd();
+        } catch (e2) {}
+        return JSON.stringify({ ok: false, error: e.message });
+      }
+    },
+
+    monitorDragEnd() {
+      const state = this._monitorDrag;
+      if (!state) return JSON.stringify({ ok: false, reason: "no-drag" });
+      this._monitorDrag = null;
+      try {
+        state.wm._handleGrabOpEnd(global.display, state.src, Meta.GrabOp.MOVING);
+      } finally {
+        global.display.get_focus_window = state.origFocus;
+        global.display.get_current_monitor = state.origMonitor;
+      }
+      return JSON.stringify({ ok: true });
+    },
+
     fuzzDrag(opts) {
       const o = opts || {};
       const wm = forgeExt() && forgeExt().extWm;

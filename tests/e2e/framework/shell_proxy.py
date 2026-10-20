@@ -880,6 +880,35 @@ class ShellProxy:
         self._ensure_bridge()
         return self.eval("globalThis._forgeTestBridge.liveResizeEnd()")
 
+    def monitor_drag_begin(self) -> dict:
+        """Start a MOVING grab on the window of monitor 0 (close-spec-gaps:N15).
+
+        Shims get_focus_window to that window and get_current_monitor to monitor 0, so the
+        pointer stays behind, then swaps sortedWindows for a sentinel. Refuses while a drag
+        is open. Returns the state, like monitor_drag_state.
+        """
+        self._ensure_bridge()
+        return self.eval("globalThis._forgeTestBridge.monitorDragBegin()")
+
+    def monitor_drag_move(self) -> dict:
+        """Move the real frame three quarters onto monitor 1, which sits right of monitor 0.
+        Returns the state."""
+        self._ensure_bridge()
+        return self.eval("globalThis._forgeTestBridge.monitorDragMove()")
+
+    def monitor_drag_state(self) -> dict:
+        """The dragged and the other window's monitors, the shimmed pointer monitor, the
+        target count, whether sortedWindows was rebuilt since Begin and whether it holds the
+        other window. A step that throws ends the drag and returns {'ok': False, 'error': msg}."""
+        self._ensure_bridge()
+        return self.eval("globalThis._forgeTestBridge.monitorDragState()")
+
+    def monitor_drag_end(self) -> dict:
+        """End the grab and restore both shims. MOVING is not a drop op, so nothing drops.
+        Returns {'ok': False, 'reason': 'no-drag'} when no drag is open."""
+        self._ensure_bridge()
+        return self.eval("globalThis._forgeTestBridge.monitorDragEnd()")
+
     def fuzz_drag(self, src: str = None, tgt: str = None, zone: str = "center") -> dict:
         """Simulate a drag-drop tile: drag the SRC window onto ZONE of the TGT window,
         exercising Forge's drop/reparent logic (the only path keybindings can't reach).

@@ -90,6 +90,53 @@ class TestMultiMonitorTiling:
             message="the dropped window should land on monitor 1, not back on monitor 0",
         )
 
+    def test_drag_keeps_targets_when_window_changes_monitor(self, shell_proxy, two_windows):
+        """close-spec-gaps:N15: a window dragged across the monitor edge keeps its drop targets.
+
+        Forge rebuilds sortedWindows, the drag's target list, when the grab begins and on
+        every window-entered-monitor. Mutter gives a moving window the monitor that holds
+        most of its frame, so a window held behind its middle changes monitor while the
+        pointer is still on the old one. The guard before the fix compared the pointer's
+        monitor with the window's, so that rebuild left the list empty.
+
+        The bridge holds a MOVING grab on the window of monitor 0, pins the pointer's monitor
+        to monitor 0 and moves the real frame three quarters onto monitor 1. Mutter then
+        emits window-entered-monitor for real. The list the grab began with already holds
+        the other window, so the bridge swaps it for a sentinel: a missing rebuild cannot
+        pass for a good one. The grab freezes the render, so the setup first waits for both
+        monitors to finish their re-tile."""
+        if shell_proxy.get_monitor_count() < 2:
+            pytest.skip("requires 2 virtual monitors (FORGE_E2E_VIRTUAL_MONITORS=2)")
+
+        shell_proxy.ensure_focus()
+        assert shell_proxy.move_focused_window_to_monitor(1) == "ok"
+        wait_for(
+            shell_proxy.get_windows,
+            predicate=lambda ws: (
+                len(ws) == 2
+                and sum(w["rect"]["x"] >= MONITOR_1_X for w in ws) == 1
+                and all(w["rect"]["width"] > 1700 for w in ws)
+            ),
+            message="setup: one window filling each monitor",
+        )
+
+        try:
+            begin = shell_proxy.monitor_drag_begin()
+            assert begin["ok"], begin
+            moved = shell_proxy.monitor_drag_move()
+            assert moved["ok"], moved
+            state = wait_for(
+                shell_proxy.monitor_drag_state,
+                predicate=lambda s: not s["ok"] or s["srcMonitor"] == s["otherMonitor"],
+                message="the dragged window did not change monitor",
+            )
+            assert state["ok"], state
+            assert state["pointerMonitor"] == begin["srcMonitor"], state
+            assert state["rebuilt"], f"window-entered-monitor did not rebuild the list: {state}"
+            assert state["holdsOther"], f"the drag lost its target on monitor 1: {state}"
+        finally:
+            shell_proxy.monitor_drag_end()
+
 
 class TestMonitorHotPlug:
     """Monitor hot-plug (workspaces-monitors G3/G4), on a real Mutter.
