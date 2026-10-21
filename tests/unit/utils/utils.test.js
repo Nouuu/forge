@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { createEnum } from "../../../lib/extension/enum.js";
 import {
   rectContainsPoint,
@@ -21,8 +21,18 @@ import {
 import { ORIENTATION_TYPES, POSITION } from "../../../lib/extension/tree.js";
 import { GRAB_TYPES } from "../../../lib/extension/window.js";
 import { GrabOp, MotionDirection, Workspace } from "../../mocks/gnome/Meta.js";
+import { installGnomeGlobals } from "../../mocks/helpers/index.js";
 
 describe("Utility Functions", () => {
+  // getWorkAreaSafe reads the display's monitor count.
+  let gnome;
+
+  beforeEach(() => {
+    gnome = installGnomeGlobals();
+  });
+
+  afterEach(() => gnome.cleanup());
+
   describe("createEnum", () => {
     it("should create frozen enum object", () => {
       const Colors = createEnum(["RED", "GREEN", "BLUE"]);

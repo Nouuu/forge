@@ -1,6 +1,7 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { resolveAxis, resolveRect, findWindowWith } from "../../lib/extension/utils.js";
 import { Workspace } from "../mocks/gnome/Meta.js";
+import { installGnomeGlobals } from "../mocks/helpers/index.js";
 
 /**
  * Bug forge-h0w3 (audit-2026-07b): when rectRequest.x/.y is absent — or is a
@@ -23,6 +24,14 @@ import { Workspace } from "../mocks/gnome/Meta.js";
  * cost of n redundant full tab-list scans per PrefsOpen.
  */
 describe("Bug forge-h0w3: an unspecified axis must mean 'leave the window where it is'", () => {
+  let gnome;
+
+  beforeEach(() => {
+    gnome = installGnomeGlobals();
+  });
+
+  afterEach(() => gnome.cleanup());
+
   /** Secondary monitor at x=1920; primary work area starts below a 27px panel. */
   function windowOn({ x, y, workArea }) {
     return {

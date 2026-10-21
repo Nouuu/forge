@@ -37,6 +37,13 @@ import {
  * null or false and calls nothing when a precondition fails; every call site goes through
  * them. The double throws where Mutter aborts, and a test window has the active workspace
  * and monitor 0 unless the test removes them.
+ *
+ * Follow-up (review of the fix): Mutter also looks the window's own monitor up by number
+ * (`get_work_area_current_monitor` on 45 and 46, the old-area read of `move_to_monitor` on
+ * every release), and the lookup returns NULL for a number past the current count. After a
+ * monitor change Mutter updates the windows one at a time (`on_monitors_changed_internal`),
+ * so JS running in that loop can meet a window whose monitor is past the count. Both window
+ * helpers refuse it.
  */
 describe("close-spec-gaps:N18: every shell-aborting Mutter call goes through a guarded helper", () => {
   const NO_WORKSPACE = /meta_window_get_workspaces: code should not be reached/;
@@ -55,6 +62,9 @@ describe("close-spec-gaps:N18: every shell-aborting Mutter call goes through a g
     ["no workspace", { workspace: null }],
     ["no monitor", { monitor: -1 }],
   ];
+
+  // The fixture display has two monitors.
+  const STALE_MONITOR = ["a monitor past the display's count", { monitor: 2 }];
 
   let ctx;
 
@@ -94,6 +104,13 @@ describe("close-spec-gaps:N18: every shell-aborting Mutter call goes through a g
       expect(() => win.move_to_monitor(-1)).toThrow(NEGATIVE_INDEX);
     });
 
+    it("aborts the calls that look the window's monitor up on a monitor past the display's count", () => {
+      const win = createMockWindow(STALE_MONITOR[1]);
+      expect(() => win.get_work_area_current_monitor()).toThrow(NO_LOGICAL_MONITOR);
+      expect(() => win.move_to_monitor(1)).toThrow(NO_LOGICAL_MONITOR);
+      expect(win.get_work_area_for_monitor(1)).toMatchObject({ x: 1920, width: 1920 });
+    });
+
     it("gives a test window the active workspace and monitor 0", () => {
       const win = createMockWindow();
       expect(win.get_workspace()).toBe(activeWorkspace());
@@ -120,7 +137,7 @@ describe("close-spec-gaps:N18: every shell-aborting Mutter call goes through a g
       expect(Utils.getWorkAreaSafe(win)).toMatchObject({ width: 1920, height: 1080 });
     });
 
-    it.each(BROKEN_STATES)("refuses a window with %s", (_state, params) => {
+    it.each([...BROKEN_STATES, STALE_MONITOR])("refuses a window with %s", (_state, params) => {
       const win = createMockWindow(params);
       const raw = vi.spyOn(win, "get_work_area_current_monitor");
       expect(Utils.getWorkAreaSafe(win)).toBeNull();
@@ -186,7 +203,7 @@ describe("close-spec-gaps:N18: every shell-aborting Mutter call goes through a g
     });
 
     it.each([
-      ...BROKEN_STATES.map(([state, params]) => [state, params, 1]),
+      ...[...BROKEN_STATES, STALE_MONITOR].map(([state, params]) => [state, params, 1]),
       ["index -1", {}, -1],
       ["index 2", {}, 2],
     ])("refuses %s", (_case, params, index) => {

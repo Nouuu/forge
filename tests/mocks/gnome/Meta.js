@@ -48,6 +48,9 @@ export class Rectangle {
 
 // close-spec-gaps:N18: the window calls below throw where Mutter (window.c, 45 to 50) aborts.
 const activeWorkspace = () => global.workspace_manager?.get_active_workspace?.() ?? null;
+const monitorCount = () => global.display?.get_n_monitors?.() ?? 1;
+const NO_LOGICAL_MONITOR =
+  "meta_window_get_work_area_for_logical_monitor: assertion failed: (logical_monitor)";
 
 function assertWorkspaces(win) {
   if (!win._on_all_workspaces && !win._workspace)
@@ -57,10 +60,7 @@ function assertWorkspaces(win) {
 function assertMonitorIndex(index) {
   if (index < 0)
     throw new Error("meta_window_get_work_area_for_monitor: assertion 'which_monitor >= 0' failed");
-  if (!(index < (global.display?.get_n_monitors?.() ?? 1)))
-    throw new Error(
-      "meta_window_get_work_area_for_logical_monitor: assertion failed: (logical_monitor)"
-    );
+  if (!(index < monitorCount())) throw new Error(NO_LOGICAL_MONITOR);
 }
 
 export class Window extends withSignals() {
@@ -100,10 +100,9 @@ export class Window extends withSignals() {
   }
 
   get_work_area_current_monitor() {
-    if (this.get_monitor() < 0)
-      throw new Error(
-        "meta_window_get_work_area_for_logical_monitor: assertion failed: (logical_monitor)"
-      );
+    // 45 and 46 look the window's monitor up by number (window.c 45: 5863, 5885, 5827).
+    const monitor = this.get_monitor();
+    if (monitor < 0 || monitor >= monitorCount()) throw new Error(NO_LOGICAL_MONITOR);
     assertWorkspaces(this);
     return new Rectangle({ x: 0, y: 0, width: 1920, height: 1080 });
   }
@@ -117,8 +116,7 @@ export class Window extends withSignals() {
 
   get_work_area_all_monitors() {
     assertWorkspaces(this);
-    const monitors = global.display?.get_n_monitors?.() ?? 1;
-    return new Rectangle({ x: 0, y: 0, width: monitors * 1920, height: 1080 });
+    return new Rectangle({ x: 0, y: 0, width: monitorCount() * 1920, height: 1080 });
   }
 
   move_resize_frame(interactive, x, y, width, height) {
@@ -312,6 +310,8 @@ export class Window extends withSignals() {
   move_to_monitor(monitorIndex) {
     if (this.get_monitor() < 0)
       throw new Error("meta_window_move_to_monitor: window->monitor is NULL");
+    // The old-area read looks the window's monitor up by number (window.c 45: 4115, 50: 4590).
+    if (this.get_monitor() >= monitorCount()) throw new Error(NO_LOGICAL_MONITOR);
     assertWorkspaces(this);
     assertMonitorIndex(monitorIndex);
     this._monitor = monitorIndex;

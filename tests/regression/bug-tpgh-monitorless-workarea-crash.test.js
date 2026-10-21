@@ -1,12 +1,13 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { WINDOW_MODES } from "../../lib/extension/window.js";
 import { NODE_TYPES } from "../../lib/extension/tree.js";
-import { WindowType, Workspace } from "../mocks/gnome/Meta.js";
+import { WindowType } from "../mocks/gnome/Meta.js";
 import * as Utils from "../../lib/extension/utils.js";
 import {
   createMockWindow,
   createWindowManagerFixture,
   getWorkspaceAndMonitor,
+  installGnomeGlobals,
 } from "../mocks/helpers/index.js";
 
 /**
@@ -33,6 +34,14 @@ describe("Bug forge-tpgh: monitor-less window does not abort via work-area looku
     });
 
   describe("getWorkAreaSafe helper", () => {
+    let gnome;
+
+    beforeEach(() => {
+      gnome = installGnomeGlobals();
+    });
+
+    afterEach(() => gnome.cleanup());
+
     it("returns null and never calls the C function when get_monitor() is -1", () => {
       const win = createMockWindow({ monitor: -1 });
       failIfWorkAreaCalled(win);
@@ -41,7 +50,7 @@ describe("Bug forge-tpgh: monitor-less window does not abort via work-area looku
     });
 
     it("returns the work area when the window has a valid monitor", () => {
-      const win = createMockWindow({ monitor: 0, workspace: new Workspace() });
+      const win = createMockWindow({ monitor: 0 });
       const wa = Utils.getWorkAreaSafe(win);
       expect(wa).toMatchObject({ x: 0, y: 0, width: 1920, height: 1080 });
     });
