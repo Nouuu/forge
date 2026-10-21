@@ -29,8 +29,13 @@ afterEach(() => {
   vi.doUnmock("resource:///org/gnome/shell/misc/config.js");
 });
 
-// A managed window has an actor and a monitor; the shims refuse one without (close-spec-gaps:N18).
-const live = { get_compositor_private: () => ({}), get_monitor: () => 0 };
+// A managed window has an actor, a monitor and a workspace; the shims refuse one without them
+// (close-spec-gaps:N18).
+const live = {
+  get_compositor_private: () => ({}),
+  get_monitor: () => 0,
+  get_workspace: () => ({}),
+};
 
 describe("compat (Mutter 49+ branch)", () => {
   let Compat;
