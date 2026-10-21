@@ -28,12 +28,13 @@ import {
  *   dereference a NULL `window->monitor` (45: 3144), 47 to 50 assert `(logical_monitor)`
  *   (47: 3219, 50: 3458). `move()` unmaximizes before it checks the actor.
  *
- * Fix: the render skips a window with no actor (`Tree.apply`, `_tiledWindowsOnMonitor`, the
- * occluded-dialog recentre); `Compat.maximize` refuses a window with no actor and
- * `Compat.unmaximize` one with no monitor. Mutter gives every window its actor while it
- * constructs it (window.c 45: 1343, 50: 1451), so no live window is refused. The window
- * double drops its actor in `unmanage()`, and its maximize and unmaximize throw where
- * Mutter aborts.
+ * Fix: the render places no window with no actor (`Tree.apply`, the occluded-dialog
+ * recentre); `Compat.maximize` refuses a window with no actor, which covers
+ * maximize-on-single, and `Compat.unmaximize` one with no monitor. A closing tile still
+ * counts in `_tiledWindowsOnMonitor` until it leaves the tree, so the single-tile rules keep
+ * their timing (FR-019). Mutter gives every window its actor while it constructs it
+ * (window.c 45: 1343, 50: 1451), so no live window is refused. The window double drops its
+ * actor in `unmanage()`, and its maximize and unmaximize throw where Mutter aborts.
  *
  * Follow-up (review of the fix): 45 and 46 look the window's monitor up by number to
  * unmaximize it (window.c 45: 3144 then 5827, 46: 3104 then 5805), and the lookup returns
@@ -132,14 +133,21 @@ describe("close-spec-gaps:N18: a render never acts on a window Mutter has unmana
       expect(callsOf(calls)).toEqual([]);
     });
 
-    it("counts the live tile as alone once Mutter has unmanaged its sibling", () => {
+    it("keeps counting a tile Mutter has unmanaged until it leaves the tree", () => {
+      const { monitor } = getWorkspaceAndMonitor(ctx);
       const live = createTiledWindow(ctx, { id: "live" });
       const closing = unmanagedTile("closing");
 
       render();
 
-      expect(live.metaWindow.is_maximized()).toBe(true);
+      expect(ctx.windowManager._tiledWindowsOnMonitor(monitor)).toHaveLength(2);
+      expect(live.metaWindow.get_maximized()).toBe(0);
       expect(closing.metaWindow.get_maximized()).toBe(0);
+
+      // The close animation ends: Mutter destroys the actor and Forge drops the node.
+      ctx.windowManager.windowDestroy(closing.nodeWindow.windowActor);
+
+      expect(live.metaWindow.is_maximized()).toBe(true);
     });
 
     it("places the live tile and never hands move() the one Mutter has unmanaged", () => {
