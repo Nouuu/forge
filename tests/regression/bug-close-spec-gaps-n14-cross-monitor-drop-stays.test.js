@@ -20,8 +20,9 @@ import { Rectangle } from "../mocks/gnome/Meta.js";
  * on a plain object, as GJS does. Monitors side by side: A = {x:0..1920}, B = {x:1920..3840}.
  *
  * Follow-up (review of the fix): every render now reaches the target work area, so it is
- * read from the window's own workspace (`metaWindow.get_work_area_for_monitor`, as
- * `rectForMonitor` does), not from the active workspace, whose struts can differ.
+ * read from the window's own workspace (`metaWindow.get_workspace()`, then that workspace's
+ * `get_work_area_for_monitor`; the Meta.Window API aborts on a window without a workspace,
+ * close-spec-gaps:N17), not from the active workspace, whose struts can differ.
  */
 describe("close-spec-gaps:N14: a cross-monitor render rect stays on its target monitor", () => {
   let ctx;
@@ -58,9 +59,11 @@ describe("close-spec-gaps:N14: a cross-monitor render rect stays on its target m
     const ws = ctx.workspaceManager.get_active_workspace();
     ws.get_work_area_for_monitor = (idx) =>
       new Rectangle({ x: idx * 1920, y: 0, width: idx === 1 ? 1720 : 1920, height: 1080 });
-    const win = createMockWindow({ monitor: 1 });
-    win.get_work_area_for_monitor = (idx) =>
-      new Rectangle({ x: idx * 1920, y: 0, width: 1920, height: 1080 });
+    const ownWorkspace = {
+      get_work_area_for_monitor: (idx) =>
+        new Rectangle({ x: idx * 1920, y: 0, width: 1920, height: 1080 }),
+    };
+    const win = createMockWindow({ monitor: 1, workspace: ownWorkspace });
 
     ctx.windowManager.move(win, { x: 3000, y: 100, width: 800, height: 600 });
 
