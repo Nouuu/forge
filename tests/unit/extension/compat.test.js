@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { MaximizeFlags, Window } from "../../mocks/gnome/Meta.js";
 import { Orientation } from "../../mocks/gnome/Clutter.js";
+import { installGnomeGlobals } from "../../mocks/helpers/index.js";
 
 // Compat dispatches on IS_MUTTER_49_PLUS which is computed from
 // PACKAGE_VERSION at module load. tests/setup.js mocks that resource
@@ -16,7 +17,15 @@ async function loadCompat(packageVersion) {
   return await import("../../../lib/extension/compat.js");
 }
 
+// Compat.unmaximize reads the display's monitor count.
+let gnome;
+
+beforeEach(() => {
+  gnome = installGnomeGlobals();
+});
+
 afterEach(() => {
+  gnome.cleanup();
   vi.doUnmock("resource:///org/gnome/shell/misc/config.js");
 });
 

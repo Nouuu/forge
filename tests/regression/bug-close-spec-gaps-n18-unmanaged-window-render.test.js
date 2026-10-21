@@ -34,6 +34,11 @@ import {
  * constructs it (window.c 45: 1343, 50: 1451), so no live window is refused. The window
  * double drops its actor in `unmanage()`, and its maximize and unmaximize throw where
  * Mutter aborts.
+ *
+ * Follow-up (review of the fix): 45 and 46 look the window's monitor up by number to
+ * unmaximize it (window.c 45: 3144 then 5827, 46: 3104 then 5805), and the lookup returns
+ * NULL for a number past the current count. JS running inside Mutter's monitor-change loop
+ * can meet such a window, so `Compat.unmaximize` refuses it too, as `getWorkAreaSafe` does.
  */
 describe("close-spec-gaps:N18: a render never acts on a window Mutter has unmanaged", () => {
   const NO_ACTOR = /meta_window_actor_size_change: the window has no actor/;
@@ -54,6 +59,11 @@ describe("close-spec-gaps:N18: a render never acts on a window Mutter has unmana
     "get_work_area_all_monitors",
   ];
   const UNMAXIMIZE = ["unmaximize", "set_unmaximize_flags"];
+  // The fixture display has one monitor.
+  const NO_USABLE_MONITOR = [
+    ["no monitor", { monitor: -1 }],
+    ["a monitor past the display's count", { monitor: 1 }],
+  ];
   const spyCalls = (win, names = MUTTER_CALLS) => names.map((name) => vi.spyOn(win, name));
   const callsOf = (spies) => spies.flatMap((spy) => spy.mock.calls);
 
@@ -99,13 +109,16 @@ describe("close-spec-gaps:N18: a render never acts on a window Mutter has unmana
       expect(() => win.set_maximize_flags(MaximizeFlags.BOTH)).toThrow(NO_ACTOR);
     });
 
-    it("aborts an unmaximize of a maximized window with no monitor", () => {
-      const win = createMockWindow({ monitor: -1 });
-      expect(() => win.unmaximize(MaximizeFlags.BOTH)).not.toThrow();
-      win.maximize();
-      expect(() => win.unmaximize(MaximizeFlags.BOTH)).toThrow(NO_LOGICAL_MONITOR);
-      expect(() => win.set_unmaximize_flags(MaximizeFlags.BOTH)).toThrow(NO_LOGICAL_MONITOR);
-    });
+    it.each(NO_USABLE_MONITOR)(
+      "aborts an unmaximize of a maximized window with %s",
+      (_, params) => {
+        const win = createMockWindow(params);
+        expect(() => win.unmaximize(MaximizeFlags.BOTH)).not.toThrow();
+        win.maximize();
+        expect(() => win.unmaximize(MaximizeFlags.BOTH)).toThrow(NO_LOGICAL_MONITOR);
+        expect(() => win.set_unmaximize_flags(MaximizeFlags.BOTH)).toThrow(NO_LOGICAL_MONITOR);
+      }
+    );
   });
 
   describe("a render with window-maximize-on-single on", () => {
@@ -208,16 +221,19 @@ describe("close-spec-gaps:N18: a render never acts on a window Mutter has unmana
       expect(callsOf(calls)).toEqual([]);
     });
 
-    it("Compat.unmaximize calls no Mutter unmaximize for a window with no monitor", () => {
-      const win = createMockWindow({ monitor: -1 });
-      win.maximize();
-      const calls = spyCalls(win, UNMAXIMIZE);
+    it.each(NO_USABLE_MONITOR)(
+      "Compat.unmaximize calls no Mutter unmaximize for a window with %s",
+      (_, params) => {
+        const win = createMockWindow(params);
+        win.maximize();
+        const calls = spyCalls(win, UNMAXIMIZE);
 
-      expect(() => Compat.unmaximize(win)).not.toThrow();
+        expect(() => Compat.unmaximize(win)).not.toThrow();
 
-      expect(callsOf(calls)).toEqual([]);
-      expect(win.is_maximized()).toBe(true);
-    });
+        expect(callsOf(calls)).toEqual([]);
+        expect(win.is_maximized()).toBe(true);
+      }
+    );
 
     it("both still maximize and unmaximize a live window", () => {
       const win = createMockWindow();

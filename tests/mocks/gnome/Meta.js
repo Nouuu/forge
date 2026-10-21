@@ -78,6 +78,8 @@ function assertMonitorToUnmaximize(win, flags) {
     (flags & MaximizeFlags.HORIZONTAL && win.maximized_horizontally) ||
     (flags & MaximizeFlags.VERTICAL && win.maximized_vertically);
   if (shrinks && win.get_monitor() < 0) throw new Error(NO_LOGICAL_MONITOR);
+  // 45 and 46 look the monitor up by number (window.c 45: 3144 then 5827, 46: 3104 then 5805).
+  if (shrinks && win.get_monitor() >= monitorCount()) throw new Error(NO_LOGICAL_MONITOR);
 }
 
 export class Window extends withSignals() {
