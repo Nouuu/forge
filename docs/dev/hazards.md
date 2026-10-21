@@ -223,12 +223,14 @@ clears it for a window that is not a normal window, cannot be resized or is full
 | `get_work_area_all_monitors()` | the window has no workspace | 45 to 50 | none yet |
 | `move_to_monitor(i)` | the window has no monitor: it reads `window->monitor->number` first | 45 to 50 | `Utils.moveToMonitorSafe` |
 | `move_to_monitor(i)` | the window has no workspace, its monitor is past the count, or `i` is past the count (a negative `i` is the `g_return_if_fail` above): it reads the work area of both monitors | 45 to 50 | `Utils.moveToMonitorSafe` |
+| `move_to_monitor(i)` | the window has no actor and `i` is another monitor: `meta_window_actor_size_change` dereferences it. 45 to 49 get there for a window whose rect overlaps its old work area, 50 for a window that is not hidden | 45 to 50 | `Utils.moveToMonitorSafe` |
 | `maximize` (49 and 50: `set_maximize_flags`, then `maximize()`) | the window has no actor: `meta_window_actor_size_change` dereferences it | 45 to 50 | `Compat.maximize` |
 | `maximize` | the window has a monitor and no workspace: `meta_window_recalc_features` reads the monitor's work area, which asserts | 45 to 50, a maximizable window | `Compat.maximize` |
 | `maximize` | the window's monitor is past the count: the same read looks it up by number | 45, 46, a maximizable window | `Compat.maximize` |
 | `unmaximize` (49 and 50: `set_unmaximize_flags`, then `unmaximize()`) | the window is maximized and has no monitor: 45 and 46 dereference the NULL `window->monitor`, 47 to 50 assert `(logical_monitor)` | 45 to 50 | `Compat.unmaximize` |
 | `unmaximize` | the window is maximized and its monitor is past the count: 45 and 46 look it up by number | 45, 46 | `Compat.unmaximize` |
 | `unmaximize` | the window is maximized and has no workspace | 45 to 50 | `Compat.unmaximize` |
+| `unmaximize` | the window is maximized and has no actor: `meta_window_actor_size_change` dereferences it | 45 to 50 | `Compat.unmaximize` |
 
 `Meta.Workspace` has `get_work_area_for_monitor` and `get_work_area_all_monitors` too. They do
 not abort on a bad index or a missing monitor. For an index past the last monitor,
@@ -256,9 +258,12 @@ it. The first caller adds a guarded helper to `utils.js`, the one file the rule 
   `_repositionOccludedDialog` skip it. `_tiledWindowsOnMonitor` still counts a closing tile
   until its node leaves the tree, so maximize-on-single and the single-tile rules keep their
   timing. The maximize shim is what stops a maximize there.
-- **Guardrail (in-code):** `Compat.maximize` and `Compat.unmaximize` share `hasWorkArea`: a
-  monitor in range and a workspace, the `getWorkAreaSafe` checks. `Compat.maximize` also needs
-  an actor. For a maximize, a window with no monitor is a conservative refusal, since
+- **Guardrail (in-code):** `Compat.maximize` and `Compat.unmaximize` share `canChangeMaximize`:
+  an actor, then the `getWorkAreaSafe` checks, a monitor in range and a workspace. It reads the
+  actor first, and so does `Utils.moveToMonitorSafe`. On a finalized wrapper GJS passes NULL
+  (class 2). `meta_window_get_compositor_private` checks for NULL and `meta_window_get_monitor`
+  does not (Mutter 45 to 50). So the first read refuses that wrapper, and nothing dereferences
+  it. For a maximize, a window with no monitor is a conservative refusal, since
   `meta_window_recalc_features` skips its work-area read there. `compat.js` cannot import
   `utils.js` (an import cycle), so it repeats the checks. Both shims check before the version
   dispatch, so every release is covered. `no-raw-maximize-api` (class 5) already forces every

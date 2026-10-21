@@ -51,6 +51,17 @@ import {
  * past the count, no workspace. A maximize with no monitor skips the read and the
  * constraints (45: 3865, 50: 4269); it is refused because the window has nowhere to go. The
  * setups build a maximized window as maximized, never through a maximize Mutter would abort.
+ *
+ * Follow-up (phase 13 review): an unmaximize hands Mutter the actor too. For a window
+ * maximized in a direction it clears, `meta_window_unmaximize` (45 to 48) and
+ * `meta_window_set_unmaximize_flags` (49, 50) call `meta_window_actor_size_change` (window.c
+ * 45: 3219, 47: 3306, 50: 3568), which reads the actor unchecked (window-actor 45: 1080, 50:
+ * 1155). Mutter drops the actor before it clears the maximize flags. For a focused window it
+ * moves the focus in between, which runs JS (window.c 45: 1450, 1510, 1535; 50: 1552, 1619,
+ * 1644). Both shims now share one check, the actor read first:
+ * `meta_window_get_compositor_private` returns NULL for a NULL window, and
+ * `meta_window_get_monitor` dereferences it (50: 6932, 3985). These rows drop only the actor,
+ * since `unmanage()` also clears the monitor and the workspace.
  */
 describe("close-spec-gaps:N18: a render never acts on a window Mutter has unmanaged", () => {
   const NO_ACTOR = /meta_window_actor_size_change: the window has no actor/;
@@ -145,6 +156,16 @@ describe("close-spec-gaps:N18: a render never acts on a window Mutter has unmana
         expect(() => win.set_unmaximize_flags(MaximizeFlags.BOTH)).toThrow(abort);
       }
     );
+
+    it("aborts an unmaximize of a maximized window with no actor", () => {
+      const restored = createMockWindow();
+      restored._actor = null;
+      expect(() => restored.unmaximize(MaximizeFlags.BOTH)).not.toThrow();
+      const win = maximizedWindow();
+      win._actor = null;
+      expect(() => win.unmaximize(MaximizeFlags.BOTH)).toThrow(NO_ACTOR);
+      expect(() => win.set_unmaximize_flags(MaximizeFlags.BOTH)).toThrow(NO_ACTOR);
+    });
   });
 
   describe("a render with window-maximize-on-single on", () => {
@@ -278,6 +299,27 @@ describe("close-spec-gaps:N18: a render never acts on a window Mutter has unmana
         expect(win.is_maximized()).toBe(true);
       }
     );
+
+    it("Compat.maximize refuses a window with no actor before it reads the monitor", () => {
+      const win = createMockWindow();
+      win._actor = null;
+      const calls = spyCalls(win, ["maximize", "set_maximize_flags", "get_monitor"]);
+
+      expect(() => Compat.maximize(win)).not.toThrow();
+
+      expect(callsOf(calls)).toEqual([]);
+    });
+
+    it("Compat.unmaximize refuses a maximized window with no actor before it reads the monitor", () => {
+      const win = maximizedWindow();
+      win._actor = null;
+      const calls = spyCalls(win, [...UNMAXIMIZE, "get_monitor"]);
+
+      expect(() => Compat.unmaximize(win)).not.toThrow();
+
+      expect(callsOf(calls)).toEqual([]);
+      expect(win.is_maximized()).toBe(true);
+    });
 
     it("both still maximize and unmaximize a live window", () => {
       const win = createMockWindow();

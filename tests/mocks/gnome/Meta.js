@@ -63,6 +63,12 @@ function assertMonitorIndex(index) {
   if (!(index < monitorCount())) throw new Error(NO_LOGICAL_MONITOR);
 }
 
+// meta_window_actor_size_change reads the actor unchecked (window-actor 45: 1080, 50: 1155).
+function assertActor(win) {
+  if (!win.get_compositor_private())
+    throw new Error("meta_window_actor_size_change: the window has no actor");
+}
+
 // A maximize reads the monitor's work area in meta_window_recalc_features, and only for a
 // window with a monitor (window.c 45: 2665, 5657; 50: 2873, 6009).
 function assertCanMaximize(win, flags) {
@@ -77,8 +83,7 @@ function assertCanMaximize(win, flags) {
     assertWorkspaces(win);
   }
   // A maximize hands the actor to meta_window_actor_size_change (window.c 45: 2728, 50: 2933).
-  if (!win.get_compositor_private())
-    throw new Error("meta_window_actor_size_change: the window has no actor");
+  assertActor(win);
 }
 
 // An unmaximize reads the monitor's work area (window.c 45: 3144, 47: 3219, 50: 3458).
@@ -92,6 +97,8 @@ function assertCanUnmaximize(win, flags) {
   if (win.get_monitor() >= monitorCount()) throw new Error(NO_LOGICAL_MONITOR);
   // The read lists the window's workspaces (window.c 45: 5832, 50: 6097).
   assertWorkspaces(win);
+  // Then it hands the actor over (window.c 45: 3219, 47: 3306, 50: 3568).
+  assertActor(win);
 }
 
 export class Window extends withSignals() {
@@ -347,6 +354,8 @@ export class Window extends withSignals() {
     if (this.get_monitor() >= monitorCount()) throw new Error(NO_LOGICAL_MONITOR);
     assertWorkspaces(this);
     assertMonitorIndex(monitorIndex);
+    // A move to another monitor hands the actor over (window.c 45: 4137, 50: 4610).
+    if (monitorIndex !== this.get_monitor()) assertActor(this);
     this._monitor = monitorIndex;
   }
 

@@ -115,8 +115,9 @@ path that does not end in `.json` reads as an existing directory. Call
   outside the display's monitors, a negative one included (Mutter reads an unset rect there).
   `maximize` and `set_maximize_flags` throw for a window with no actor. They also throw for a
   window that has a monitor and either no workspace or a monitor the display lacks.
-  `unmaximize` and `set_unmaximize_flags` throw for a maximized window with no monitor, a
-  monitor the display lacks or no workspace. A maximize that adds no direction, and an
+  `unmaximize` and `set_unmaximize_flags` throw for a maximized window with no actor, no
+  monitor, a monitor the display lacks or no workspace. `move_to_monitor` also throws for a
+  window with no actor moved to another monitor. A maximize that adds no direction, and an
   unmaximize of a window that is not maximized, never throw. The preconditions are class 8 in
   [hazards.md](../docs/dev/hazards.md). Fix the window or the code, never the double.
 - A test window has the active workspace of the mock `global.workspace_manager` (install the
@@ -125,7 +126,8 @@ path that does not end in `.json` reads as an existing directory. Call
   active workspace for a window on all workspaces, as Mutter does.
 - `unmanage()` leaves the state `meta_window_unmanage` leaves, and emits no signal:
   `get_compositor_private()` returns null (any other window has an actor), the maximize flags
-  clear, and the window has no workspace and no monitor.
+  clear, and the window has no workspace and no monitor. To drop only the actor, set
+  `_actor = null`.
 - `Gio.Settings` has no schema. Its setters never refuse a value, and neither they nor
   `reset` emit `changed::<key>`: a test emits it by hand.
 - `set_value`, `set_string` and `set_strv` return true. To test a refused write (a value

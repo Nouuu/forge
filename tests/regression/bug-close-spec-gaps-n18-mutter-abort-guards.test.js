@@ -44,11 +44,19 @@ import {
  * monitor change Mutter updates the windows one at a time (`on_monitors_changed_internal`),
  * so JS running in that loop can meet a window whose monitor is past the count. Both window
  * helpers refuse it.
+ *
+ * Follow-up (phase 13 review): a move to another monitor hands Mutter the actor too.
+ * `move_to_monitor` calls `meta_window_actor_size_change` (window.c 45: 4137, 50: 4610), which
+ * reads the actor unchecked (window-actor 45: 1080, 50: 1155). 45 to 49 get there for a window
+ * whose rect overlaps its old work area, 50 for a window that is not hidden. A move to the
+ * window's own monitor never gets there. `moveToMonitorSafe` checks the actor before anything
+ * else, and the double aborts a move to another monitor without one.
  */
 describe("close-spec-gaps:N18: every shell-aborting Mutter call goes through a guarded helper", () => {
   const NO_WORKSPACE = /meta_window_get_workspaces: code should not be reached/;
   const NO_LOGICAL_MONITOR = /assertion failed: \(logical_monitor\)/;
   const NEGATIVE_INDEX = /assertion 'which_monitor >= 0' failed/;
+  const NO_ACTOR = /meta_window_actor_size_change: the window has no actor/;
 
   const MUTTER_CALLS = [
     "get_work_area_current_monitor",
@@ -109,6 +117,13 @@ describe("close-spec-gaps:N18: every shell-aborting Mutter call goes through a g
       expect(() => win.get_work_area_current_monitor()).toThrow(NO_LOGICAL_MONITOR);
       expect(() => win.move_to_monitor(1)).toThrow(NO_LOGICAL_MONITOR);
       expect(win.get_work_area_for_monitor(1)).toMatchObject({ x: 1920, width: 1920 });
+    });
+
+    it("aborts a move of a window with no actor to another monitor", () => {
+      const win = createMockWindow();
+      win._actor = null;
+      expect(() => win.move_to_monitor(0)).not.toThrow();
+      expect(() => win.move_to_monitor(1)).toThrow(NO_ACTOR);
     });
 
     it("gives a test window the active workspace and monitor 0", () => {
@@ -211,6 +226,16 @@ describe("close-spec-gaps:N18: every shell-aborting Mutter call goes through a g
       const raw = vi.spyOn(win, "move_to_monitor");
       expect(Utils.moveToMonitorSafe(win, index)).toBe(false);
       expect(raw).not.toHaveBeenCalled();
+    });
+
+    it("refuses a window with no actor before it reads the monitor", () => {
+      const win = createMockWindow();
+      win._actor = null;
+      const raw = vi.spyOn(win, "move_to_monitor");
+      const monitor = vi.spyOn(win, "get_monitor");
+      expect(Utils.moveToMonitorSafe(win, 1)).toBe(false);
+      expect(raw).not.toHaveBeenCalled();
+      expect(monitor).not.toHaveBeenCalled();
     });
   });
 
