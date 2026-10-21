@@ -15,8 +15,9 @@
 const js = require("@eslint/js");
 
 // Repo-local rules (forge-fhen.6): structural guards against recurring GNOME
-// hazard classes (raw Mutter maximize APIs, untracked signal connects, unguarded
-// window derefs). CommonJS require — this config file is CJS (no "type":"module").
+// hazard classes (raw Mutter maximize APIs, raw Mutter calls that abort the shell,
+// untracked signal connects, unguarded window derefs). CommonJS require: this config
+// file is CJS (no "type":"module").
 const localRules = {
   "no-raw-maximize-api": require("./eslint-rules/no-raw-maximize-api"),
   "no-raw-abort-api": require("./eslint-rules/no-raw-abort-api"),

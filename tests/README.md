@@ -107,6 +107,22 @@ path that does not end in `.json` reads as an existing directory. Call
   maximized on both axes or fullscreen. The `allows_resize` param stands for the size
   hints only, so a test that maximizes a window reads false, and a one-axis edge snap
   keeps the param's value.
+- `Meta.Window` throws where Mutter aborts the shell, so a test that reaches such a state
+  fails instead of passing on a forgiving double. The work-area calls and `move_to_monitor`
+  throw for a window with no workspace. `get_work_area_current_monitor` and `move_to_monitor`
+  also throw for no monitor or a monitor the display lacks, and `get_work_area_for_monitor`
+  and `move_to_monitor` for an index outside the display's monitors. `maximize` and
+  `set_maximize_flags` throw for a window with no actor when they maximize a new direction;
+  `unmaximize` and `set_unmaximize_flags` throw for a maximized window with no monitor or a
+  monitor the display lacks. The preconditions are class 8 in
+  [hazards.md](../docs/dev/hazards.md). Fix the window or the code, never the double.
+- A test window has the active workspace of the mock `global.workspace_manager` (install the
+  mock globals first, as `createWindowManagerFixture` does) and monitor 0. Pass
+  `workspace: null` or `monitor: -1` to remove one on purpose. `get_workspace()` answers the
+  active workspace for a window on all workspaces, as Mutter does.
+- `unmanage()` leaves the state `meta_window_unmanage` leaves, and emits no signal:
+  `get_compositor_private()` returns null (any other window has an actor), the maximize flags
+  clear, and the window has no workspace and no monitor.
 - `Gio.Settings` has no schema. Its setters never refuse a value, and neither they nor
   `reset` emit `changed::<key>`: a test emits it by hand.
 - `set_value`, `set_string` and `set_strv` return true. To test a refused write (a value

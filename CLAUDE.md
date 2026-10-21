@@ -49,7 +49,7 @@ See **[docs/dev/](docs/dev/)** for the detailed reference: [architecture.md](doc
 ## Code Style
 
 - Prettier with 2-space indentation, 100-char line width; run `npm run format` before committing
-- ESLint (`eslint.config.js`) lints `lib/`, `extension.js`, `prefs.js`, and the e2e framework. Three custom repo rules in `eslint-rules/` (`no-raw-maximize-api`, `no-unguarded-window-deref`, `no-untracked-connect`) enforce the bug-class guardrails catalogued in [docs/dev/hazards.md](docs/dev/hazards.md) and run as blocking errors
+- ESLint (`eslint.config.js`) lints `lib/`, `extension.js`, `prefs.js`, and the e2e framework. Four custom repo rules in `eslint-rules/` (`no-raw-maximize-api`, `no-raw-abort-api`, `no-unguarded-window-deref`, `no-untracked-connect`) enforce the bug-class guardrails catalogued in [docs/dev/hazards.md](docs/dev/hazards.md) and run as blocking errors
 - Husky pre-commit hooks (`lint-staged`) enforce prettier, ESLint, `vitest related`, and `ruff` (Python e2e helpers)
 
 ## Branches
