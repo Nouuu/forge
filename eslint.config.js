@@ -19,6 +19,7 @@ const js = require("@eslint/js");
 // window derefs). CommonJS require — this config file is CJS (no "type":"module").
 const localRules = {
   "no-raw-maximize-api": require("./eslint-rules/no-raw-maximize-api"),
+  "no-raw-abort-api": require("./eslint-rules/no-raw-abort-api"),
   "no-untracked-connect": require("./eslint-rules/no-untracked-connect"),
   "no-unguarded-window-deref": require("./eslint-rules/no-unguarded-window-deref"),
 };
@@ -99,6 +100,7 @@ module.exports = [
       // forge-fhen.6 repo-local structural guards. Promoted to blocking `error`
       // in forge-fhen.12 once the extension tree was clean.
       "local/no-raw-maximize-api": "error",
+      "local/no-raw-abort-api": "error",
       "local/no-untracked-connect": "error",
       "local/no-unguarded-window-deref": "error",
     },
