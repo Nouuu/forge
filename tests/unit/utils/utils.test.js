@@ -20,7 +20,7 @@ import {
 } from "../../../lib/extension/utils.js";
 import { ORIENTATION_TYPES, POSITION } from "../../../lib/extension/tree.js";
 import { GRAB_TYPES } from "../../../lib/extension/window.js";
-import { GrabOp, MotionDirection } from "../../mocks/gnome/Meta.js";
+import { GrabOp, MotionDirection, Workspace } from "../../mocks/gnome/Meta.js";
 
 describe("Utility Functions", () => {
   describe("createEnum", () => {
@@ -98,6 +98,7 @@ describe("Utility Functions", () => {
     const win = (monitor = 0) => ({
       get_frame_rect: () => ({ x: 300, y: 200, width: 800, height: 600 }),
       get_monitor: () => monitor,
+      get_workspace: () => new Workspace(),
       get_work_area_current_monitor: () => ({ x: 100, y: 27, width: 1600, height: 900 }),
     });
 
@@ -147,6 +148,7 @@ describe("Utility Functions", () => {
     const mockWindow = {
       get_frame_rect: () => ({ x: 0, y: 0, width: 800, height: 600 }),
       get_monitor: () => 0,
+      get_workspace: () => new Workspace(),
       get_work_area_current_monitor: () => ({ x: 0, y: 0, width: 1920, height: 1080 }),
     };
 
@@ -175,6 +177,7 @@ describe("Utility Functions", () => {
     const mockWindow = {
       get_frame_rect: () => ({ x: 0, y: 0, width: 800, height: 600 }),
       get_monitor: () => 0,
+      get_workspace: () => new Workspace(),
       get_work_area_current_monitor: () => ({ x: 0, y: 0, width: 1920, height: 1080 }),
     };
 

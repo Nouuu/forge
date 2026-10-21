@@ -46,6 +46,23 @@ export class Rectangle {
   }
 }
 
+// close-spec-gaps:N18: the window calls below throw where Mutter (window.c, 45 to 50) aborts.
+const activeWorkspace = () => global.workspace_manager?.get_active_workspace?.() ?? null;
+
+function assertWorkspaces(win) {
+  if (!win._on_all_workspaces && !win._workspace)
+    throw new Error("meta_window_get_workspaces: code should not be reached");
+}
+
+function assertMonitorIndex(index) {
+  if (index < 0)
+    throw new Error("meta_window_get_work_area_for_monitor: assertion 'which_monitor >= 0' failed");
+  if (!(index < (global.display?.get_n_monitors?.() ?? 1)))
+    throw new Error(
+      "meta_window_get_work_area_for_logical_monitor: assertion failed: (logical_monitor)"
+    );
+}
+
 export class Window extends withSignals() {
   constructor(params = {}) {
     super();
@@ -61,7 +78,7 @@ export class Window extends withSignals() {
     this._window_type = "window_type" in params ? params.window_type : WindowType.NORMAL;
     this._transient_for = "transient_for" in params ? params.transient_for : null;
     this._allows_resize = "allows_resize" in params ? params.allows_resize : true;
-    this._workspace = params.workspace ?? null;
+    this._workspace = "workspace" in params ? params.workspace ?? null : activeWorkspace();
     this._monitor = params.monitor ?? 0;
     this._size_hints = params.size_hints ?? null;
     this._on_all_workspaces = params.on_all_workspaces ?? false;
@@ -83,12 +100,25 @@ export class Window extends withSignals() {
   }
 
   get_work_area_current_monitor() {
+    if (this.get_monitor() < 0)
+      throw new Error(
+        "meta_window_get_work_area_for_logical_monitor: assertion failed: (logical_monitor)"
+      );
+    assertWorkspaces(this);
     return new Rectangle({ x: 0, y: 0, width: 1920, height: 1080 });
   }
 
   get_work_area_for_monitor(monitorIndex) {
     // Default implementation, tests can override this
+    assertMonitorIndex(monitorIndex);
+    assertWorkspaces(this);
     return new Rectangle({ x: monitorIndex * 1920, y: 0, width: 1920, height: 1080 });
+  }
+
+  get_work_area_all_monitors() {
+    assertWorkspaces(this);
+    const monitors = global.display?.get_n_monitors?.() ?? 1;
+    return new Rectangle({ x: 0, y: 0, width: monitors * 1920, height: 1080 });
   }
 
   move_resize_frame(interactive, x, y, width, height) {
@@ -122,7 +152,7 @@ export class Window extends withSignals() {
   }
 
   get_workspace() {
-    return this._workspace;
+    return this._on_all_workspaces ? activeWorkspace() : this._workspace;
   }
 
   get_monitor() {
@@ -280,6 +310,10 @@ export class Window extends withSignals() {
   }
 
   move_to_monitor(monitorIndex) {
+    if (this.get_monitor() < 0)
+      throw new Error("meta_window_move_to_monitor: window->monitor is NULL");
+    assertWorkspaces(this);
+    assertMonitorIndex(monitorIndex);
     this._monitor = monitorIndex;
   }
 

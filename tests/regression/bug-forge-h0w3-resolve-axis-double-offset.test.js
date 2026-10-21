@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { resolveAxis, resolveRect, findWindowWith } from "../../lib/extension/utils.js";
+import { Workspace } from "../mocks/gnome/Meta.js";
 
 /**
  * Bug forge-h0w3 (audit-2026-07b): when rectRequest.x/.y is absent — or is a
@@ -27,6 +28,7 @@ describe("Bug forge-h0w3: an unspecified axis must mean 'leave the window where 
     return {
       get_frame_rect: () => ({ x, y, width: 800, height: 600 }),
       get_monitor: () => 0,
+      get_workspace: () => new Workspace(),
       get_work_area_current_monitor: () => workArea,
     };
   }

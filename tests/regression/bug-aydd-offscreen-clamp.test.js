@@ -84,6 +84,7 @@ describe("forge-aydd: off-screen clamp resolves the target monitor (multi-monito
     ctx = createWindowManagerFixture({
       globals: {
         display: {
+          monitorCount: 2,
           monitorGeometries: [
             { x: 0, y: 0, width: 1920, height: 1080 },
             { x: 0, y: 1080, width: 1920, height: 1080 },

@@ -214,7 +214,7 @@ describe("WindowManager - Movement & Positioning", () => {
         width: 1920,
         height: 1080,
       }));
-      metaWindow.get_work_area_for_monitor = vi.fn(() => ({
+      metaWindow.get_workspace().get_work_area_for_monitor = vi.fn(() => ({
         x: 1920,
         y: 0,
         width: 1920,
@@ -241,7 +241,7 @@ describe("WindowManager - Movement & Positioning", () => {
         width: 1920,
         height: 1080,
       }));
-      metaWindow.get_work_area_for_monitor = vi.fn(() => ({
+      metaWindow.get_workspace().get_work_area_for_monitor = vi.fn(() => ({
         x: 1920,
         y: 0,
         width: 2560,
@@ -271,7 +271,7 @@ describe("WindowManager - Movement & Positioning", () => {
         width: 2560,
         height: 1440,
       }));
-      metaWindow.get_work_area_for_monitor = vi.fn(() => ({
+      metaWindow.get_workspace().get_work_area_for_monitor = vi.fn(() => ({
         x: 2560,
         y: 0,
         width: 1920,
@@ -301,7 +301,7 @@ describe("WindowManager - Movement & Positioning", () => {
         width: 1920,
         height: 1080,
       }));
-      metaWindow.get_work_area_for_monitor = vi.fn(() => ({
+      metaWindow.get_workspace().get_work_area_for_monitor = vi.fn(() => ({
         x: 1920,
         y: 0,
         width: 1920,
@@ -330,7 +330,7 @@ describe("WindowManager - Movement & Positioning", () => {
         width: 1920,
         height: 1080,
       }));
-      metaWindow.get_work_area_for_monitor = vi.fn(() => ({
+      metaWindow.get_workspace().get_work_area_for_monitor = vi.fn(() => ({
         x: 0,
         y: 1080,
         width: 1920,
@@ -360,7 +360,7 @@ describe("WindowManager - Movement & Positioning", () => {
         width: 1920,
         height: 1080,
       }));
-      metaWindow.get_work_area_for_monitor = vi.fn(() => ({
+      metaWindow.get_workspace().get_work_area_for_monitor = vi.fn(() => ({
         x: 1920,
         y: 0,
         width: 2560,
@@ -391,7 +391,7 @@ describe("WindowManager - Movement & Positioning", () => {
         width: 1920,
         height: 1080,
       }));
-      metaWindow.get_work_area_for_monitor = vi.fn(() => ({
+      metaWindow.get_workspace().get_work_area_for_monitor = vi.fn(() => ({
         x: 0,
         y: 0,
         width: 1920,
@@ -418,6 +418,7 @@ describe("WindowManager - Movement & Positioning", () => {
     // not past its far edge. The old '>' branch used absolute rect.x directly.
     it("places a window on the right monitor when moving off a non-origin middle monitor", () => {
       // Three 1920-wide monitors at x=0 / 1920 / 3840; move from middle -> right.
+      ctx.display.get_n_monitors.mockReturnValue(3);
       const metaWindow = createMockWindow();
       metaWindow.get_work_area_current_monitor = vi.fn(() => ({
         x: 1920,
@@ -425,7 +426,7 @@ describe("WindowManager - Movement & Positioning", () => {
         width: 1920,
         height: 1080,
       }));
-      metaWindow.get_work_area_for_monitor = vi.fn(() => ({
+      metaWindow.get_workspace().get_work_area_for_monitor = vi.fn(() => ({
         x: 3840,
         y: 0,
         width: 1920,
@@ -457,7 +458,7 @@ describe("WindowManager - Movement & Positioning", () => {
         width: 1920,
         height: 1080,
       }));
-      metaWindow.get_work_area_for_monitor = vi.fn(() => ({
+      metaWindow.get_workspace().get_work_area_for_monitor = vi.fn(() => ({
         x: 1920,
         y: 0,
         width: 1920,
