@@ -20,6 +20,9 @@ afterEach(() => {
   vi.doUnmock("resource:///org/gnome/shell/misc/config.js");
 });
 
+// A managed window has an actor and a monitor; the shims refuse one without (close-spec-gaps:N18).
+const live = { get_compositor_private: () => ({}), get_monitor: () => 0 };
+
 describe("compat (Mutter 49+ branch)", () => {
   let Compat;
   beforeEach(async () => {
@@ -57,7 +60,7 @@ describe("compat (Mutter 49+ branch)", () => {
 
   describe("maximize", () => {
     it("calls set_maximize_flags(BOTH) then maximize() with no args", () => {
-      const w = { set_maximize_flags: vi.fn(), maximize: vi.fn() };
+      const w = { ...live, set_maximize_flags: vi.fn(), maximize: vi.fn() };
       Compat.maximize(w);
       expect(w.set_maximize_flags).toHaveBeenCalledWith(MaximizeFlags.BOTH);
       expect(w.maximize).toHaveBeenCalledOnce();
@@ -65,7 +68,7 @@ describe("compat (Mutter 49+ branch)", () => {
     });
 
     it("honors an explicit flags argument", () => {
-      const w = { set_maximize_flags: vi.fn(), maximize: vi.fn() };
+      const w = { ...live, set_maximize_flags: vi.fn(), maximize: vi.fn() };
       Compat.maximize(w, MaximizeFlags.HORIZONTAL);
       expect(w.set_maximize_flags).toHaveBeenCalledWith(MaximizeFlags.HORIZONTAL);
     });
@@ -73,7 +76,7 @@ describe("compat (Mutter 49+ branch)", () => {
 
   describe("unmaximize", () => {
     it("calls set_unmaximize_flags(BOTH) then unmaximize() with no args", () => {
-      const w = { set_unmaximize_flags: vi.fn(), unmaximize: vi.fn() };
+      const w = { ...live, set_unmaximize_flags: vi.fn(), unmaximize: vi.fn() };
       Compat.unmaximize(w);
       expect(w.set_unmaximize_flags).toHaveBeenCalledWith(MaximizeFlags.BOTH);
       expect(w.unmaximize).toHaveBeenCalledOnce();
@@ -179,14 +182,14 @@ describe("compat (Mutter 48 branch)", () => {
 
   describe("maximize", () => {
     it("calls maximize(flags) directly with no set_maximize_flags", () => {
-      const w = { maximize: vi.fn(), set_maximize_flags: vi.fn() };
+      const w = { ...live, maximize: vi.fn(), set_maximize_flags: vi.fn() };
       Compat.maximize(w);
       expect(w.maximize).toHaveBeenCalledWith(MaximizeFlags.BOTH);
       expect(w.set_maximize_flags).not.toHaveBeenCalled();
     });
 
     it("honors an explicit flags argument", () => {
-      const w = { maximize: vi.fn() };
+      const w = { ...live, maximize: vi.fn() };
       Compat.maximize(w, MaximizeFlags.VERTICAL);
       expect(w.maximize).toHaveBeenCalledWith(MaximizeFlags.VERTICAL);
     });
@@ -194,7 +197,7 @@ describe("compat (Mutter 48 branch)", () => {
 
   describe("unmaximize", () => {
     it("calls unmaximize(BOTH) once and does not touch set_unmaximize_flags", () => {
-      const w = { unmaximize: vi.fn(), set_unmaximize_flags: vi.fn() };
+      const w = { ...live, unmaximize: vi.fn(), set_unmaximize_flags: vi.fn() };
       Compat.unmaximize(w);
       expect(w.unmaximize).toHaveBeenCalledOnce();
       expect(w.unmaximize).toHaveBeenCalledWith(MaximizeFlags.BOTH);

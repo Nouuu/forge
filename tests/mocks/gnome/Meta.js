@@ -63,6 +63,23 @@ function assertMonitorIndex(index) {
   if (!(index < monitorCount())) throw new Error(NO_LOGICAL_MONITOR);
 }
 
+// A maximize hands the actor to meta_window_actor_size_change (window.c 45: 2728, 50: 2933).
+function assertActor(win, flags) {
+  const grows =
+    (flags & MaximizeFlags.HORIZONTAL && !win.maximized_horizontally) ||
+    (flags & MaximizeFlags.VERTICAL && !win.maximized_vertically);
+  if (grows && !win.get_compositor_private())
+    throw new Error("meta_window_actor_size_change: the window has no actor");
+}
+
+// An unmaximize reads the monitor's work area (window.c 45: 3144, 47: 3219, 50: 3458).
+function assertMonitorToUnmaximize(win, flags) {
+  const shrinks =
+    (flags & MaximizeFlags.HORIZONTAL && win.maximized_horizontally) ||
+    (flags & MaximizeFlags.VERTICAL && win.maximized_vertically);
+  if (shrinks && win.get_monitor() < 0) throw new Error(NO_LOGICAL_MONITOR);
+}
+
 export class Window extends withSignals() {
   constructor(params = {}) {
     super();
@@ -210,12 +227,14 @@ export class Window extends withSignals() {
     // flags staged via set_maximize_flags(), else default to BOTH — so partial
     // maximize round-trips through get_maximize_flags()/get_maximized().
     const flags = directions ?? this._pendingMaximizeFlags ?? MaximizeFlags.BOTH;
+    assertActor(this, flags);
     this.maximized_horizontally = Boolean(flags & MaximizeFlags.HORIZONTAL);
     this.maximized_vertically = Boolean(flags & MaximizeFlags.VERTICAL);
     this._pendingMaximizeFlags = null;
   }
 
   unmaximize(directions) {
+    assertMonitorToUnmaximize(this, directions ?? MaximizeFlags.BOTH);
     this.maximized_horizontally = false;
     this.maximized_vertically = false;
   }
@@ -326,8 +345,8 @@ export class Window extends withSignals() {
   }
 
   get_compositor_private() {
-    // Return a mock actor object
-    if (!this._actor) {
+    // Return a mock actor object; null once unmanage() dropped it.
+    if (this._actor === undefined) {
       this._actor = {
         border: null,
         splitBorder: null,
@@ -347,13 +366,26 @@ export class Window extends withSignals() {
     return this._actor;
   }
 
+  // Test helper: the state meta_window_unmanage leaves, without emitting its signals
+  // (window.c 50: 1552, 1644, 1650, 1671).
+  unmanage() {
+    this._actor = null;
+    this.maximized_horizontally = false;
+    this.maximized_vertically = false;
+    this._on_all_workspaces = false;
+    this._workspace = null;
+    this._monitor = -1;
+  }
+
   set_unmaximize_flags(flags) {
     // GNOME 49+ method
+    assertMonitorToUnmaximize(this, flags);
   }
 
   // Mutter 49+ Meta.Window API (see lib/extension/compat.js). On real Mutter 49+,
   // maximize state is staged with set_maximize_flags() and applied by maximize().
   set_maximize_flags(flags) {
+    assertActor(this, flags);
     this._pendingMaximizeFlags = flags;
   }
 
