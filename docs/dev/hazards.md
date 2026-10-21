@@ -29,26 +29,29 @@ died between the signal and the handler" — e.g. `forge-ib39`, `forge-7bry`).
   was the first). `Utils.getMonitorGeometrySafe` covers a null monitor index.
 
 ### 2. Disposed or finalized GObject wrapper
-A `Meta.Window` wrapper can outlive its window: Mutter disposes, then finalizes, the
-GObject while a tree node, a closure or a queued callback still holds the wrapper. A
-live-looking reference obtained before an async hop may be dead by the time the handler
-runs (Bug #328).
+A `Meta.Window` wrapper can be disposed or finalized while JS still holds it. GJS flags the
+wrapper when C code disposes its object, and again when the object is finalized. GJS's
+critical names the cause: an object "destroyed from C code using something such as
+destroy(), dispose(), or remove() vfuncs". A live-looking reference obtained before an async
+hop may be dead by the time the handler runs (Bug #328). Whether a window Forge tracks can
+reach either state is left to `close-spec-gaps-followups:F70`.
 
 GJS does not throw on such a wrapper. `ObjectBase::to_c_ptr` (`gi/object.cpp`, read in GJS
-1.78 and in master) logs a critical ("has been already finalized" or "disposed") and still
-converts the wrapper to a C pointer: NULL once the object is finalized, the live pointer
-while it is only disposed. A property read on a finalized wrapper logs the same critical
-and gives `undefined`. A method call goes on into Mutter, which decides what happens next.
-`meta_window_get_title` checks `META_IS_WINDOW (window)`, so it logs a second critical and
-returns NULL. `meta_window_get_id` and `meta_window_get_monitor` do not check (Mutter 45 to
-50), so on a finalized wrapper they dereference NULL. That is the class 8 failure, reached
-through a dead wrapper.
+1.78 and in master) logs a critical, "has been already finalized" or "disposed". It still
+converts the wrapper to a C pointer. The pointer is NULL once the object is finalized, and
+the live pointer while the object is only disposed. A property read on a finalized wrapper
+logs the same critical and gives `undefined`. A method call goes on into Mutter.
+
+What happens next is up to Mutter. `meta_window_get_title` checks `META_IS_WINDOW (window)`,
+logs a second critical and returns NULL. `meta_window_get_id` and `meta_window_get_monitor`
+do not check (Mutter 45 to 50). On a finalized wrapper they dereference NULL. That is the
+class 8 failure, reached through a dead wrapper.
 
 - **Guardrail (runtime):** `Utils.isWindowAlive()` probes `get_id()` inside a `try/catch`.
-  With no throw to catch, it sees a null reference or a value that is not a window and
-  nothing else: a disposed wrapper still answers (after a critical), and on a finalized one
-  `get_id()` is `meta_window_get_id (NULL)`. Pair it with a structural check, the node's
-  `parentNode`; `Tree.pruneDeadWindows()` prunes once per render. `disconnectSignals()` wraps
+  There is no throw to catch. The probe sees a null reference or a non-window, and nothing
+  else. A disposed wrapper still answers, after a critical. On a finalized one, `get_id()` is
+  `meta_window_get_id (NULL)`. Pair the probe with a structural check, the node's
+  `parentNode`. `Tree.pruneDeadWindows()` prunes once per render. `disconnectSignals()` wraps
   each `disconnect()` in `try/catch` so one bad target cannot stop the loop (Bug #328).
 - **Guardrail (runtime):** the e2e fuzzer's log scan treats `finalized` /
   `deallocated` / `Gjs-CRITICAL` frames as failures. GJS reports a dead wrapper as a
@@ -189,23 +192,26 @@ covered on its own and nobody had written the transition BETWEEN two of them:
   is finalized, so the ids die with it — verified, not pinned).
 
 ### 8. A Mutter call aborts the shell on a window state
-A Mutter function `g_assert`s, or dereferences a pointer it expects to be set, on a window
-Mutter is closing (no actor, no workspace, no monitor) or on one whose monitor just went
-away. That is not a JS exception: the shell process dies, and on Wayland the session goes
-with it. It happened live on GNOME 50.1 Wayland (`close-spec-gaps:N17`,
-`meta_window_get_workspaces: code should not be reached`). Forge meets these states because
-a closing window stays in the tree until its actor is destroyed, while `meta_window_unmanage`
-has already dropped the actor and cleared the window's maximize flags, its workspace and its
-monitor, in that order (Mutter 45 to 50). A render in that gap could still place, maximize or
-unmaximize the window.
+A Mutter function can `g_assert`, or dereference a pointer it expects to be set, on a window in
+the wrong state. That window is one Mutter is closing (no actor, no workspace, no monitor), or
+one whose monitor just went away. It is not a JS exception. The shell process dies, and on
+Wayland the session goes with it. It happened live on GNOME 50.1 Wayland (`close-spec-gaps:N17`,
+`meta_window_get_workspaces: code should not be reached`).
 
-The table lists what each `Meta.Window` call needs, read in Mutter's `window.c` for each
-release from 45 to 50 (and in `compositor.c`, `window-actor.c` and `monitor-manager.c` where
-a call reaches them). "No workspace" is `get_workspace()` null: `meta_window_get_workspaces`
-asserts for a window that is on no workspace, not on all of them and not constructing. "No
-monitor" is `get_monitor()` of -1. "Past the count" is a monitor number at or past
-`global.display.get_n_monitors()`: Mutter looks a monitor up by number and the lookup gives
-NULL there.
+Forge meets these states because a closing window stays in the tree until its actor is
+destroyed. `meta_window_unmanage` has already dropped the actor by then. It then clears the
+maximize flags, the workspace and the monitor, in that order (Mutter 45 to 50). A render in
+that gap could still place, maximize or unmaximize the window.
+
+The table lists what each `Meta.Window` call needs. It comes from Mutter's `window.c` for each
+release from 45 to 50. Where a call reaches `compositor.c`, `window-actor.c` or
+`monitor-manager.c`, those were read too. "No workspace" is `get_workspace()` null:
+`meta_window_get_workspaces` asserts for a window on no workspace, not on all of them and not
+constructing. "No monitor" is `get_monitor()` of -1. "Past the count" is a monitor number at or
+past `global.display.get_n_monitors()`. Mutter looks a monitor up by number, and the lookup
+gives NULL there. A maximize that adds no direction, and an unmaximize of a window that is not
+maximized, do not reach these reads. A maximizable window has `has_maximize_func`. Mutter
+clears it for a window that is not a normal window, cannot be resized or is fullscreen.
 
 | Call | Aborts when | Releases | Guard |
 | --- | --- | --- | --- |
@@ -217,61 +223,63 @@ NULL there.
 | `get_work_area_all_monitors()` | the window has no workspace | 45 to 50 | none yet |
 | `move_to_monitor(i)` | the window has no monitor: it reads `window->monitor->number` first | 45 to 50 | `Utils.moveToMonitorSafe` |
 | `move_to_monitor(i)` | the window has no workspace, its monitor is past the count, or `i` is past the count (a negative `i` is the `g_return_if_fail` above): it reads the work area of both monitors | 45 to 50 | `Utils.moveToMonitorSafe` |
-| `maximize` (49 and 50: `set_maximize_flags`, then `maximize()`) | the window has no actor and the call maximizes a direction it is not yet maximized in: `meta_window_actor_size_change` dereferences the actor. A window with a monitor and no workspace asserts earlier, in `meta_window_recalc_features` | 45 to 50 | `Compat.maximize` |
+| `maximize` (49 and 50: `set_maximize_flags`, then `maximize()`) | the window has no actor: `meta_window_actor_size_change` dereferences it | 45 to 50 | `Compat.maximize` |
+| `maximize` | the window has a monitor and no workspace: `meta_window_recalc_features` reads the monitor's work area, which asserts | 45 to 50, a maximizable window | `Compat.maximize` |
+| `maximize` | the window's monitor is past the count: the same read looks it up by number | 45, 46, a maximizable window | `Compat.maximize` |
 | `unmaximize` (49 and 50: `set_unmaximize_flags`, then `unmaximize()`) | the window is maximized and has no monitor: 45 and 46 dereference the NULL `window->monitor`, 47 to 50 assert `(logical_monitor)` | 45 to 50 | `Compat.unmaximize` |
 | `unmaximize` | the window is maximized and its monitor is past the count: 45 and 46 look it up by number | 45, 46 | `Compat.unmaximize` |
-| `unmaximize` | the window is maximized and has no workspace | 45 to 50 | not tested, see the gaps |
+| `unmaximize` | the window is maximized and has no workspace | 45 to 50 | `Compat.unmaximize` |
 
 `Meta.Workspace` has `get_work_area_for_monitor` and `get_work_area_all_monitors` too. They do
-not abort on a bad index or a missing monitor: `meta_workspace_get_work_area_for_monitor` only
-fails `g_return_if_fail (logical_monitor != NULL)` for an index past the last monitor and
-leaves the rect unset. So `Utils.getWorkAreaForMonitor` asks the window's workspace (else the
-active one), never the window, and `no-raw-abort-api` bans the four names whatever the
-receiver, since a lint rule has no types to tell a window from a workspace.
-`Utils.getWorkspaceWorkArea` is the workspace form and checks the index.
-`get_work_area_all_monitors` has no helper yet and nothing calls it. The first caller adds a
-guarded helper to `utils.js`, the one file the rule exempts.
+not abort on a bad index or a missing monitor. For an index past the last monitor,
+`meta_workspace_get_work_area_for_monitor` only fails a `g_return_if_fail` and leaves the rect
+unset. So `Utils.getWorkAreaForMonitor` asks the window's workspace (else the active one),
+never the window. `Utils.getWorkspaceWorkArea` is that workspace form, and it checks the index.
+`no-raw-abort-api` bans the four names whatever the receiver. A lint rule has no types to tell
+a window from a workspace. `get_work_area_all_monitors` has no helper yet, and nothing calls
+it. The first caller adds a guarded helper to `utils.js`, the one file the rule exempts.
 
 - **Guardrail (blocking):** `local/no-raw-abort-api` (`eslint-rules/`) reports
   `get_work_area_current_monitor`, `get_work_area_for_monitor`, `get_work_area_all_monitors`
   and `move_to_monitor` in `lib/`, `extension.js` and `prefs.js`, except in
-  `lib/extension/utils.js`. It matches the property name on any receiver, and a bare
-  reference as well as a call (`const f = win.move_to_monitor`, `.call`, a callback): a
-  reference can run later with the guard skipped. Computed (`win["move_to_monitor"]`) and
-  destructured access are not matched, a limit `no-raw-maximize-api` shares. The e2e bridge
-  is outside its scope; it drives Mutter on purpose.
-- **Guardrail (in-code):** `lib/extension/utils.js` owns the four calls through
+  `lib/extension/utils.js`. It matches the property name on any receiver. It also matches a
+  bare reference (`const f = win.move_to_monitor`, `.call`, a callback). A reference can run
+  later with the guard skipped. Computed (`win["move_to_monitor"]`) and destructured access
+  are not matched, a limit `no-raw-maximize-api` shares. The e2e bridge is outside its scope:
+  it drives Mutter on purpose.
+- **Guardrail (in-code):** `lib/extension/utils.js` owns the raw calls, through
   `getWorkAreaSafe`, `getWorkspaceWorkArea`, `getWorkAreaForMonitor` and `moveToMonitorSafe`.
-  Each checks the preconditions of its call, whatever the release, and returns null or
-  false without calling Mutter.
-- **Guardrail (in-code):** a render never acts on a window Mutter has unmanaged, one whose
-  `get_compositor_private()` is null: the `Tree.apply` filter and `_repositionOccludedDialog`
-  skip it. `_tiledWindowsOnMonitor` still counts a closing tile until its node leaves the
-  tree, so maximize-on-single and the single-tile rules keep their timing; the maximize shim
-  is what stops a maximize there.
-- **Guardrail (in-code):** `Compat.maximize` returns for a window with no actor, and
-  `Compat.unmaximize` for one with no monitor or a monitor past the count. Both check before
-  the version dispatch, so every release is covered, and `no-raw-maximize-api` (class 5)
-  already forces every maximize and unmaximize through them.
+  `get_work_area_all_monitors` has no helper yet. Each helper checks the preconditions of its
+  call, whatever the release, and returns null or false without calling Mutter.
+- **Guardrail (in-code):** a render never places, maximizes or unmaximizes a window Mutter has
+  unmanaged, one whose `get_compositor_private()` is null. The `Tree.apply` filter and
+  `_repositionOccludedDialog` skip it. `_tiledWindowsOnMonitor` still counts a closing tile
+  until its node leaves the tree, so maximize-on-single and the single-tile rules keep their
+  timing. The maximize shim is what stops a maximize there.
+- **Guardrail (in-code):** `Compat.maximize` and `Compat.unmaximize` share `hasWorkArea`: a
+  monitor in range and a workspace, the `getWorkAreaSafe` checks. `Compat.maximize` also needs
+  an actor. For a maximize, a window with no monitor is a conservative refusal, since
+  `meta_window_recalc_features` skips its work-area read there. `compat.js` cannot import
+  `utils.js` (an import cycle), so it repeats the checks. Both shims check before the version
+  dispatch, so every release is covered. `no-raw-maximize-api` (class 5) already forces every
+  maximize and unmaximize through them.
 - **Guardrail (unit):** the `Meta.Window` double (`tests/mocks/gnome/Meta.js`) throws where
-  Mutter aborts, and a test window has a workspace and a monitor unless the test removes
-  them (see `tests/README.md`). Three tests in `tests/regression/` pin it:
-  `bug-close-spec-gaps-n17-workspace-less-window-work-area.test.js`,
-  `bug-close-spec-gaps-n18-mutter-abort-guards.test.js` (the helpers, their call sites, the
-  double) and `bug-close-spec-gaps-n18-unmanaged-window-render.test.js` (the render and the
-  shims, on 47.0 and 50.0).
+  Mutter aborts on any release from 45 to 50. It also throws where Mutter reads an unset rect
+  (a negative monitor index). A test window has a workspace and a monitor unless the test
+  removes them (see `tests/README.md`). Three tests in `tests/regression/` pin it.
+  `bug-close-spec-gaps-n17-workspace-less-window-work-area.test.js` pins the first crash.
+  `bug-close-spec-gaps-n18-mutter-abort-guards.test.js` pins the helpers, their call sites and
+  the double. `bug-close-spec-gaps-n18-unmanaged-window-render.test.js` pins the render and
+  the shims, on 47.0 and 50.0.
 - **Gap:** nothing proves this against a real shell. The double encodes what was read in
-  Mutter's source, and only a real session shows a precondition that was missed. A stress
-  lane that opens and closes transient windows and dialogs while Forge renders, and fails
-  when the shell aborts, is `close-spec-gaps-followups:F69`.
+  Mutter's source. Only a real session shows a precondition that was missed. A stress lane
+  would open and close transient windows and dialogs while Forge renders, and fail when the
+  shell aborts. That lane is `close-spec-gaps-followups:F69`.
 - **Gap:** only `window.c`, and what its calls reach, was read. A render still calls
-  `make_above`, `unmake_above` and `lower` on a window with no actor, and `move_resize_frame`
-  on a window with no workspace or monitor. Their preconditions, and the other Mutter calls
-  in `workspace.c`, `display.c`, `constraints.c` and the compositor, are not audited
-  (`close-spec-gaps-followups:F70`).
-- **Gap:** `Compat.unmaximize` and the double do not test the workspace of a maximized
-  window. `meta_window_unmanage` clears the maximize flags before the workspace (45 to 50),
-  so a closing window cannot be in that state, and no other path to it is known.
+  `make_above`, `unmake_above` and `lower` on a window with no actor. It still calls
+  `move_resize_frame` on a window with no workspace or monitor. Their preconditions are not
+  audited, nor are the other Mutter calls in `workspace.c`, `display.c`, `constraints.c` and
+  the compositor (`close-spec-gaps-followups:F70`).
 
 ## Cross-cutting guardrails
 

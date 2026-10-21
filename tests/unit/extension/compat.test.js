@@ -17,7 +17,7 @@ async function loadCompat(packageVersion) {
   return await import("../../../lib/extension/compat.js");
 }
 
-// Compat.unmaximize reads the display's monitor count.
+// Both Compat.maximize and Compat.unmaximize read the display's monitor count.
 let gnome;
 
 beforeEach(() => {

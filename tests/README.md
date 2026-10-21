@@ -107,14 +107,17 @@ path that does not end in `.json` reads as an existing directory. Call
   maximized on both axes or fullscreen. The `allows_resize` param stands for the size
   hints only, so a test that maximizes a window reads false, and a one-axis edge snap
   keeps the param's value.
-- `Meta.Window` throws where Mutter aborts the shell, so a test that reaches such a state
-  fails instead of passing on a forgiving double. The work-area calls and `move_to_monitor`
-  throw for a window with no workspace. `get_work_area_current_monitor` and `move_to_monitor`
-  also throw for no monitor or a monitor the display lacks, and `get_work_area_for_monitor`
-  and `move_to_monitor` for an index outside the display's monitors. `maximize` and
-  `set_maximize_flags` throw for a window with no actor when they maximize a new direction;
-  `unmaximize` and `set_unmaximize_flags` throw for a maximized window with no monitor or a
-  monitor the display lacks. The preconditions are class 8 in
+- `Meta.Window` throws where Mutter aborts the shell on any release from 45 to 50, or reads an
+  unset rect. A test that reaches such a state fails instead of passing on a forgiving double.
+  The work-area calls and `move_to_monitor` throw for a window with no workspace.
+  `get_work_area_current_monitor` and `move_to_monitor` also throw for no monitor or a monitor
+  the display lacks. `get_work_area_for_monitor` and `move_to_monitor` throw for an index
+  outside the display's monitors, a negative one included (Mutter reads an unset rect there).
+  `maximize` and `set_maximize_flags` throw for a window with no actor. They also throw for a
+  window that has a monitor and either no workspace or a monitor the display lacks.
+  `unmaximize` and `set_unmaximize_flags` throw for a maximized window with no monitor, a
+  monitor the display lacks or no workspace. A maximize that adds no direction, and an
+  unmaximize of a window that is not maximized, never throw. The preconditions are class 8 in
   [hazards.md](../docs/dev/hazards.md). Fix the window or the code, never the double.
 - A test window has the active workspace of the mock `global.workspace_manager` (install the
   mock globals first, as `createWindowManagerFixture` does) and monitor 0. Pass
