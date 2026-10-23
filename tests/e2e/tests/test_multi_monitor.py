@@ -17,6 +17,23 @@ MONITOR_1_X = 1920
 REPLUG_DELAY = 2
 
 
+def _cons(node, out=None):
+    """Every CON of the tree as (layout, number of WINDOW descendants)."""
+    out = [] if out is None else out
+    if not isinstance(node, dict):
+        return out
+
+    def windows(n):
+        own = 1 if n.get("nodeType") == "WINDOW" else 0
+        return own + sum(windows(c) for c in n.get("children") or [])
+
+    if node.get("nodeType") == "CON":
+        out.append((node.get("layout"), windows(node)))
+    for c in node.get("children") or []:
+        _cons(c, out)
+    return out
+
+
 class TestMultiMonitorTiling:
     def test_window_retiles_across_monitors(self, shell_proxy, two_windows):
         """Moving a window to monitor 2 should re-tile each monitor independently."""
@@ -137,6 +154,66 @@ class TestMultiMonitorTiling:
             assert state["holdsOther"], f"the drag lost its target on monitor 1: {state}"
         finally:
             shell_proxy.monitor_drag_end()
+
+    def test_tab_dragged_to_other_monitor_untabs_its_group(
+        self, shell_proxy, restore_settings, three_windows
+    ):
+        """close-spec-gaps:N19: a tab dragged onto the other monitor leaves no lone tab group.
+
+        Mutter gives a moving window the monitor that holds most of its frame, and Forge
+        re-homes its node on window-entered-monitor, mid-drag. That re-home kept the group
+        the tab left TABBED with one window, so the window left behind kept its tab bar. The
+        drop could not fix it: it reads the tab's parent, already the other monitor.
+
+        Two windows form a TABBED group on monitor 0 and the third moves to monitor 1. The
+        bridge then holds a MOVING grab on a tab and moves its real frame onto monitor 1."""
+        if shell_proxy.get_monitor_count() < 2:
+            pytest.skip("requires 2 virtual monitors (FORGE_E2E_VIRTUAL_MONITORS=2)")
+
+        restore_settings.set("dnd-center-layout", "tabbed")
+        time.sleep(Timing.SETTINGS_SETTLE)
+
+        # The group takes the left slot; the third window stays alone on the right.
+        res = shell_proxy.fuzz_drag("rightmost", "leftmost", "center")
+        assert isinstance(res, dict) and res.get("ok") and res.get("dropped"), res
+        wait_for(
+            lambda: _cons(shell_proxy.get_forge_tree()),
+            predicate=lambda c: ("TABBED", 2) in c,
+            message="setup: no TABBED group of two after the center drop",
+        )
+        shell_proxy.invoke_forge_action(
+            {"name": "Move", "direction": "Right"}, focus_window="rightmost", also_activate=True
+        )
+        wait_for(
+            shell_proxy.get_windows,
+            predicate=lambda ws: (
+                len(ws) == 3 and sum(w["rect"]["x"] >= MONITOR_1_X for w in ws) == 1
+            ),
+            message="setup: the lone window did not move to monitor 1",
+        )
+        assert ("TABBED", 2) in _cons(shell_proxy.get_forge_tree())
+
+        try:
+            begin = shell_proxy.monitor_drag_begin()
+            assert begin["ok"], begin
+            moved = shell_proxy.monitor_drag_move()
+            assert moved["ok"], moved
+            state = wait_for(
+                shell_proxy.monitor_drag_state,
+                predicate=lambda s: not s["ok"] or s["srcMonitor"] == s["otherMonitor"],
+                message="the dragged tab did not change monitor",
+            )
+            assert state["ok"], state
+            cons = _cons(shell_proxy.get_forge_tree())
+            assert not any(lay in ("STACKED", "TABBED") and n == 1 for lay, n in cons), cons
+        finally:
+            shell_proxy.monitor_drag_end()
+
+        wait_for(
+            lambda: shell_proxy.get_stale_decorations(),
+            predicate=lambda d: d.get("stale") == 0,
+            message="a tab bar of the group the tab left is still visible",
+        )
 
 
 class TestMonitorHotPlug:
