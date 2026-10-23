@@ -20,8 +20,11 @@ import { Rectangle } from "../mocks/gnome/Meta.js";
  * child of the target's container before any drop, and a zero percent takes an equal share.
  *
  * Fix: a center drop that wraps the target and the dragged window keeps the container's
- * percents; the new group takes the target's percent. When the dragged window leaves the
- * same container, `computeSizes` scales the remaining percents into the freed space.
+ * percents; the new group takes the target's percent. A share the drop frees in that
+ * container (the dragged window was a sibling, or the only window of a sibling container
+ * that `removeEmptyCon` removes, which also reset the container) is spread over the rest,
+ * so the stored percents still sum to 1 and a later resize moves only its own edge
+ * (review of the fix).
  */
 describe("close-spec-gaps:N22: a center drop keeps the sizes of the target's container", () => {
   let ctx, monitor, column;
@@ -49,6 +52,12 @@ describe("close-spec-gaps:N22: a center drop keeps the sizes of the target's con
   }
 
   const width = (node) => node.nodeValue.get_frame_rect().width;
+
+  function expectPercents(expected) {
+    const got = column.childNodes.map((n) => n.percent);
+    expect(got).toHaveLength(expected.length);
+    got.forEach((p, i) => expect(p).toBeCloseTo(expected[i], 6));
+  }
 
   beforeEach(() => {
     ctx = createWindowManagerFixture({
@@ -87,7 +96,32 @@ describe("close-spec-gaps:N22: a center drop keeps the sizes of the target's con
 
     dropOnCenter(d, b);
 
-    expect(column.childNodes.map((n) => n.percent)).toEqual([0.5, 0.25]);
+    expectPercents([2 / 3, 1 / 3]);
+    expect(width(a)).toBeGreaterThan(width(b) * 1.8);
+  });
+
+  it("keeps the stored percents summing to 1 when three windows stay", () => {
+    win("A", column, 0, 0.4);
+    const b = win("B", column, 480, 0.2);
+    const d = win("D", column, 720, 0.2);
+    win("C", column, 960, 0.2);
+
+    dropOnCenter(d, b);
+
+    expectPercents([0.5, 0.25, 0.25]);
+  });
+
+  it("keeps the sizes when the dragged window was alone in a sibling container", () => {
+    const a = win("A", column, 0, 0.5);
+    const b = win("B", column, 720, 0.25);
+    const solo = createContainerNode(column, LAYOUT_TYPES.VSPLIT);
+    solo.percent = 0.25;
+    const d = win("D", solo, 1080);
+
+    dropOnCenter(d, b);
+
+    expect(column.childNodes).toEqual([a, b.parentNode]);
+    expectPercents([2 / 3, 1 / 3]);
     expect(width(a)).toBeGreaterThan(width(b) * 1.8);
   });
 });
