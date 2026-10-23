@@ -181,13 +181,22 @@ class TestMultiMonitorTiling:
             predicate=lambda c: ("TABBED", 2) in c,
             message="setup: no TABBED group of two after the center drop",
         )
+        # "rightmost" reads live frames, so wait until both tabs sit in the left slot.
+        wait_for(
+            shell_proxy.get_windows,
+            predicate=lambda ws: len(ws) == 3 and sum(w["rect"]["x"] < 100 for w in ws) == 2,
+            message="setup: the tabs did not settle in the left slot",
+        )
         shell_proxy.invoke_forge_action(
             {"name": "Move", "direction": "Right"}, focus_window="rightmost", also_activate=True
         )
+        # The grab freezes the render, so both monitors finish their re-tile first.
         wait_for(
             shell_proxy.get_windows,
             predicate=lambda ws: (
-                len(ws) == 3 and sum(w["rect"]["x"] >= MONITOR_1_X for w in ws) == 1
+                len(ws) == 3
+                and sum(w["rect"]["x"] >= MONITOR_1_X for w in ws) == 1
+                and all(w["rect"]["width"] > 1700 for w in ws)
             ),
             message="setup: the lone window did not move to monitor 1",
         )

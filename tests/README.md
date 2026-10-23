@@ -101,8 +101,10 @@ path that does not end in `.json` reads as an existing directory. Call
 
 ### Known mock quirks
 
-- `St.Widget.destroy()` detaches the actor from its parent, as Clutter does, so a destroyed
-  tab bar is no longer in `global.window_group`.
+- `St.Widget.destroy()` destroys the actor's children, detaches it from its parent and emits
+  `destroy`, as Clutter does, so a destroyed tab bar is no longer in `global.window_group`
+  and takes the tabs it still holds with it. `add_child` and `remove_child` of `Bin` and
+  `BoxLayout` keep `get_parent()` right.
 - `Meta.Window.allows_resize()` follows Mutter: it is false while the window is
   maximized on both axes or fullscreen. The `allows_resize` param stands for the size
   hints only, so a test that maximizes a window reads false, and a one-axis edge snap

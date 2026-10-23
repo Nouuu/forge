@@ -37,9 +37,14 @@ export class Widget extends withSignals() {
   }
 
   destroy() {
-    // Clutter detaches a destroyed actor from its parent.
+    if (this._destroyed) return;
+    this._destroyed = true;
+    // Clutter destroys an actor's children with it, detaches it from its parent and
+    // emits "destroy".
+    for (const child of [...(this.children ?? [])]) child.destroy?.();
     const parent = this.get_parent ? this.get_parent() : null;
     if (parent && parent.remove_child) parent.remove_child(this);
+    this.emit("destroy");
   }
 
   grab_key_focus() {
@@ -110,6 +115,7 @@ export class Bin extends Widget {
 
   add_child(child) {
     this.children.push(child);
+    if (child) child._parent = this;
   }
 
   remove_child(child) {
@@ -117,6 +123,7 @@ export class Bin extends Widget {
     if (index !== -1) {
       this.children.splice(index, 1);
     }
+    if (child?._parent === this) child._parent = null;
   }
 
   get_children() {
@@ -156,6 +163,7 @@ export class BoxLayout extends Widget {
 
   add_child(child) {
     this.children.push(child);
+    if (child) child._parent = this;
   }
 
   remove_child(child) {
@@ -163,6 +171,7 @@ export class BoxLayout extends Widget {
     if (index !== -1) {
       this.children.splice(index, 1);
     }
+    if (child?._parent === this) child._parent = null;
   }
 
   get_children() {

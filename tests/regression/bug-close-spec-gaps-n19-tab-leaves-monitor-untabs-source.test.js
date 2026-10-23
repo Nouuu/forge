@@ -22,6 +22,12 @@ import { Rectangle } from "../mocks/gnome/Meta.js";
  * already the other monitor, so nothing resets the old group: it stays TABBED and the N13
  * render keeps its bar. A tab sent to another workspace takes the same re-home.
  *
+ * Fix: the re-home collapses a source left with one child. The collapse lets the N13 render
+ * destroy the old bar, and Clutter destroys an actor's children with it: the moved window's
+ * tab, still in that bar when no drop detached it, went too, and nothing rebuilt it for its
+ * next group (review of the fix). `Node.removeChild` now takes a window's tab out of the bar
+ * it leaves; the St mock destroys children with their parent and emits "destroy".
+ *
  * Monitors side by side: A = {x:0..1920}, B = {x:1920..3840}.
  */
 describe("close-spec-gaps:N19: a tab that leaves for another monitor untabs its old group", () => {
@@ -92,6 +98,18 @@ describe("close-spec-gaps:N19: a tab that leaves for another monitor untabs its 
     expect(container.layout).toBe(LAYOUT_TYPES.HSPLIT);
     expect(container.decoration).toBeNull();
     expect(global.window_group.contains(deco)).toBe(false);
+  });
+
+  it("keeps the moved window's tab when the grab ends without a drop", () => {
+    const tab = tabA.tab;
+    expect(tab).toBeTruthy();
+    tabA.nodeValue._monitor = 1;
+    ctx.windowManager.updateMetaWorkspaceMonitor("window-entered-monitor", 1, tabA.nodeValue);
+
+    ctx.windowManager.renderTree("grab-op-end");
+
+    expect(tabA.tab).toBe(tab);
+    expect(container.decoration).toBeNull();
   });
 
   it("collapses the old group when a tab is sent to another workspace", () => {
