@@ -182,6 +182,8 @@ describe("close-spec-gaps:N16: a drop on a stacked or tabbed title bar joins the
     const { target } = drag(240, 540);
 
     expect(target).toBe("X");
-    expect(ids(group)).toEqual(["X", "Y", "D"]);
+    // close-spec-gaps:N21: the center drop wraps X and D; Y stays beside them.
+    expect(ids(group)).toEqual(["CON", "Y"]);
+    expect(ids(group.firstChild)).toEqual(["X", "D"]);
   });
 });
